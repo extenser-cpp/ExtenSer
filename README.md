@@ -1,2 +1,3 @@
 # ExtenSer
-An extensible, generic serialization library for C++
+
+An extensible, generic serialization library for C++.
