@@ -327,7 +327,7 @@ namespace detail_json
         {
             if (subobject(key).size() != sizeof...(Args))
             {
-                throw function_mismatch_error{ "JSON error: invalid number of args" };
+                throw std::runtime_error{ "JSON error: invalid number of args" };
             }
 
             [[maybe_unused]] size_t arg_counter = 0;
@@ -352,7 +352,7 @@ namespace detail_json
 
             if (v_idx >= arg_sz)
             {
-                throw deserialization_error{
+                throw std::runtime_error{
                     std::string{ "JSON error: variant index exceeded variant size: " }.append(
                         std::to_string(arg_sz))
                 };
@@ -511,15 +511,15 @@ namespace detail_json
             if (!validate_arg<no_ref_t>(arg))
             {
 #ifdef EXTENSER_NO_RTTI
-                throw function_mismatch_error{
+                throw std::runtime_error{
                     std::string{ "JSON error: expected type: {NO-RTTI}, got type: " }.append(
                         arg.type_name())
                 };
 #else
-                throw function_mismatch_error{ std::string{ "JSON error: expected type: " }
-                                                   .append(typeid(no_ref_t).name())
-                                                   .append(", got type: ")
-                                                   .append(arg.type_name()) };
+                throw std::runtime_error{ std::string{ "JSON error: expected type: " }
+                                              .append(typeid(no_ref_t).name())
+                                              .append(", got type: ")
+                                              .append(arg.type_name()) };
 #endif
             }
 
@@ -535,7 +535,7 @@ namespace detail_json
         {
             if (index >= arg_arr.size())
             {
-                throw function_mismatch_error{ "JSON error: argument count mismatch" };
+                throw std::runtime_error{ "JSON error: argument count mismatch" };
             }
 
             if (arg_arr.is_array())

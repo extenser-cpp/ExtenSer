@@ -55,17 +55,17 @@
 #  define EXTENSER_ASSERTION(EXPR) assert(EXPR)
 #elif defined(EXTENSER_ASSERT_STDERR)
 #  define EXTENSER_ASSERTION(EXPR)                                                             \
-    if (!(EXPR))                                                                              \
-    std::fprintf(stderr,                                                                      \
+    if (!(EXPR))                                                                               \
+    std::fprintf(stderr,                                                                       \
         "EXTENSER_ASSERTION: \"%s\" failed!\n  func: %s,\n  file: %s,\n  line: %d\n\n", #EXPR, \
         __FUNCTION__, __FILE__, __LINE__)
 #elif defined(EXTENSER_ASSERT_THROW)
 #  define EXTENSER_ASSERTION(EXPR) \
-    if (!(EXPR))                  \
+    if (!(EXPR))                   \
     throw std::runtime_error("EXTENSER_ASSERTION: \"" #EXPR "\" failed!")
 #elif defined(EXTENSER_ASSERT_ABORT)
 #  define EXTENSER_ASSERTION(EXPR) \
-    if (!(EXPR))                  \
+    if (!(EXPR))                   \
     std::abort()
 #elif defined(EXTENSER_ASSERT_ASSUME)
 #  define EXTENSER_ASSERTION(EXPR) EXTENSER_ASSUME(EXPR)
@@ -86,6 +86,154 @@
 
 namespace extenser
 {
+namespace detail
+{
+#define EXTENSER_NOPAREN(...) __VA_ARGS__
+#define EXTENSER_CHECKER(NAME, EXPR1, EXPR2)                      \
+  template<typename C>                                            \
+  struct NAME                                                     \
+  {                                                               \
+private:                                                          \
+    template<typename T>                                          \
+    static constexpr auto check([[maybe_unused]] T* ptr) noexcept \
+        -> std::is_same<decltype(EXPR1), EXPR2>;                  \
+    template<typename>                                            \
+    static constexpr auto check(...) noexcept -> std::false_type; \
+    using type = decltype(check<C>(nullptr));                     \
+                                                                  \
+public:                                                           \
+    static constexpr bool value = type::value;                    \
+  }
+
+    EXTENSER_CHECKER(has_begin, std::declval<T>().begin(), typename T::iterator);
+    EXTENSER_CHECKER(has_end, std::declval<T>().end(), typename T::iterator);
+    EXTENSER_CHECKER(has_size, std::declval<T>().size(), typename T::iterator);
+    EXTENSER_CHECKER(has_set_key, typename T::value_type{}, typename T::key_type);
+    EXTENSER_CHECKER(
+        has_map_iterator, std::declval<typename T::iterator>()->second, typename T::mapped_type);
+    EXTENSER_CHECKER(
+        has_map_at, std::declval<T>().at(typename T::key_type{}), typename T::mapped_type);
+#undef EXTENSER_CHECKER
+
+#define EXTENSER_TYPE_TRAIT(NAME, COND)    \
+  template<typename C>                     \
+  struct NAME : std::bool_constant<(COND)> \
+  {                                        \
+  };                                       \
+  template<typename C>                     \
+  inline constexpr bool NAME##_v = NAME<C>::value
+
+#define EXTENSER_CONJ_TYPE_TRAIT(NAME, ...) \
+  EXTENSER_TYPE_TRAIT(NAME, std::conjunction<EXTENSER_NOPAREN(__VA_ARGS__)>::value)
+
+#define EXTENSER_DISJ_TYPE_TRAIT(NAME, ...) \
+  EXTENSER_TYPE_TRAIT(NAME, std::disjunction<EXTENSER_NOPAREN(__VA_ARGS__)>::value)
+
+    EXTENSER_TYPE_TRAIT(is_boolean_testable, (std::is_convertible_v<C, bool>));
+    EXTENSER_DISJ_TYPE_TRAIT(is_stringlike, std::is_convertible<C, std::string>,
+        std::is_convertible<C, std::string_view>);
+
+    EXTENSER_CONJ_TYPE_TRAIT(
+        is_container, has_begin<std::remove_cv_t<C>>, has_end<std::remove_cv_t<C>>);
+
+    EXTENSER_CONJ_TYPE_TRAIT(is_map, is_container<C>, has_map_iterator<std::remove_cv_t<C>>);
+    EXTENSER_CONJ_TYPE_TRAIT(is_multimap, is_map<C>, std::negation<has_map_at<C>>);
+    EXTENSER_CONJ_TYPE_TRAIT(is_set, is_container<C>, has_set_key<std::remove_cv_t<C>>);
+#undef EXTENSER_TYPE_TRAIT
+#undef EXTENSER_CONJ_TYPE_TRAIT
+#undef EXTENSER_DISJ_TYPE_TRAIT
+
+#if defined(__cpp_lib_remove_cvref)
+    using std::remove_cvref;
+    using std::remove_cvref_t;
+#else
+    // backport of C++20's remove_cvref
+    template<typename T>
+    struct remove_cvref
+    {
+        using type = std::remove_cv_t<std::remove_reference_t<T>>;
+    };
+
+    template<typename T>
+    using remove_cvref_t = typename remove_cvref<T>::type;
+#endif
+
+    template<typename T>
+    struct decay_str
+    {
+        static_assert(!std::is_pointer_v<remove_cvref_t<T>>, "Pointer parameters are not allowed");
+        static_assert(!std::is_array_v<remove_cvref_t<T>>, "C array parameters are not allowed");
+
+        using type = T;
+    };
+
+    template<>
+    struct decay_str<const char*>
+    {
+        using type = const std::string&;
+    };
+
+    template<>
+    struct decay_str<const char*&>
+    {
+        using type = const std::string&;
+    };
+
+    template<>
+    struct decay_str<const char* const&>
+    {
+        using type = const std::string&;
+    };
+
+    template<size_t N>
+    struct decay_str<const char (&)[N]>
+    {
+        using type = const std::string&;
+    };
+
+    template<>
+    struct decay_str<std::string_view>
+    {
+        using type = const std::string&;
+    };
+
+    template<typename T>
+    using decay_str_t = typename decay_str<T>::type;
+
+    template<typename C>
+    struct is_optional : std::false_type
+    {
+    };
+
+    template<typename T>
+    struct is_optional<std::optional<T>> : std::true_type
+    {
+    };
+
+    template<typename C>
+    inline constexpr bool is_optional_v = is_optional<std::remove_cv_t<C>>::value;
+
+    template<typename F, typename... Ts, size_t... Is>
+    constexpr void for_each_tuple(const std::tuple<Ts...>& tuple, F&& func,
+        [[maybe_unused]] const std::index_sequence<Is...> iseq)
+    {
+        static_assert(std::conjunction_v<std::is_invocable<F, Ts>...>,
+            "applied function must be able to take given args");
+
+        using expander = int[];
+        std::ignore = expander{ 0, ((void)std::forward<F>(func)(std::get<Is>(tuple)), 0)... };
+    }
+
+    template<typename F, typename... Ts>
+    constexpr void for_each_tuple(const std::tuple<Ts...>& tuple, F&& func)
+    {
+        static_assert(std::conjunction_v<std::is_invocable<F, Ts>...>,
+            "applied function must be able to take given args");
+
+        for_each_tuple(tuple, std::forward<F>(func), std::make_index_sequence<sizeof...(Ts)>());
+    }
+} //namespace detail
+
 template<typename Derived>
 class generic_serializer
 {
