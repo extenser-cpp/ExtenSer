@@ -30,12 +30,14 @@
 cmake_minimum_required(VERSION 3.12)
 
 project(
-  "ExtenSer"
-  VERSION 0.1.0
-  DESCRIPTION "Extensible, generic serialization library for C++"
-  LANGUAGES CXX)
+    "ExtenSer"
+    VERSION 0.1.0
+    DESCRIPTION "Extensible, generic serialization library for C++"
+    LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(BUILD_TESTING "Build the test tree" ON)
 
 # ==== Target(s) ====
 
@@ -43,28 +45,43 @@ add_library(extenser INTERFACE include/extenser.hpp)
 add_library(ExtenSer::extenser ALIAS extenser)
 
 include(GNUInstallDirs)
-target_compile_features(extenser INTERFACE cxx_std_17)
 target_include_directories(
-  extenser INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-                    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+    extenser INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+include(FetchContent)
+FetchContent_Declare(nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG bc889afb4c5bf1c0d8ee29ef35eaaf4c8bef8a5d
+    )
+FetchContent_MakeAvailable(nlohmann_json)
+
+add_library(extenser-json INTERFACE adapters/json/extenser_json.hpp)
+target_link_libraries(extenser-json INTERFACE extenser nlohmann_json::nlohmann_json)
+target_include_directories(extenser-json INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/adapters>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 # ==== Target Installation ====
 
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
-  ${CMAKE_CURRENT_BINARY_DIR}/ExtenSerConfigVersion.cmake
-  COMPATIBILITY SameMajorVersion)
+    ${CMAKE_CURRENT_BINARY_DIR}/ExtenSerConfigVersion.cmake
+    COMPATIBILITY SameMajorVersion)
 
 install(
-  TARGETS extenser
-  EXPORT extenser-targets
-  INCLUDES
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    TARGETS extenser
+    EXPORT extenser-targets
+    INCLUDES
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(
-  EXPORT extenser-targets
-  FILE "ExtenSerConfig.cmake"
-  NAMESPACE ExtenSer::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
+    EXPORT extenser-targets
+    FILE "ExtenSerConfig.cmake"
+    NAMESPACE ExtenSer::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ExtenSerConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
+
+if (BUILD_TESTING)
+  add_subdirectory(tests)
+endif ()

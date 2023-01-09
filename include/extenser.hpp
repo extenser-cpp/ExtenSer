@@ -433,6 +433,12 @@ public:
     }
 };
 
+template<typename Adapter>
+using serializer = typename Adapter::serializer_t;
+
+template<typename Adapter>
+using deserializer = typename Adapter::deserializer_t;
+
 // Overloads for common types
 template<typename Adapter>
 void serialize(serializer_base<Adapter, false>& ser, const bool val)
