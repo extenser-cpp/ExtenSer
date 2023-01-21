@@ -213,6 +213,45 @@ public:                                                           \
     template<typename C>
     inline constexpr bool is_optional_v = is_optional<std::remove_cv_t<C>>::value;
 
+    template<typename C>
+    struct is_pair : std::false_type
+    {
+    };
+
+    template<typename T1, typename T2>
+    struct is_pair<std::pair<T1, T2>> : std::true_type
+    {
+    };
+
+    template<typename C>
+    inline constexpr bool is_pair_v = is_pair<std::remove_cv_t<C>>::value;
+
+    template<typename C>
+    struct is_tuple : std::false_type
+    {
+    };
+
+    template<typename... Args>
+    struct is_tuple<std::tuple<Args...>> : std::true_type
+    {
+    };
+
+    template<typename C>
+    inline constexpr bool is_tuple_v = is_tuple<std::remove_cv_t<C>>::value;
+
+    template<typename C>
+    struct is_variant : std::false_type
+    {
+    };
+
+    template<typename... Args>
+    struct is_variant<std::variant<Args...>> : std::true_type
+    {
+    };
+
+    template<typename C>
+    inline constexpr bool is_variant_v = is_variant<std::remove_cv_t<C>>::value;
+
     template<typename F, typename... Ts, size_t... Is>
     constexpr void for_each_tuple(const std::tuple<Ts...>& tuple, F&& func,
         [[maybe_unused]] const std::index_sequence<Is...> iseq)

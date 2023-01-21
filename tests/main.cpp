@@ -1,8 +1,17 @@
+#include "bitsery/extenser_bitsery.hpp"
 #include "json/extenser_json.hpp"
 
-#include <iostream>
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
+#include <doctest/doctest.h>
+
 #include <string>
 
+const size_t extenser::bitsery_adapter::config::max_container_size = 1'000;
+const size_t extenser::bitsery_adapter::config::max_string_size = 1'000;
+
+namespace
+{
 struct Person
 {
     int age{};
@@ -15,34 +24,41 @@ void serialize(extenser::generic_serializer<S>& ser, Person& person)
     ser.as_int("age", person.age);
     ser.as_string("name", person.name);
 }
+} //namespace
 
-int main()
+TEST_CASE("Simple JSON serialize/deserialize")
 {
-    try
-    {
-        const Person in_person{ 42, "Jake" };
-        extenser::serializer<extenser::json_adapter> ser{};
-        ser.serialize_object(in_person);
+    const Person in_person{ 42, "Jake" };
+    extenser::serializer<extenser::json_adapter> ser{};
+    ser.serialize_object(in_person);
 
-        auto obj = std::move(ser).object();
+    auto obj = std::move(ser).object();
 
-        std::cout << obj.dump() << '\n';
+    REQUIRE(obj.contains("age"));
+    REQUIRE_EQ(obj["age"], 42);
+    REQUIRE(obj.contains("name"));
+    REQUIRE_EQ(obj["name"], "Jake");
 
-        assert(obj.contains("age") && obj["age"] == 42);
-        assert(obj.contains("name") && obj["name"] == "Jake");
+    Person out_person{};
+    extenser::deserializer<extenser::json_adapter> dser{ obj };
+    dser.deserialize_object(out_person);
 
-        Person out_person{};
-        extenser::deserializer<extenser::json_adapter> dser{ obj };
-        dser.deserialize_object(out_person);
+    REQUIRE_EQ(out_person.age, 42);
+    REQUIRE_EQ(out_person.name, "Jake");
+}
 
-        assert(out_person.age == 42);
-        assert(out_person.name == "Jake");
-    }
-    catch (const std::exception& ex)
-    {
-        std::cerr << ex.what() << '\n';
-        return EXIT_FAILURE;
-    }
+TEST_CASE("Simple bitsery serialize/deserialize")
+{
+    const Person in_person{ 42, "Jake" };
+    extenser::serializer<extenser::bitsery_adapter> ser{};
+    ser.serialize_object(in_person);
 
-    return EXIT_SUCCESS;
+    auto obj = std::move(ser).object();
+
+    Person out_person{};
+    extenser::deserializer<extenser::bitsery_adapter> dser{ obj };
+    dser.deserialize_object(out_person);
+
+    REQUIRE_EQ(out_person.age, 42);
+    REQUIRE_EQ(out_person.name, "Jake");
 }

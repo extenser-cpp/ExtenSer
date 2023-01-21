@@ -62,7 +62,7 @@ namespace detail_json
         using serial_t = nlohmann::json;
         using serializer_t = serializer;
         using deserializer_t = deserializer;
-        using config_t = void;
+        using config = void;
     };
 
     class serializer : public serializer_base<serial_adapter, false>
