@@ -7,7 +7,7 @@ FetchContent_Declare(doctest
     )
 FetchContent_MakeAvailable(doctest)
 
-add_executable(extenser-test main.cpp)
+add_executable(extenser-test test_main.cpp)
 target_link_libraries(extenser-test PRIVATE extenser-bitsery extenser-json doctest::doctest)
 target_compile_features(extenser-test PRIVATE cxx_std_17)
 add_test(tester extenser-test)

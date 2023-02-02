@@ -32,6 +32,8 @@
 #define EXTENSER_HPP
 
 #include <cassert>
+#include <iterator>
+#include <memory>
 #include <optional>
 #include <string_view>
 #include <tuple>
@@ -252,6 +254,111 @@ public:                                                           \
     template<typename C>
     inline constexpr bool is_variant_v = is_variant<std::remove_cv_t<C>>::value;
 
+    template<typename T>
+    class span_iterator
+    {
+    public:
+        using iterator_category = std::random_access_iterator_tag;
+        using difference_type = ptrdiff_t;
+        using value_type = std::remove_cv_t<T>;
+        using pointer = T*;
+        using reference = T&;
+
+        constexpr span_iterator(pointer ptr) noexcept : m_ptr(ptr) {}
+
+        constexpr reference operator*() const noexcept { return *m_ptr; }
+        constexpr pointer operator->() const noexcept { return m_ptr; }
+
+        constexpr span_iterator& operator++() noexcept
+        {
+            ++m_ptr;
+            return *this;
+        }
+
+        constexpr span_iterator operator++(int) noexcept
+        {
+            span_iterator tmp{ *this };
+            ++*this;
+            return tmp;
+        }
+
+        constexpr span_iterator& operator--() noexcept
+        {
+            --m_ptr;
+            return *this;
+        }
+
+        constexpr span_iterator operator--(int)
+        {
+            span_iterator tmp{ *this };
+            --*this;
+            return tmp;
+        }
+
+        constexpr span_iterator& operator+=(const difference_type offset) noexcept
+        {
+            m_ptr += offset;
+            return *this;
+        }
+
+        friend constexpr span_iterator operator+(
+            const span_iterator& lhs, const difference_type offset) noexcept
+        {
+            span_iterator tmp{ lhs };
+            tmp += offset;
+            return tmp;
+        }
+
+        friend constexpr span_iterator operator+(
+            const difference_type offset, span_iterator next) noexcept
+        {
+            next += offset;
+            return next;
+        }
+
+        constexpr span_iterator& operator-=(const difference_type offset) noexcept
+        {
+            m_ptr -= offset;
+            return *this;
+        }
+
+        friend constexpr span_iterator operator-(
+            const span_iterator& lhs, const difference_type offset) noexcept
+        {
+            span_iterator tmp{ lhs };
+            tmp -= offset;
+            return tmp;
+        }
+
+        friend constexpr difference_type operator-(
+            const span_iterator& lhs, const span_iterator& rhs) noexcept
+        {
+            return lhs.m_ptr - rhs.m_ptr;
+        }
+
+        constexpr reference operator[](const difference_type offset) const noexcept
+        {
+            return *(*this + offset);
+        }
+
+        friend constexpr bool operator==(
+            const span_iterator& lhs, const span_iterator& rhs) noexcept
+        {
+            return lhs.m_ptr == rhs.m_ptr;
+        }
+
+        friend constexpr bool operator!=(
+            const span_iterator& lhs, const span_iterator& rhs) noexcept
+        {
+            return lhs.m_ptr != rhs.m_ptr;
+        }
+
+        constexpr pointer to_address() const noexcept { return m_ptr; }
+
+    private:
+        pointer m_ptr{ nullptr };
+    };
+
     template<typename F, typename... Ts, size_t... Is>
     constexpr void for_each_tuple(const std::tuple<Ts...>& tuple, F&& func,
         [[maybe_unused]] const std::index_sequence<Is...> iseq)
@@ -272,6 +379,95 @@ public:                                                           \
         for_each_tuple(tuple, std::forward<F>(func), std::make_index_sequence<sizeof...(Ts)>());
     }
 } //namespace detail
+
+template<typename T>
+class span
+{
+public:
+    using element_type = T;
+    using value_type = std::remove_cv_t<T>;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+    using pointer = T*;
+    using const_pointer = const T*;
+    using reference = T&;
+    using const_reference = const T&;
+    using iterator = detail::span_iterator<T>;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+
+    ~span() noexcept = default;
+
+    template<typename It>
+    explicit constexpr span(It first, size_t size)
+        : m_head_ptr(iterator{ first }.to_address()), m_sz(size)
+    {
+        EXTENSER_POSTCONDITION(m_sz != 0);
+    }
+
+    template<typename It>
+    explicit constexpr span(It first, It last)
+        : m_head_ptr(iterator{ first }.to_address()), m_sz(last - first)
+    {
+        EXTENSER_POSTCONDITION(m_sz != 0);
+    }
+
+    template<size_t N>
+    constexpr span(element_type (&arr)[N]) noexcept : m_head_ptr(std::data(arr)), m_sz(N)
+    {
+    }
+
+    template<typename U, size_t N>
+    constexpr span(std::array<U, N>& arr) noexcept : m_head_ptr(std::data(arr)), m_sz(N)
+    {
+    }
+
+    template<typename U, size_t N>
+    constexpr span(const std::array<U, N>& arr) noexcept : m_head_ptr(std::data(arr)), m_sz(N)
+    {
+    }
+
+    constexpr span(const span&) noexcept = default;
+    constexpr span(span&&) = delete;
+
+    constexpr span& operator=(const span&) noexcept = default;
+    constexpr span& operator=(span&&) = delete;
+
+    constexpr iterator begin() const noexcept { return { m_head_ptr }; }
+    constexpr iterator end() const noexcept { return { m_head_ptr + m_sz }; }
+    constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator{ end() }; }
+    constexpr reverse_iterator rend() const noexcept { return reverse_iterator{ begin() }; }
+    constexpr reference front() const noexcept { return m_head_ptr[0]; }
+    constexpr reference back() const noexcept { return m_head_ptr[m_sz]; }
+
+    constexpr T& operator[](size_t idx) const
+    {
+        EXTENSER_PRECONDITION(idx < m_sz);
+        return *std::next(m_head_ptr, idx);
+    }
+
+    constexpr T* data() const noexcept { return m_head_ptr; }
+    constexpr size_t size() const noexcept { return m_sz; }
+    constexpr size_t size_bytes() const noexcept { return m_sz * sizeof(T); }
+
+private:
+    pointer m_head_ptr{ nullptr };
+    size_t m_sz{ 0 };
+};
+
+// Deduction guides
+template<class T, std::size_t N>
+span(T (&)[N]) -> span<T>;
+
+template<class T, std::size_t N>
+span(std::array<T, N>&) -> span<T>;
+
+template<class T, std::size_t N>
+span(const std::array<T, N>&) -> span<const T>;
+
+static_assert(detail::is_container_v<span<int>>, "span is not container");
+
+template<typename T>
+using view = span<const T>;
 
 template<typename Derived>
 class generic_serializer
@@ -371,6 +567,8 @@ public:
     void serialize_object(const T& val)
     {
         static_assert(!Deserialize, "Cannot call serialize_object() on a deserializer");
+        static_assert(!std::is_pointer_v<T>,
+            "Cannot serialize a pointer directly, wrap it in a span or view");
 
         // Necessary for bi-directional serialization
         serialize(*this, const_cast<T&>(val)); // NOLINT(cppcoreguidelines-pro-type-const-cast)
@@ -380,6 +578,8 @@ public:
     void deserialize_object(T&& val)
     {
         static_assert(Deserialize, "Cannot call deserialize_object() on a serializer");
+        static_assert(!std::is_pointer_v<T>,
+            "Cannot serialize a pointer directly, wrap it in a span or view");
         serialize(*this, std::forward<T>(val));
     }
 
@@ -414,7 +614,9 @@ public:
     template<typename T>
     EXTENSER_INLINE void as_array(const std::string_view key, T& val)
     {
-        static_assert(detail::is_container_v<T>, "T must have begin() and end()");
+        static_assert(
+            detail::is_container_v<T> || std::is_array_v<T>, "T must have begin() and end()");
+
         (static_cast<serializer_t*>(this))->as_array(key, val);
     }
 
@@ -529,10 +731,25 @@ void serialize(serializer_base<Adapter, true>& ser, T& val)
     ser.as_string("", val);
 }
 
+template<typename Adapter, bool Deserialize, typename T, size_t N>
+void serialize(serializer_base<Adapter, Deserialize>& ser, std::array<T, N>& val)
+{
+    span arr_span{ val };
+    ser.as_array("", arr_span);
+}
+
 template<typename Adapter, bool Deserialize, typename T,
-    std::enable_if_t<(detail::is_container_v<T>
-                         && (!detail::is_stringlike_v<T>)&&(!detail::is_map_v<T>)),
-        bool> = true>
+    std::enable_if_t<std::is_array_v<T>, bool> = true>
+void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
+{
+    span arr_span{ val };
+    ser.as_array("", arr_span);
+}
+
+template<typename Adapter, bool Deserialize, typename T,
+    std::enable_if_t<
+        (detail::is_container_v<T> && !detail::is_stringlike_v<T> && !detail::is_map_v<T>), bool> =
+        true>
 void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
 {
     ser.as_array("", val);
