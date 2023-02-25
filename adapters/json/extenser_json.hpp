@@ -270,17 +270,20 @@ namespace detail_json
             val = T{ cbegin(arr), cend(arr) };
         }
 
-        template<typename T, size_t N>
-        void as_array(const std::string_view key, std::array<T, N>& val) const
+        template<typename T>
+        void as_array(const std::string_view key, span<T>& val) const
         {
             const auto& arr = subobject(key);
 
-            if (arr.size() != N)
+            if (arr.size() != val.size())
             {
                 throw std::out_of_range{ "JSON error: array out of bounds" };
             }
 
-            std::copy(cbegin(arr), cend(arr), begin(val));
+            if constexpr (!std::is_const_v<T>)
+            {
+                std::copy(cbegin(arr), cend(arr), std::begin(val));
+            }
         }
 
         template<typename T>

@@ -31,8 +31,11 @@
 #ifndef EXTENSER_HPP
 #define EXTENSER_HPP
 
-#include <cassert>
+#include <array>
+#include <cstddef>
+#include <iterator>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
@@ -52,24 +55,29 @@
 #if defined(EXTENSER_ASSERT_NONE)
 #  define EXTENSER_ASSERTION(EXPR) static_cast<void>(0)
 #elif defined(EXTENSER_ASSERT_DEBUG)
+#  include <cassert>
 #  define EXTENSER_ASSERTION(EXPR) assert(EXPR)
 #elif defined(EXTENSER_ASSERT_STDERR)
+#  include <cstdio>
 #  define EXTENSER_ASSERTION(EXPR)                                                             \
     if (!(EXPR))                                                                               \
     std::fprintf(stderr,                                                                       \
         "EXTENSER_ASSERTION: \"%s\" failed!\n  func: %s,\n  file: %s,\n  line: %d\n\n", #EXPR, \
         __FUNCTION__, __FILE__, __LINE__)
 #elif defined(EXTENSER_ASSERT_THROW)
+#  include <stdexcept>
 #  define EXTENSER_ASSERTION(EXPR) \
     if (!(EXPR))                   \
     throw std::runtime_error("EXTENSER_ASSERTION: \"" #EXPR "\" failed!")
 #elif defined(EXTENSER_ASSERT_ABORT)
+#  include <cstdio>
 #  define EXTENSER_ASSERTION(EXPR) \
     if (!(EXPR))                   \
     std::abort()
 #elif defined(EXTENSER_ASSERT_ASSUME)
 #  define EXTENSER_ASSERTION(EXPR) EXTENSER_ASSUME(EXPR)
 #else
+#  include <cassert>
 #  define EXTENSER_ASSERTION(EXPR) assert(EXPR)
 #endif
 
@@ -143,6 +151,16 @@ public:                                                           \
 #undef EXTENSER_CONJ_TYPE_TRAIT
 #undef EXTENSER_DISJ_TYPE_TRAIT
 
+    template<typename T, typename It>
+    struct constructible_from_iterator :
+        std::bool_constant<std::is_trivially_constructible_v<T,
+            std::remove_reference_t<decltype(*std::declval<It&>())>>>
+    {
+    };
+
+    template<typename T, typename It>
+    inline constexpr bool constructible_from_iterator_v = constructible_from_iterator<T, It>::value;
+
 #if defined(__cpp_lib_remove_cvref)
     using std::remove_cvref;
     using std::remove_cvref_t;
@@ -158,11 +176,28 @@ public:                                                           \
     using remove_cvref_t = typename remove_cvref<T>::type;
 #endif
 
+#if defined(__cpp_lib_type_identity)
+    using std::type_identity;
+    using std::type_identity_t;
+#else
+    // backport of C++20's type_identity
+    template<typename T>
+    struct type_identity
+    {
+        using type = T;
+    };
+
+    template<typename T>
+    using type_identity_t = typename type_identity<T>::type;
+#endif
+
     template<typename T>
     struct decay_str
     {
-        static_assert(!std::is_pointer_v<remove_cvref_t<T>>, "Pointer parameters are not allowed");
-        static_assert(!std::is_array_v<remove_cvref_t<T>>, "C array parameters are not allowed");
+        static_assert(!std::is_pointer_v<remove_cvref_t<T>>,
+            "Pointer parameters are not allowed, please wrap in a span or view");
+        static_assert(!std::is_array_v<remove_cvref_t<T>>,
+            "C-style array parameters are not allowed, please wrap in a span or view");
 
         using type = T;
     };
@@ -185,7 +220,7 @@ public:                                                           \
         using type = const std::string&;
     };
 
-    template<size_t N>
+    template<std::size_t N>
     struct decay_str<const char (&)[N]>
     {
         using type = const std::string&;
@@ -252,7 +287,112 @@ public:                                                           \
     template<typename C>
     inline constexpr bool is_variant_v = is_variant<std::remove_cv_t<C>>::value;
 
-    template<typename F, typename... Ts, size_t... Is>
+    template<typename T>
+    class span_iterator
+    {
+    public:
+        using iterator_category = std::random_access_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+        using value_type = std::remove_cv_t<T>;
+        using pointer = T*;
+        using reference = T&;
+
+        constexpr span_iterator(pointer ptr) noexcept : m_ptr(ptr) {}
+
+        constexpr auto operator*() const noexcept -> reference { return *m_ptr; }
+        constexpr auto operator->() const noexcept -> pointer { return m_ptr; }
+
+        constexpr auto operator++() noexcept -> span_iterator&
+        {
+            ++m_ptr;
+            return *this;
+        }
+
+        constexpr auto operator++(int) noexcept -> span_iterator
+        {
+            span_iterator tmp{ *this };
+            ++*this;
+            return tmp;
+        }
+
+        constexpr auto operator--() noexcept -> span_iterator&
+        {
+            --m_ptr;
+            return *this;
+        }
+
+        constexpr auto operator--(int) -> span_iterator
+        {
+            span_iterator tmp{ *this };
+            --*this;
+            return tmp;
+        }
+
+        constexpr auto operator+=(const difference_type offset) noexcept -> span_iterator&
+        {
+            m_ptr += offset;
+            return *this;
+        }
+
+        friend constexpr auto operator+(
+            const span_iterator& lhs, const difference_type offset) noexcept -> span_iterator
+        {
+            span_iterator tmp{ lhs };
+            tmp += offset;
+            return tmp;
+        }
+
+        friend constexpr auto operator+(const difference_type offset, span_iterator next) noexcept
+            -> span_iterator
+        {
+            next += offset;
+            return next;
+        }
+
+        constexpr auto operator-=(const difference_type offset) noexcept -> span_iterator&
+        {
+            m_ptr -= offset;
+            return *this;
+        }
+
+        friend constexpr auto operator-(
+            const span_iterator& lhs, const difference_type offset) noexcept -> span_iterator
+        {
+            span_iterator tmp{ lhs };
+            tmp -= offset;
+            return tmp;
+        }
+
+        friend constexpr auto operator-(const span_iterator& lhs, const span_iterator& rhs) noexcept
+            -> difference_type
+        {
+            return lhs.m_ptr - rhs.m_ptr;
+        }
+
+        constexpr auto operator[](const difference_type offset) const noexcept -> reference
+        {
+            return *(*this + offset);
+        }
+
+        friend constexpr auto operator==(
+            const span_iterator& lhs, const span_iterator& rhs) noexcept -> bool
+        {
+            return lhs.m_ptr == rhs.m_ptr;
+        }
+
+        friend constexpr auto operator!=(
+            const span_iterator& lhs, const span_iterator& rhs) noexcept -> bool
+        {
+            return lhs.m_ptr != rhs.m_ptr;
+        }
+
+        constexpr auto to_address() const noexcept -> pointer { return m_ptr; }
+
+    private:
+        pointer m_ptr{ nullptr };
+    };
+
+    template<typename F, typename... Ts, std::size_t... Is>
     constexpr void for_each_tuple(const std::tuple<Ts...>& tuple, F&& func,
         [[maybe_unused]] const std::index_sequence<Is...> iseq)
     {
@@ -272,6 +412,163 @@ public:                                                           \
         for_each_tuple(tuple, std::forward<F>(func), std::make_index_sequence<sizeof...(Ts)>());
     }
 } //namespace detail
+
+#if defined(__cpp_lib_span)
+using std::as_bytes;
+using std::as_writable_bytes;
+using std::span;
+#else
+// backport of C++20's span
+template<typename T>
+class span
+{
+public:
+    using element_type = T;
+    using value_type = std::remove_cv_t<T>;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using pointer = T*;
+    using const_pointer = const T*;
+    using reference = T&;
+    using const_reference = const T&;
+    using iterator = detail::span_iterator<T>;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+
+    ~span() noexcept = default;
+
+    constexpr span() noexcept = default;
+
+    template<typename It,
+        typename = std::enable_if_t<detail::constructible_from_iterator_v<element_type, It>>>
+    constexpr span(It first, size_type count)
+        : m_head_ptr(iterator{ first }.to_address()), m_sz(count)
+    {
+    }
+
+    template<typename It, typename End,
+        typename = std::enable_if_t<detail::constructible_from_iterator_v<element_type, It>
+            && !std::is_convertible_v<End, size_type>>>
+    constexpr span(It first, End last)
+        : m_head_ptr(iterator{ first }.to_address()), m_sz(last - first)
+    {
+    }
+
+    template<std::size_t N>
+    constexpr span(detail::type_identity_t<element_type> (&arr)[N]) noexcept
+        : m_head_ptr(std::data(arr)), m_sz(N)
+    {
+    }
+
+    template<typename U, std::size_t N>
+    constexpr span(std::array<U, N>& arr) noexcept : m_head_ptr(std::data(arr)), m_sz(N)
+    {
+    }
+
+    template<typename U, std::size_t N>
+    constexpr span(const std::array<U, N>& arr) noexcept : m_head_ptr(std::data(arr)), m_sz(N)
+    {
+    }
+
+    template<typename U>
+    constexpr span(const span<U>& source) noexcept
+        : m_head_ptr(source.m_head_ptr), m_sz(source.m_sz)
+    {
+    }
+
+    constexpr span(const span&) noexcept = default;
+    constexpr span(span&&) = delete;
+
+    constexpr auto operator=(const span&) noexcept -> span& = default;
+    constexpr auto operator=(span&&) -> span& = delete;
+
+    constexpr auto begin() const noexcept -> iterator { return { m_head_ptr }; }
+    constexpr auto end() const noexcept -> iterator { return begin() + m_sz; }
+    constexpr auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{ end() }; }
+    constexpr auto rend() const noexcept -> reverse_iterator { return reverse_iterator{ begin() }; }
+
+    constexpr auto front() const -> reference
+    {
+        EXTENSER_PRECONDITION(m_sz != 0);
+        return m_head_ptr[0];
+    }
+
+    constexpr auto back() const -> reference
+    {
+        EXTENSER_PRECONDITION(m_sz != 0);
+        return m_head_ptr[m_sz];
+    }
+
+    constexpr auto operator[](size_type idx) const -> reference
+    {
+        EXTENSER_PRECONDITION(idx < m_sz);
+        return *(begin() + idx);
+    }
+
+    constexpr auto data() const noexcept -> pointer { return m_head_ptr; }
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool { return m_sz == 0; }
+    constexpr auto size() const noexcept -> size_type { return m_sz; }
+    constexpr auto size_bytes() const noexcept -> size_type { return m_sz * sizeof(T); }
+
+    constexpr auto first(size_type count) const -> span
+    {
+        EXTENSER_PRECONDITION(count <= m_sz);
+        return { begin(), count };
+    }
+
+    constexpr auto last(size_type count) const -> span
+    {
+        EXTENSER_PRECONDITION(count <= m_sz);
+        return { end() - count, count };
+    }
+
+    constexpr auto subspan(size_type offset) const -> span
+    {
+        EXTENSER_PRECONDITION(offset <= m_sz);
+        return { begin() + m_sz, end() };
+    }
+
+    constexpr auto subspan(size_type offset, size_type count) const -> span
+    {
+        EXTENSER_PRECONDITION(offset <= m_sz);
+        EXTENSER_PRECONDITION(count <= m_sz - offset);
+        return { begin() + offset, count };
+    }
+
+private:
+    pointer m_head_ptr{ nullptr };
+    size_type m_sz{ 0 };
+};
+
+template<typename T>
+auto as_bytes(span<T> span) noexcept -> extenser::span<const std::byte>
+{
+    return { reinterpret_cast<const std::byte*>(span.data()), span.size_bytes() };
+}
+
+template<typename T>
+auto as_writable_bytes(span<T> span) noexcept -> extenser::span<std::byte>
+{
+    return { reinterpret_cast<std::byte*>(span.data()), span.size_bytes() };
+}
+
+// Deduction guides
+template<typename It, typename End>
+span(It, End) -> span<std::remove_reference_t<decltype(*std::declval<It&>())>>;
+
+template<typename T, std::size_t N>
+span(T (&)[N]) -> span<T>;
+
+template<typename T, std::size_t N>
+span(std::array<T, N>&) -> span<T>;
+
+template<typename T, std::size_t N>
+span(const std::array<T, N>&) -> span<const T>;
+#endif
+
+static_assert(detail::is_container_v<span<int>>, "span is not container");
+
+template<typename T>
+using view = span<const T>;
 
 template<typename Derived>
 class generic_serializer
@@ -365,12 +662,14 @@ public:
     using serializer_t = std::conditional_t<Deserialize, typename Adapter::deserializer_t,
         typename Adapter::serializer_t>;
 
-    static constexpr size_t max_variant_size = 10;
+    static constexpr std::size_t max_variant_size = 10;
 
     template<typename T>
     void serialize_object(const T& val)
     {
         static_assert(!Deserialize, "Cannot call serialize_object() on a deserializer");
+        static_assert(!std::is_pointer_v<T>,
+            "Cannot serialize a pointer directly, wrap it in a span or view");
 
         // Necessary for bi-directional serialization
         serialize(*this, const_cast<T&>(val)); // NOLINT(cppcoreguidelines-pro-type-const-cast)
@@ -380,6 +679,8 @@ public:
     void deserialize_object(T&& val)
     {
         static_assert(Deserialize, "Cannot call deserialize_object() on a serializer");
+        static_assert(!std::is_pointer_v<T>,
+            "Cannot serialize a pointer directly, wrap it in a span or view");
         serialize(*this, std::forward<T>(val));
     }
 
@@ -414,7 +715,9 @@ public:
     template<typename T>
     EXTENSER_INLINE void as_array(const std::string_view key, T& val)
     {
-        static_assert(detail::is_container_v<T>, "T must have begin() and end()");
+        static_assert(
+            detail::is_container_v<T> || std::is_array_v<T>, "T must have begin() and end()");
+
         (static_cast<serializer_t*>(this))->as_array(key, val);
     }
 
@@ -529,10 +832,25 @@ void serialize(serializer_base<Adapter, true>& ser, T& val)
     ser.as_string("", val);
 }
 
+template<typename Adapter, bool Deserialize, typename T, std::size_t N>
+void serialize(serializer_base<Adapter, Deserialize>& ser, std::array<T, N>& val)
+{
+    span arr_span{ val };
+    ser.as_array("", arr_span);
+}
+
 template<typename Adapter, bool Deserialize, typename T,
-    std::enable_if_t<(detail::is_container_v<T>
-                         && (!detail::is_stringlike_v<T>)&&(!detail::is_map_v<T>)),
-        bool> = true>
+    std::enable_if_t<std::is_array_v<T>, bool> = true>
+void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
+{
+    span arr_span{ val };
+    ser.as_array("", arr_span);
+}
+
+template<typename Adapter, bool Deserialize, typename T,
+    std::enable_if_t<
+        (detail::is_container_v<T> && !detail::is_stringlike_v<T> && !detail::is_map_v<T>), bool> =
+        true>
 void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
 {
     ser.as_array("", val);

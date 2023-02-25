@@ -77,6 +77,8 @@ struct std::hash<std::vector<uint8_t>>
 
 namespace extenser
 {
+// TODO: Define ContainerTraits for extenser::span
+
 namespace detail_bitsery
 {
     class serializer;
@@ -314,7 +316,7 @@ namespace detail_bitsery
         }
 
         template<typename T, size_t N>
-        void as_array([[maybe_unused]] const std::string_view key, std::array<T, N>& val)
+        void as_array([[maybe_unused]] const std::string_view key, span<T>& val)
         {
             if constexpr (std::is_arithmetic_v<T>)
             {
@@ -503,10 +505,8 @@ namespace detail_bitsery
                         parse_obj(s_ser, fallback, subval);
                     } });
         }
-        else if constexpr (
-            std::is_same_v<T,
-                std::
-                    nullptr_t> || std::is_same_v<T, std::monostate> || std::is_same_v<T, std::nullopt_t>)
+        else if constexpr (std::is_same_v<T, std::nullptr_t> || std::is_same_v<T, std::monostate>
+            || std::is_same_v<T, std::nullopt_t>)
         {
             // nop
         }
