@@ -11,3 +11,8 @@ add_executable(extenser-test test_main.cpp)
 target_link_libraries(extenser-test PRIVATE extenser-bitsery extenser-json doctest::doctest)
 target_compile_features(extenser-test PRIVATE cxx_std_17)
 add_test(tester extenser-test)
+
+add_executable(json-test json.test.cpp)
+target_link_libraries(json-test PRIVATE extenser-json doctest::doctest)
+target_compile_features(json-test PRIVATE cxx_std_17)
+add_test(nlohmann-json json-test)

@@ -597,6 +597,12 @@ public:
     }
 
     template<typename T>
+    EXTENSER_INLINE void as_uint(const std::string_view key, T& val)
+    {
+        (static_cast<Derived*>(this))->as_uint(key, val);
+    }
+
+    template<typename T>
     EXTENSER_INLINE void as_string(const std::string_view key, T& val)
     {
         (static_cast<Derived*>(this))->as_string(key, val);
@@ -701,8 +707,17 @@ public:
     template<typename T>
     EXTENSER_INLINE void as_int(const std::string_view key, T& val)
     {
-        static_assert(std::is_integral_v<T> || std::is_enum_v<T>, "T must be an integral type");
+        static_assert(std::is_signed_v<T> && (std::is_integral_v<T> || std::is_enum_v<T>),
+            "T must be a signed integral type");
         (static_cast<serializer_t*>(this))->as_int(key, val);
+    }
+
+    template<typename T>
+    EXTENSER_INLINE void as_uint(const std::string_view key, T& val)
+    {
+        static_assert(std::is_unsigned_v<T> && (std::is_integral_v<T> || std::is_enum_v<T>),
+            "T must be an unsigned integral type");
+        (static_cast<serializer_t*>(this))->as_uint(key, val);
     }
 
     template<typename T>
@@ -795,17 +810,35 @@ void serialize(serializer_base<Adapter, true>& ser, bool& val)
 }
 
 template<typename Adapter, typename T,
-    std::enable_if_t<(std::is_integral_v<T> && (!std::is_same_v<T, bool>)), bool> = true>
+    std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && (!std::is_same_v<T, bool>)),
+        bool> = true>
 void serialize(serializer_base<Adapter, false>& ser, const T val)
 {
     ser.as_int("", val);
 }
 
 template<typename Adapter, typename T,
-    std::enable_if_t<(std::is_integral_v<T> && (!std::is_same_v<T, bool>)), bool> = true>
+    std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && (!std::is_same_v<T, bool>)),
+        bool> = true>
 void serialize(serializer_base<Adapter, true>& ser, T& val)
 {
     ser.as_int("", val);
+}
+
+template<typename Adapter, typename T,
+    std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && (!std::is_same_v<T, bool>)),
+        bool> = true>
+void serialize(serializer_base<Adapter, false>& ser, const T val)
+{
+    ser.as_uint("", val);
+}
+
+template<typename Adapter, typename T,
+    std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && (!std::is_same_v<T, bool>)),
+        bool> = true>
+void serialize(serializer_base<Adapter, true>& ser, T& val)
+{
+    ser.as_uint("", val);
 }
 
 template<typename Adapter, typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>

@@ -137,12 +137,18 @@ namespace detail_bitsery
         template<typename T>
         void as_float([[maybe_unused]] const std::string_view key, const T& val)
         {
-            static_assert(sizeof(T) <= sizeof(double), "long double not supported");
+            static_assert(sizeof(T) <= sizeof(double), "long double is not supported");
             m_ser.value<sizeof(T)>(val);
         }
 
         template<typename T>
         void as_int([[maybe_unused]] const std::string_view key, const T& val)
+        {
+            m_ser.value<sizeof(T)>(val);
+        }
+
+        template<typename T>
+        void as_uint([[maybe_unused]] const std::string_view key, const T& val)
         {
             m_ser.value<sizeof(T)>(val);
         }
@@ -286,12 +292,18 @@ namespace detail_bitsery
         template<typename T>
         void as_float([[maybe_unused]] const std::string_view key, T& val)
         {
-            static_assert(sizeof(T) <= sizeof(double), "long double not supported");
+            static_assert(sizeof(T) <= sizeof(double), "long double is not supported");
             m_ser.value<sizeof(T)>(val);
         }
 
         template<typename T>
         void as_int([[maybe_unused]] const std::string_view key, T& val)
+        {
+            m_ser.value<sizeof(T)>(val);
+        }
+
+        template<typename T>
+        void as_uint([[maybe_unused]] const std::string_view key, T& val)
         {
             m_ser.value<sizeof(T)>(val);
         }

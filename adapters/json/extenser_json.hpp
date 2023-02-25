@@ -91,18 +91,50 @@ namespace detail_json
         template<typename T>
         void as_float(const std::string_view key, const T& val)
         {
-            subobject(key) = val;
+            static_assert(!std::is_same_v<T, long double>, "long double is not supported");
+            subobject(key) = static_cast<double>(val);
         }
 
         template<typename T>
         void as_int(const std::string_view key, const T& val)
         {
-            subobject(key) = val;
+            static_assert(std::is_signed_v<T> || !std::is_integral_v<T>,
+                "only signed integers are supported");
+            static_assert(sizeof(T) <= sizeof(int64_t) || !std::is_integral_v<T>,
+                "maximum 64-bit integers supported");
+
+            if constexpr (std::is_integral_v<T>)
+            {
+                subobject(key) = val;
+            }
+            else
+            {
+                subobject(key) = static_cast<int64_t>(val);
+            }
+        }
+
+        template<typename T>
+        void as_uint(const std::string_view key, const T& val)
+        {
+            static_assert(std::is_unsigned_v<T> || !std::is_integral_v<T>,
+                "only unsigned integers are supported");
+            static_assert(sizeof(T) <= sizeof(int64_t) || !std::is_integral_v<T>,
+                "maximum 64-bit integers supported");
+
+            if constexpr (std::is_integral_v<T>)
+            {
+                subobject(key) = val;
+            }
+            else
+            {
+                subobject(key) = static_cast<uint64_t>(val);
+            }
         }
 
         template<typename T>
         void as_string(const std::string_view key, const T& val)
         {
+            static_assert(detail::is_stringlike_v<T>, "T must be convertible to std::string_view");
             subobject(key) = val;
         }
 
@@ -253,6 +285,12 @@ namespace detail_json
 
         template<typename T>
         void as_int(const std::string_view key, T& val) const
+        {
+            val = subobject(key).get<T>();
+        }
+
+        template<typename T>
+        void as_uint(const std::string_view key, T& val) const
         {
             val = subobject(key).get<T>();
         }
