@@ -31,10 +31,11 @@
 #ifndef EXTENSER_HPP
 #define EXTENSER_HPP
 
-#include <cassert>
+#include <array>
+#include <cstddef>
 #include <iterator>
-#include <memory>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
@@ -54,24 +55,29 @@
 #if defined(EXTENSER_ASSERT_NONE)
 #  define EXTENSER_ASSERTION(EXPR) static_cast<void>(0)
 #elif defined(EXTENSER_ASSERT_DEBUG)
+#  include <cassert>
 #  define EXTENSER_ASSERTION(EXPR) assert(EXPR)
 #elif defined(EXTENSER_ASSERT_STDERR)
+#  include <cstdio>
 #  define EXTENSER_ASSERTION(EXPR)                                                             \
     if (!(EXPR))                                                                               \
     std::fprintf(stderr,                                                                       \
         "EXTENSER_ASSERTION: \"%s\" failed!\n  func: %s,\n  file: %s,\n  line: %d\n\n", #EXPR, \
         __FUNCTION__, __FILE__, __LINE__)
 #elif defined(EXTENSER_ASSERT_THROW)
+#  include <stdexcept>
 #  define EXTENSER_ASSERTION(EXPR) \
     if (!(EXPR))                   \
     throw std::runtime_error("EXTENSER_ASSERTION: \"" #EXPR "\" failed!")
 #elif defined(EXTENSER_ASSERT_ABORT)
+#  include <cstdio>
 #  define EXTENSER_ASSERTION(EXPR) \
     if (!(EXPR))                   \
     std::abort()
 #elif defined(EXTENSER_ASSERT_ASSUME)
 #  define EXTENSER_ASSERTION(EXPR) EXTENSER_ASSUME(EXPR)
 #else
+#  include <cassert>
 #  define EXTENSER_ASSERTION(EXPR) assert(EXPR)
 #endif
 
@@ -188,8 +194,10 @@ public:                                                           \
     template<typename T>
     struct decay_str
     {
-        static_assert(!std::is_pointer_v<remove_cvref_t<T>>, "Pointer parameters are not allowed");
-        static_assert(!std::is_array_v<remove_cvref_t<T>>, "C array parameters are not allowed");
+        static_assert(!std::is_pointer_v<remove_cvref_t<T>>,
+            "Pointer parameters are not allowed, please wrap in a span or view");
+        static_assert(!std::is_array_v<remove_cvref_t<T>>,
+            "C-style array parameters are not allowed, please wrap in a span or view");
 
         using type = T;
     };
@@ -212,7 +220,7 @@ public:                                                           \
         using type = const std::string&;
     };
 
-    template<size_t N>
+    template<std::size_t N>
     struct decay_str<const char (&)[N]>
     {
         using type = const std::string&;
@@ -284,7 +292,7 @@ public:                                                           \
     {
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using difference_type = ptrdiff_t;
+        using difference_type = std::ptrdiff_t;
         using value_type = std::remove_cv_t<T>;
         using pointer = T*;
         using reference = T&;
@@ -384,7 +392,7 @@ public:                                                           \
         pointer m_ptr{ nullptr };
     };
 
-    template<typename F, typename... Ts, size_t... Is>
+    template<typename F, typename... Ts, std::size_t... Is>
     constexpr void for_each_tuple(const std::tuple<Ts...>& tuple, F&& func,
         [[maybe_unused]] const std::index_sequence<Is...> iseq)
     {
@@ -417,8 +425,8 @@ class span
 public:
     using element_type = T;
     using value_type = std::remove_cv_t<T>;
-    using size_type = size_t;
-    using difference_type = ptrdiff_t;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
     using pointer = T*;
     using const_pointer = const T*;
     using reference = T&;
@@ -445,18 +453,18 @@ public:
     {
     }
 
-    template<size_t N>
+    template<std::size_t N>
     constexpr span(detail::type_identity_t<element_type> (&arr)[N]) noexcept
         : m_head_ptr(std::data(arr)), m_sz(N)
     {
     }
 
-    template<typename U, size_t N>
+    template<typename U, std::size_t N>
     constexpr span(std::array<U, N>& arr) noexcept : m_head_ptr(std::data(arr)), m_sz(N)
     {
     }
 
-    template<typename U, size_t N>
+    template<typename U, std::size_t N>
     constexpr span(const std::array<U, N>& arr) noexcept : m_head_ptr(std::data(arr)), m_sz(N)
     {
     }
@@ -528,7 +536,7 @@ public:
 
 private:
     pointer m_head_ptr{ nullptr };
-    size_t m_sz{ 0 };
+    size_type m_sz{ 0 };
 };
 
 template<typename T>
@@ -654,7 +662,7 @@ public:
     using serializer_t = std::conditional_t<Deserialize, typename Adapter::deserializer_t,
         typename Adapter::serializer_t>;
 
-    static constexpr size_t max_variant_size = 10;
+    static constexpr std::size_t max_variant_size = 10;
 
     template<typename T>
     void serialize_object(const T& val)
@@ -824,7 +832,7 @@ void serialize(serializer_base<Adapter, true>& ser, T& val)
     ser.as_string("", val);
 }
 
-template<typename Adapter, bool Deserialize, typename T, size_t N>
+template<typename Adapter, bool Deserialize, typename T, std::size_t N>
 void serialize(serializer_base<Adapter, Deserialize>& ser, std::array<T, N>& val)
 {
     span arr_span{ val };

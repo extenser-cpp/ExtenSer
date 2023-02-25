@@ -1,15 +1,19 @@
-#include "bitsery/extenser_bitsery.hpp"
 #include "extenser.hpp"
+
+#include "bitsery/extenser_bitsery.hpp"
 #include "json/extenser_json.hpp"
-#include <cstring>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>
 
 #include <algorithm>
+#include <array>
+#include <memory>
 #include <numeric>
 #include <string>
+#include <utility>
+#include <vector>
 
 const size_t extenser::bitsery_adapter::config::max_container_size = 1'000;
 const size_t extenser::bitsery_adapter::config::max_string_size = 1'000;
