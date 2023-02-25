@@ -291,94 +291,94 @@ public:                                                           \
 
         constexpr span_iterator(pointer ptr) noexcept : m_ptr(ptr) {}
 
-        constexpr reference operator*() const noexcept { return *m_ptr; }
-        constexpr pointer operator->() const noexcept { return m_ptr; }
+        constexpr auto operator*() const noexcept -> reference { return *m_ptr; }
+        constexpr auto operator->() const noexcept -> pointer { return m_ptr; }
 
-        constexpr span_iterator& operator++() noexcept
+        constexpr auto operator++() noexcept -> span_iterator&
         {
             ++m_ptr;
             return *this;
         }
 
-        constexpr span_iterator operator++(int) noexcept
+        constexpr auto operator++(int) noexcept -> span_iterator
         {
             span_iterator tmp{ *this };
             ++*this;
             return tmp;
         }
 
-        constexpr span_iterator& operator--() noexcept
+        constexpr auto operator--() noexcept -> span_iterator&
         {
             --m_ptr;
             return *this;
         }
 
-        constexpr span_iterator operator--(int)
+        constexpr auto operator--(int) -> span_iterator
         {
             span_iterator tmp{ *this };
             --*this;
             return tmp;
         }
 
-        constexpr span_iterator& operator+=(const difference_type offset) noexcept
+        constexpr auto operator+=(const difference_type offset) noexcept -> span_iterator&
         {
             m_ptr += offset;
             return *this;
         }
 
-        friend constexpr span_iterator operator+(
-            const span_iterator& lhs, const difference_type offset) noexcept
+        friend constexpr auto operator+(
+            const span_iterator& lhs, const difference_type offset) noexcept -> span_iterator
         {
             span_iterator tmp{ lhs };
             tmp += offset;
             return tmp;
         }
 
-        friend constexpr span_iterator operator+(
-            const difference_type offset, span_iterator next) noexcept
+        friend constexpr auto operator+(const difference_type offset, span_iterator next) noexcept
+            -> span_iterator
         {
             next += offset;
             return next;
         }
 
-        constexpr span_iterator& operator-=(const difference_type offset) noexcept
+        constexpr auto operator-=(const difference_type offset) noexcept -> span_iterator&
         {
             m_ptr -= offset;
             return *this;
         }
 
-        friend constexpr span_iterator operator-(
-            const span_iterator& lhs, const difference_type offset) noexcept
+        friend constexpr auto operator-(
+            const span_iterator& lhs, const difference_type offset) noexcept -> span_iterator
         {
             span_iterator tmp{ lhs };
             tmp -= offset;
             return tmp;
         }
 
-        friend constexpr difference_type operator-(
-            const span_iterator& lhs, const span_iterator& rhs) noexcept
+        friend constexpr auto operator-(const span_iterator& lhs, const span_iterator& rhs) noexcept
+            -> difference_type
         {
             return lhs.m_ptr - rhs.m_ptr;
         }
 
-        constexpr reference operator[](const difference_type offset) const noexcept
+        constexpr auto operator[](const difference_type offset) const noexcept -> reference
         {
             return *(*this + offset);
         }
 
-        friend constexpr bool operator==(
-            const span_iterator& lhs, const span_iterator& rhs) noexcept
+        friend constexpr auto operator==(
+            const span_iterator& lhs, const span_iterator& rhs) noexcept -> bool
         {
             return lhs.m_ptr == rhs.m_ptr;
         }
 
-        friend constexpr bool operator!=(
-            const span_iterator& lhs, const span_iterator& rhs) noexcept
+        friend constexpr auto operator!=(
+            const span_iterator& lhs, const span_iterator& rhs) noexcept -> bool
         {
             return lhs.m_ptr != rhs.m_ptr;
         }
 
-        constexpr pointer to_address() const noexcept { return m_ptr; }
+        constexpr auto to_address() const noexcept -> pointer { return m_ptr; }
 
     private:
         pointer m_ptr{ nullptr };
@@ -504,13 +504,13 @@ public:
     constexpr auto first(size_type count) const -> span
     {
         EXTENSER_PRECONDITION(count <= m_sz);
-        return { begin(), begin() + count };
+        return { begin(), count };
     }
 
     constexpr auto last(size_type count) const -> span
     {
         EXTENSER_PRECONDITION(count <= m_sz);
-        return { end() - count, end() };
+        return { end() - count, count };
     }
 
     constexpr auto subspan(size_type offset) const -> span
@@ -523,7 +523,7 @@ public:
     {
         EXTENSER_PRECONDITION(offset <= m_sz);
         EXTENSER_PRECONDITION(count <= m_sz - offset);
-        return { begin() + offset, begin() + offset + count };
+        return { begin() + offset, count };
     }
 
 private:
