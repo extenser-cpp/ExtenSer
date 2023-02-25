@@ -145,6 +145,16 @@ public:                                                           \
 #undef EXTENSER_CONJ_TYPE_TRAIT
 #undef EXTENSER_DISJ_TYPE_TRAIT
 
+    template<typename T, typename It>
+    struct constructible_from_iterator :
+        std::bool_constant<std::is_trivially_constructible_v<T,
+            std::remove_reference_t<decltype(*std::declval<It&>())>>>
+    {
+    };
+
+    template<typename T, typename It>
+    inline constexpr bool constructible_from_iterator_v = constructible_from_iterator<T, It>::value;
+
 #if defined(__cpp_lib_remove_cvref)
     using std::remove_cvref;
     using std::remove_cvref_t;
@@ -158,6 +168,21 @@ public:                                                           \
 
     template<typename T>
     using remove_cvref_t = typename remove_cvref<T>::type;
+#endif
+
+#if defined(__cpp_lib_type_identity)
+    using std::type_identity;
+    using std::type_identity_t;
+#else
+    // backport of C++20's type_identity
+    template<typename T>
+    struct type_identity
+    {
+        using type = T;
+    };
+
+    template<typename T>
+    using type_identity_t = typename type_identity<T>::type;
 #endif
 
     template<typename T>
@@ -380,6 +405,12 @@ public:                                                           \
     }
 } //namespace detail
 
+#if defined(__cpp_lib_span)
+using std::as_bytes;
+using std::as_writable_bytes;
+using std::span;
+#else
+// backport of C++20's span
 template<typename T>
 class span
 {
@@ -397,22 +428,26 @@ public:
 
     ~span() noexcept = default;
 
-    template<typename It>
-    explicit constexpr span(It first, size_t size)
-        : m_head_ptr(iterator{ first }.to_address()), m_sz(size)
+    constexpr span() noexcept = default;
+
+    template<typename It,
+        typename = std::enable_if_t<detail::constructible_from_iterator_v<element_type, It>>>
+    constexpr span(It first, size_type count)
+        : m_head_ptr(iterator{ first }.to_address()), m_sz(count)
     {
-        EXTENSER_POSTCONDITION(m_sz != 0);
     }
 
-    template<typename It>
-    explicit constexpr span(It first, It last)
+    template<typename It, typename End,
+        typename = std::enable_if_t<detail::constructible_from_iterator_v<element_type, It>
+            && !std::is_convertible_v<End, size_type>>>
+    constexpr span(It first, End last)
         : m_head_ptr(iterator{ first }.to_address()), m_sz(last - first)
     {
-        EXTENSER_POSTCONDITION(m_sz != 0);
     }
 
     template<size_t N>
-    constexpr span(element_type (&arr)[N]) noexcept : m_head_ptr(std::data(arr)), m_sz(N)
+    constexpr span(detail::type_identity_t<element_type> (&arr)[N]) noexcept
+        : m_head_ptr(std::data(arr)), m_sz(N)
     {
     }
 
@@ -426,43 +461,101 @@ public:
     {
     }
 
+    template<typename U>
+    constexpr span(const span<U>& source) noexcept
+        : m_head_ptr(source.m_head_ptr), m_sz(source.m_sz)
+    {
+    }
+
     constexpr span(const span&) noexcept = default;
     constexpr span(span&&) = delete;
 
-    constexpr span& operator=(const span&) noexcept = default;
-    constexpr span& operator=(span&&) = delete;
+    constexpr auto operator=(const span&) noexcept -> span& = default;
+    constexpr auto operator=(span&&) -> span& = delete;
 
-    constexpr iterator begin() const noexcept { return { m_head_ptr }; }
-    constexpr iterator end() const noexcept { return { m_head_ptr + m_sz }; }
-    constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator{ end() }; }
-    constexpr reverse_iterator rend() const noexcept { return reverse_iterator{ begin() }; }
-    constexpr reference front() const noexcept { return m_head_ptr[0]; }
-    constexpr reference back() const noexcept { return m_head_ptr[m_sz]; }
+    constexpr auto begin() const noexcept -> iterator { return { m_head_ptr }; }
+    constexpr auto end() const noexcept -> iterator { return begin() + m_sz; }
+    constexpr auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{ end() }; }
+    constexpr auto rend() const noexcept -> reverse_iterator { return reverse_iterator{ begin() }; }
 
-    constexpr T& operator[](size_t idx) const
+    constexpr auto front() const -> reference
     {
-        EXTENSER_PRECONDITION(idx < m_sz);
-        return *std::next(m_head_ptr, idx);
+        EXTENSER_PRECONDITION(m_sz != 0);
+        return m_head_ptr[0];
     }
 
-    constexpr T* data() const noexcept { return m_head_ptr; }
-    constexpr size_t size() const noexcept { return m_sz; }
-    constexpr size_t size_bytes() const noexcept { return m_sz * sizeof(T); }
+    constexpr auto back() const -> reference
+    {
+        EXTENSER_PRECONDITION(m_sz != 0);
+        return m_head_ptr[m_sz];
+    }
+
+    constexpr auto operator[](size_type idx) const -> reference
+    {
+        EXTENSER_PRECONDITION(idx < m_sz);
+        return *(begin() + idx);
+    }
+
+    constexpr auto data() const noexcept -> pointer { return m_head_ptr; }
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool { return m_sz == 0; }
+    constexpr auto size() const noexcept -> size_type { return m_sz; }
+    constexpr auto size_bytes() const noexcept -> size_type { return m_sz * sizeof(T); }
+
+    constexpr auto first(size_type count) const -> span
+    {
+        EXTENSER_PRECONDITION(count <= m_sz);
+        return { begin(), begin() + count };
+    }
+
+    constexpr auto last(size_type count) const -> span
+    {
+        EXTENSER_PRECONDITION(count <= m_sz);
+        return { end() - count, end() };
+    }
+
+    constexpr auto subspan(size_type offset) const -> span
+    {
+        EXTENSER_PRECONDITION(offset <= m_sz);
+        return { begin() + m_sz, end() };
+    }
+
+    constexpr auto subspan(size_type offset, size_type count) const -> span
+    {
+        EXTENSER_PRECONDITION(offset <= m_sz);
+        EXTENSER_PRECONDITION(count <= m_sz - offset);
+        return { begin() + offset, begin() + offset + count };
+    }
 
 private:
     pointer m_head_ptr{ nullptr };
     size_t m_sz{ 0 };
 };
 
+template<typename T>
+auto as_bytes(span<T> span) noexcept -> extenser::span<const std::byte>
+{
+    return { reinterpret_cast<const std::byte*>(span.data()), span.size_bytes() };
+}
+
+template<typename T>
+auto as_writable_bytes(span<T> span) noexcept -> extenser::span<std::byte>
+{
+    return { reinterpret_cast<std::byte*>(span.data()), span.size_bytes() };
+}
+
 // Deduction guides
-template<class T, std::size_t N>
+template<typename It, typename End>
+span(It, End) -> span<std::remove_reference_t<decltype(*std::declval<It&>())>>;
+
+template<typename T, std::size_t N>
 span(T (&)[N]) -> span<T>;
 
-template<class T, std::size_t N>
+template<typename T, std::size_t N>
 span(std::array<T, N>&) -> span<T>;
 
-template<class T, std::size_t N>
+template<typename T, std::size_t N>
 span(const std::array<T, N>&) -> span<const T>;
+#endif
 
 static_assert(detail::is_container_v<span<int>>, "span is not container");
 
