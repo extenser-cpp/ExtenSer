@@ -119,8 +119,10 @@ public:                                                           \
     EXTENSER_CHECKER(has_set_key, typename T::value_type{}, typename T::key_type);
     EXTENSER_CHECKER(
         has_map_iterator, std::declval<typename T::iterator>()->second, typename T::mapped_type);
-    EXTENSER_CHECKER(
-        has_map_at, std::declval<T>().at(typename T::key_type{}), typename T::mapped_type);
+
+    EXTENSER_CHECKER(has_map_at, std::declval<T>().at(typename T::key_type{}),
+        std::add_lvalue_reference_t<typename T::mapped_type>);
+
 #undef EXTENSER_CHECKER
 
 #define EXTENSER_TYPE_TRAIT(NAME, COND)    \

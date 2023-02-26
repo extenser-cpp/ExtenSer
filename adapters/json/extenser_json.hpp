@@ -145,6 +145,7 @@ namespace detail_json
 
             for (const auto& subval : val)
             {
+                // BUG: Need to be able to use objects, not just primatives
                 arr.push_back(subval);
             }
 
@@ -158,7 +159,7 @@ namespace detail_json
 
             for (const auto& [k, v] : val)
             {
-                const auto key_str = nlohmann::json{ k }.dump();
+                const auto key_str = nlohmann::json{ k }.front().dump();
                 obj[key_str] = v;
             }
 
@@ -210,6 +211,7 @@ namespace detail_json
         {
             if (val.has_value())
             {
+                // BUG: Need to be able to use objects, not just primatives
                 subobject(key) = val.value();
             }
             else
