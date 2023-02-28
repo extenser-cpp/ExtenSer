@@ -33,6 +33,10 @@
 
 #include "extenser.hpp"
 
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+#  include <magic_enum.hpp>
+#endif
+
 #include <nlohmann/json.hpp>
 
 #include <array>
@@ -98,37 +102,33 @@ namespace detail_json
         template<typename T>
         void as_int(const std::string_view key, const T& val)
         {
-            static_assert(std::is_signed_v<T> || !std::is_integral_v<T>,
-                "only signed integers are supported");
-            static_assert(sizeof(T) <= sizeof(int64_t) || !std::is_integral_v<T>,
-                "maximum 64-bit integers supported");
+            static_assert(sizeof(T) <= sizeof(int64_t), "maximum 64-bit integers supported");
+            static_assert(
+                std::is_integral_v<T> && std::is_signed_v<T>, "only signed integers are supported");
 
-            if constexpr (std::is_integral_v<T>)
-            {
-                subobject(key) = val;
-            }
-            else
-            {
-                subobject(key) = static_cast<int64_t>(val);
-            }
+            subobject(key) = val;
         }
 
         template<typename T>
         void as_uint(const std::string_view key, const T& val)
         {
-            static_assert(std::is_unsigned_v<T> || !std::is_integral_v<T>,
+            static_assert(sizeof(T) <= sizeof(int64_t), "maximum 64-bit integers supported");
+            static_assert(std::is_integral_v<T> && std::is_unsigned_v<T>,
                 "only unsigned integers are supported");
-            static_assert(sizeof(T) <= sizeof(int64_t) || !std::is_integral_v<T>,
-                "maximum 64-bit integers supported");
 
-            if constexpr (std::is_integral_v<T>)
-            {
-                subobject(key) = val;
-            }
-            else
-            {
-                subobject(key) = static_cast<uint64_t>(val);
-            }
+            subobject(key) = val;
+        }
+
+        template<typename T>
+        void as_enum(const std::string_view key, const T& val)
+        {
+            static_assert(std::is_enum_v<T>, "T must be an enum type");
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+            subobject(key) = magic_enum::enum_name<T>(val);
+#else
+            subobject(key) = static_cast<std::underlying_type_t<T>>(val);
+#endif
         }
 
         template<typename T>
@@ -158,8 +158,11 @@ namespace detail_json
 
             for (const auto& [k, v] : val)
             {
-                const auto key_str = nlohmann::json{ k }.front().dump();
-                obj[key_str] = v;
+                nlohmann::json key_obj{};
+                push_arg(k, key_obj);
+                const auto key_str = key_obj.get<std::string>();
+                auto& val_obj = obj[key_str];
+                push_arg(v, val_obj);
             }
 
             subobject(key) = std::move(obj);
@@ -172,14 +175,16 @@ namespace detail_json
 
             for (const auto& [k, v] : val)
             {
-                const auto key_str = nlohmann::json{ k }.dump();
+                nlohmann::json key_obj{};
+                push_arg(k, key_obj);
+                const auto key_str = key_obj.get<std::string>();
 
                 if (obj.find(key_str) == end(obj))
                 {
                     obj[key_str] = nlohmann::json::array();
                 }
 
-                obj[key_str].push_back(v);
+                push_args(v, obj[key_str]);
             }
 
             subobject(key) = std::move(obj);
@@ -189,8 +194,12 @@ namespace detail_json
         void as_tuple(const std::string_view key, const std::pair<T1, T2>& val)
         {
             auto obj = nlohmann::json::object();
-            obj["first"] = val.first;
-            obj["second"] = val.second;
+            auto& obj1 = obj["first"];
+            auto& obj2 = obj["second"];
+
+            push_arg(val.first, obj1);
+            push_arg(val.second, obj2);
+
             subobject(key) = std::move(obj);
         }
 
@@ -223,9 +232,9 @@ namespace detail_json
         void as_variant(const std::string_view key, const std::variant<Args...>& val)
         {
             auto& new_arg = subobject(key);
-
             new_arg["v_idx"] = val.index();
             auto& var_val = new_arg["v_val"];
+
             std::visit([&var_val](auto&& l_val)
                 { push_arg(std::forward<decltype(l_val)>(l_val), var_val); },
                 val);
@@ -297,6 +306,18 @@ namespace detail_json
         }
 
         template<typename T>
+        void as_enum(const std::string_view key, T& val) const
+        {
+            static_assert(std::is_enum_v<T>, "T must be an enum type");
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+            val = magic_enum::enum_cast<T>(subobject(key).get<std::string>());
+#else
+            val = static_cast<T>(subobject(key).get<std::underlying_type_t<T>>());
+#endif
+        }
+
+        template<typename T>
         void as_string(const std::string_view key, T& val) const
         {
             val = subobject(key).get<std::string>();
@@ -306,7 +327,31 @@ namespace detail_json
         void as_array(const std::string_view key, T& val) const
         {
             const auto& arr = subobject(key);
-            val = T{ cbegin(arr), cend(arr) };
+
+            if constexpr (std::is_default_constructible_v<typename T::value_type>)
+            {
+                val.resize(arr.size());
+                std::transform(
+                    arr.cbegin(), arr.cend(), std::begin(val), parse_arg<typename T::value_type>);
+            }
+            else
+            {
+                // TODO: Is there way to avoid extra copy (inserter perhaps)?
+                std::vector<typename T::value_type> buf;
+                buf.reserve(arr.size());
+                std::transform(arr.cbegin(), arr.cend(), std::back_inserter(buf),
+                    parse_arg<typename T::value_type>);
+
+                val = T{ buf.begin(), buf.end() };
+            }
+        }
+
+        template<typename T, size_t N>
+        void as_array(const std::string_view key, std::array<T, N>& val) const
+        {
+            const auto& arr = subobject(key);
+            std::transform(
+                arr.cbegin(), arr.cend(), val.begin(), parse_arg<typename T::value_type>);
         }
 
         template<typename T>
@@ -321,7 +366,8 @@ namespace detail_json
 
             if constexpr (!std::is_const_v<T>)
             {
-                std::copy(cbegin(arr), cend(arr), std::begin(val));
+                std::transform(
+                    arr.cbegin(), arr.cend(), val.begin(), parse_arg<typename T::value_type>);
             }
         }
 
@@ -334,8 +380,8 @@ namespace detail_json
 
             for (const auto& [k, v] : obj.items())
             {
-                val.insert(
-                    { nlohmann::json::parse(k).front().template get<typename T::key_type>(), v });
+                val.insert({ parse_arg<typename T::key_type>(nlohmann::json::parse(k).front()),
+                    parse_arg<typename T::value_type>(v) });
             }
         }
 
@@ -348,11 +394,12 @@ namespace detail_json
 
             for (const auto& [k, v] : obj.items())
             {
+                const auto parsed_key =
+                    parse_arg<typename T::key_type>(nlohmann::json::parse(k).front());
+
                 for (const auto& subval : v)
                 {
-                    val.insert(
-                        { nlohmann::json::parse(k).front().template get<typename T::key_type>(),
-                            subval });
+                    val.insert({ parsed_key, parse_arg<typename T::value_type>(subval) });
                 }
             }
         }
@@ -361,7 +408,7 @@ namespace detail_json
         void as_tuple(const std::string_view key, std::pair<T1, T2>& val) const
         {
             const auto& obj = subobject(key);
-            val = { obj.at("first"), obj.at("second") };
+            val = { parse_arg<T1>(obj.at("first")), parse_arg<T2>(obj.at("second")) };
         }
 
         template<typename... Args>
@@ -381,7 +428,7 @@ namespace detail_json
         {
             const auto& obj = subobject(key);
             val = obj.is_null() ? std::optional<T>{ std::nullopt }
-                                : std::optional<T>{ std::in_place, obj.template get<T>() };
+                                : std::optional<T>{ std::in_place, parse_arg<T>(obj) };
         }
 
         template<typename... Args>

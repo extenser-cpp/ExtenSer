@@ -31,77 +31,93 @@ cmake_minimum_required(VERSION 3.12)
 
 if (CMAKE_GENERATOR MATCHES "Ninja")
     file(
-        WRITE "${CMAKE_BINARY_DIR}/GNUMakeRulesOverwrite.cmake" 
+            WRITE "${CMAKE_BINARY_DIR}/GNUMakeRulesOverwrite.cmake"
             "STRING(REPLACE \"-MD\" \"-MMD\" CMAKE_DEPFILE_FLAGS_C \"\${CMAKE_DEPFILE_FLAGS_C}\")\n"
             "STRING(REPLACE \"-MD\" \"-MMD\" CMAKE_DEPFILE_FLAGS_CXX \"\${CMAKE_DEPFILE_FLAGS_CXX}\")\n"
     )
     set(CMAKE_USER_MAKE_RULES_OVERRIDE "${CMAKE_BINARY_DIR}/GNUMakeRulesOverwrite.cmake" CACHE INTERNAL "")
-endif()
+endif ()
 
 project(
-    "ExtenSer"
-    VERSION 0.1.0
-    DESCRIPTION "Extensible, generic serialization library for C++"
-    LANGUAGES CXX)
+        "ExtenSer"
+        VERSION 0.1.0
+        DESCRIPTION "Extensible, generic serialization library for C++"
+        LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BUILD_TESTING "Build the test tree" ON)
+option(USE_MAGIC_ENUM "Build w/ magic_enum static reflection support for enum serialization" OFF)
 
 # ==== Target(s) ====
 
 add_library(extenser INTERFACE include/extenser.hpp)
 add_library(ExtenSer::extenser ALIAS extenser)
 
+if ((MSVC) AND (MSVC_VERSION GREATER_EQUAL 1914))
+    target_compile_options(extenser INTERFACE "/Zc:__cplusplus")
+endif ()
+
 include(GNUInstallDirs)
 target_include_directories(
-    extenser INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+        extenser INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 include(FetchContent)
 FetchContent_Declare(nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG bc889afb4c5bf1c0d8ee29ef35eaaf4c8bef8a5d
-    )
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG bc889afb4c5bf1c0d8ee29ef35eaaf4c8bef8a5d
+        )
 FetchContent_MakeAvailable(nlohmann_json)
 
 add_library(extenser-json INTERFACE adapters/json/extenser_json.hpp)
 target_link_libraries(extenser-json INTERFACE extenser nlohmann_json::nlohmann_json)
+
+if (USE_MAGIC_ENUM)
+    FetchContent_Declare(magic_enum
+            GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+            GIT_TAG e1a68e9dd3d2e9180b04c8aeacd4975db745e6b8
+            )
+    FetchContent_MakeAvailable(magic_enum)
+    target_link_libraries(extenser-json INTERFACE magic_enum::magic_enum)
+    target_compile_definitions(extenser-json INTERFACE EXTENSER_USE_MAGIC_ENUM)
+endif ()
+
 target_include_directories(extenser-json INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/adapters>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 FetchContent_Declare(bitsery
-    GIT_REPOSITORY https://github.com/fraillt/bitsery.git
-    GIT_TAG d1a47e06e2104b195a19c73b61f1d5c1dceaa228
-    )
+        GIT_REPOSITORY https://github.com/fraillt/bitsery.git
+        GIT_TAG d1a47e06e2104b195a19c73b61f1d5c1dceaa228
+        )
 FetchContent_MakeAvailable(bitsery)
 
 add_library(extenser-bitsery INTERFACE adapters/bitsery/extenser_bitsery.hpp)
 target_link_libraries(extenser-bitsery INTERFACE extenser Bitsery::bitsery)
 target_include_directories(extenser-bitsery INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/adapters>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 # ==== Target Installation ====
 
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/ExtenSerConfigVersion.cmake
-    COMPATIBILITY SameMajorVersion)
+        ${CMAKE_CURRENT_BINARY_DIR}/ExtenSerConfigVersion.cmake
+        COMPATIBILITY SameMajorVersion)
 
 install(
-    TARGETS extenser
-    EXPORT extenser-targets
-    INCLUDES
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+        TARGETS extenser
+        EXPORT extenser-targets
+        INCLUDES
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(
-    EXPORT extenser-targets
-    FILE "ExtenSerConfig.cmake"
-    NAMESPACE ExtenSer::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
+        EXPORT extenser-targets
+        FILE "ExtenSerConfig.cmake"
+        NAMESPACE ExtenSer::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ExtenSerConfigVersion.cmake
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
 
 if (BUILD_TESTING)
-  add_subdirectory(tests)
+    add_subdirectory(tests)
 endif ()
