@@ -152,7 +152,6 @@ TEST_SUITE("json::serializer")
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_bool("", true));
-
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_boolean());
         REQUIRE(static_cast<bool>(obj));
@@ -161,29 +160,24 @@ TEST_SUITE("json::serializer")
         ser.emplace();
 
         CHECK_NOTHROW(ser->as_bool("test_val", false));
-
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_object());
-        REQUIRE(obj.is_structured());
         REQUIRE(obj.contains("test_val"));
 
-        const auto& obj_val = obj.at("test_val");
+        const auto& sub_obj = obj.at("test_val");
 
-        REQUIRE_FALSE(static_cast<bool>(obj_val));
+        REQUIRE_FALSE(static_cast<bool>(sub_obj));
 
         CHECK_NOTHROW(ser->as_bool("test_val", 22));
-
-        REQUIRE(static_cast<bool>(obj_val));
+        REQUIRE(static_cast<bool>(sub_obj));
 
         CHECK_NOTHROW(ser->as_bool("test_val", nullptr));
-
-        REQUIRE_FALSE(static_cast<bool>(obj_val));
+        REQUIRE_FALSE(static_cast<bool>(sub_obj));
     }
 
     TEST_CASE("as_float")
     {
         static constexpr double test_epsilon{ 0.0001 };
-
         static constexpr float test_val1{ std::numeric_limits<float>::min() };
         static constexpr double test_val2{ NAN };
         static constexpr double test_val3{ M_PI };
@@ -195,7 +189,6 @@ TEST_SUITE("json::serializer")
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_float("", test_val1));
-
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_number());
         REQUIRE(obj.is_number_float());
@@ -205,26 +198,22 @@ TEST_SUITE("json::serializer")
         ser.emplace();
 
         CHECK_NOTHROW(ser->as_float("test_val", test_val2));
-
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_object());
-        REQUIRE(obj.is_structured());
         REQUIRE(obj.contains("test_val"));
 
-        const auto& obj_val = obj.at("test_val");
+        const auto& sub_obj = obj.at("test_val");
 
-        REQUIRE(obj_val.is_number_float());
-        REQUIRE(doctest::IsNaN(obj_val.get<double>()));
+        REQUIRE(sub_obj.is_number_float());
+        REQUIRE(doctest::IsNaN(sub_obj.get<double>()));
 
         CHECK_NOTHROW(ser->as_float("test_val", test_val3));
-
-        REQUIRE(obj_val.is_number_float());
-        REQUIRE_EQ(obj_val.get<long double>(), doctest::Approx(test_val3).epsilon(test_epsilon));
+        REQUIRE(sub_obj.is_number_float());
+        REQUIRE_EQ(sub_obj.get<long double>(), doctest::Approx(test_val3).epsilon(test_epsilon));
 
         CHECK_NOTHROW(ser->as_float("test_val", test_val4_i));
-
-        REQUIRE(obj_val.is_number_float());
-        REQUIRE_EQ(obj_val.get<double>(), doctest::Approx(test_val4).epsilon(test_epsilon));
+        REQUIRE(sub_obj.is_number_float());
+        REQUIRE_EQ(sub_obj.get<double>(), doctest::Approx(test_val4).epsilon(test_epsilon));
     }
 
     TEST_CASE("as_int")
@@ -240,7 +229,6 @@ TEST_SUITE("json::serializer")
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_int("", test_val1));
-
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_number());
         REQUIRE(obj.is_number_integer());
@@ -251,29 +239,25 @@ TEST_SUITE("json::serializer")
         ser.emplace();
 
         CHECK_NOTHROW(ser->as_int("test_val", test_val2));
-
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_object());
-        REQUIRE(obj.is_structured());
         REQUIRE(obj.contains("test_val"));
 
-        const auto& obj_val = obj.at("test_val");
+        const auto& sub_obj = obj.at("test_val");
 
-        REQUIRE(obj_val.is_number_integer());
-        REQUIRE_FALSE(obj_val.is_number_unsigned());
-        REQUIRE_EQ(obj_val.get<intmax_t>(), test_val2);
+        REQUIRE(sub_obj.is_number_integer());
+        REQUIRE_FALSE(sub_obj.is_number_unsigned());
+        REQUIRE_EQ(sub_obj.get<intmax_t>(), test_val2);
 
         CHECK_NOTHROW(ser->as_int("test_val", test_val3));
-
-        REQUIRE(obj_val.is_number_integer());
-        REQUIRE_FALSE(obj_val.is_number_unsigned());
-        REQUIRE_EQ(obj_val.get<int8_t>(), test_val3);
+        REQUIRE(sub_obj.is_number_integer());
+        REQUIRE_FALSE(sub_obj.is_number_unsigned());
+        REQUIRE_EQ(sub_obj.get<int8_t>(), test_val3);
 
         CHECK_NOTHROW(ser->as_int("test_val", test_val4_f));
-
-        REQUIRE(obj_val.is_number_integer());
-        REQUIRE_FALSE(obj_val.is_number_unsigned());
-        REQUIRE_EQ(obj_val.get<int16_t>(), test_val4);
+        REQUIRE(sub_obj.is_number_integer());
+        REQUIRE_FALSE(sub_obj.is_number_unsigned());
+        REQUIRE_EQ(sub_obj.get<int16_t>(), test_val4);
     }
 
     TEST_CASE("as_uint")
@@ -289,7 +273,6 @@ TEST_SUITE("json::serializer")
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_uint("", test_val1));
-
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_number());
         REQUIRE(obj.is_number_integer());
@@ -300,36 +283,32 @@ TEST_SUITE("json::serializer")
         ser.emplace();
 
         CHECK_NOTHROW(ser->as_uint("test_val", test_val2));
-
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_object());
-        REQUIRE(obj.is_structured());
         REQUIRE(obj.contains("test_val"));
 
-        const auto& obj_val = obj.at("test_val");
+        const auto& sub_obj = obj.at("test_val");
 
-        REQUIRE(obj_val.is_number_integer());
-        REQUIRE(obj_val.is_number_unsigned());
-        REQUIRE_EQ(obj_val.get<uintmax_t>(), test_val2);
+        REQUIRE(sub_obj.is_number_integer());
+        REQUIRE(sub_obj.is_number_unsigned());
+        REQUIRE_EQ(sub_obj.get<uintmax_t>(), test_val2);
 
         CHECK_NOTHROW(ser->as_uint("test_val", test_val3));
-
-        REQUIRE(obj_val.is_number_integer());
-        REQUIRE(obj_val.is_number_unsigned());
-        REQUIRE_EQ(obj_val.get<uint8_t>(), test_val3);
+        REQUIRE(sub_obj.is_number_integer());
+        REQUIRE(sub_obj.is_number_unsigned());
+        REQUIRE_EQ(sub_obj.get<uint8_t>(), test_val3);
 
         CHECK_NOTHROW(ser->as_uint("test_val", test_val4_f));
-
-        REQUIRE(obj_val.is_number_integer());
-        REQUIRE(obj_val.is_number_unsigned());
-        REQUIRE_EQ(obj_val.get<uint16_t>(), test_val4);
+        REQUIRE(sub_obj.is_number_integer());
+        REQUIRE(sub_obj.is_number_unsigned());
+        REQUIRE_EQ(sub_obj.get<uint16_t>(), test_val4);
     }
 
     TEST_CASE("as_string")
     {
         static constexpr std::string_view test_val1{ "Hello, world!" };
         static constexpr const char* test_val2{ "Mary had a little lamb" };
-        static constexpr char test_val3[]{ "Whose fleece was white as snow" };
+        static constexpr char test_val3[]{ "Whose fleece was white as snow" }; //NOLINT
         static constexpr std::array<char, 6> test_val4{ 'Q', 'W', 'E', 'R', 'T', 'Y' };
         const std::string test_val5{ "Goodbye, cruel world!" };
 
@@ -338,7 +317,6 @@ TEST_SUITE("json::serializer")
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_string("", test_val1));
-
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_string());
         REQUIRE_EQ(obj.get<std::string>(), test_val1);
@@ -347,31 +325,26 @@ TEST_SUITE("json::serializer")
         ser.emplace();
 
         CHECK_NOTHROW(ser->as_string("test_val", test_val2));
-
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_object());
-        REQUIRE(obj.is_structured());
         REQUIRE(obj.contains("test_val"));
 
-        const auto& obj_val = obj.at("test_val");
+        const auto& sub_obj = obj.at("test_val");
 
-        REQUIRE(obj_val.is_string());
-        REQUIRE_EQ(obj_val.get<std::string>(), test_val2);
+        REQUIRE(sub_obj.is_string());
+        REQUIRE_EQ(sub_obj.get<std::string>(), test_val2);
 
         CHECK_NOTHROW(ser->as_string("test_val", test_val3));
-
-        REQUIRE(obj_val.is_string());
-        REQUIRE_EQ(obj_val.get<std::string>(), test_val3);
+        REQUIRE(sub_obj.is_string());
+        REQUIRE_EQ(sub_obj.get<std::string>(), test_val3);
 
         CHECK_NOTHROW(ser->as_string("test_val", test_val4.data()));
-
-        REQUIRE(obj_val.is_string());
-        REQUIRE_EQ(obj_val.get<std::string>(), test_val4.data());
+        REQUIRE(sub_obj.is_string());
+        REQUIRE_EQ(sub_obj.get<std::string>(), test_val4.data());
 
         CHECK_NOTHROW(ser->as_string("test_val", test_val5));
-
-        REQUIRE(obj_val.is_string());
-        REQUIRE_EQ(obj_val.get<std::string>(), test_val5);
+        REQUIRE(sub_obj.is_string());
+        REQUIRE_EQ(sub_obj.get<std::string>(), test_val5);
     }
 
     TEST_CASE("as_array")
@@ -390,7 +363,6 @@ TEST_SUITE("json::serializer")
             const auto& obj = ser.value().object();
 
             CHECK_NOTHROW(ser->as_array("", test_val1));
-
             REQUIRE_FALSE(obj.empty());
             REQUIRE(obj.is_array());
             REQUIRE_EQ(obj.size(), test_val1.size());
@@ -402,39 +374,34 @@ TEST_SUITE("json::serializer")
             ser.emplace();
 
             CHECK_NOTHROW(ser->as_array("test_val", test_val2));
-
             REQUIRE_FALSE(obj.empty());
             REQUIRE(obj.is_object());
-            REQUIRE(obj.is_structured());
             REQUIRE(obj.contains("test_val"));
 
-            const auto& obj_val = obj.at("test_val");
+            const auto& sub_obj = obj.at("test_val");
 
-            REQUIRE(obj_val.is_array());
-            REQUIRE_EQ(obj_val.size(), test_val2.size());
-            REQUIRE(obj_val[0].is_number());
-            REQUIRE(std::equal(obj_val.begin(), obj_val.end(), test_val2.begin()));
+            REQUIRE(sub_obj.is_array());
+            REQUIRE_EQ(sub_obj.size(), test_val2.size());
+            REQUIRE(sub_obj[0].is_number());
+            REQUIRE(std::equal(sub_obj.begin(), sub_obj.end(), test_val2.begin()));
 
             CHECK_NOTHROW(ser->as_array("test_val", test_val3));
-
-            REQUIRE(obj_val.is_array());
-            REQUIRE_EQ(obj_val.size(), test_val3.size());
-            REQUIRE(obj_val[0].is_string());
-            REQUIRE(std::equal(obj_val.begin(), obj_val.end(), test_val3.begin()));
+            REQUIRE(sub_obj.is_array());
+            REQUIRE_EQ(sub_obj.size(), test_val3.size());
+            REQUIRE(sub_obj[0].is_string());
+            REQUIRE(std::equal(sub_obj.begin(), sub_obj.end(), test_val3.begin()));
 
             CHECK_NOTHROW(ser->as_array("test_val", test_val4));
-
-            REQUIRE(obj_val.is_array());
-            REQUIRE_EQ(obj_val.size(), test_val4.size());
-            REQUIRE(obj_val[0].is_number());
-            REQUIRE(std::equal(obj_val.begin(), obj_val.end(), test_val4.begin()));
+            REQUIRE(sub_obj.is_array());
+            REQUIRE_EQ(sub_obj.size(), test_val4.size());
+            REQUIRE(sub_obj[0].is_number());
+            REQUIRE(std::equal(sub_obj.begin(), sub_obj.end(), test_val4.begin()));
 
             CHECK_NOTHROW(ser->as_array("test_val", test_val5));
-
-            REQUIRE(obj_val.is_array());
-            REQUIRE_EQ(obj_val.size(), test_val5.size());
-            REQUIRE(obj_val[0].is_boolean());
-            REQUIRE(std::equal(obj_val.begin(), obj_val.end(), test_val5.begin()));
+            REQUIRE(sub_obj.is_array());
+            REQUIRE_EQ(sub_obj.size(), test_val5.size());
+            REQUIRE(sub_obj[0].is_boolean());
+            REQUIRE(std::equal(sub_obj.begin(), sub_obj.end(), test_val5.begin()));
         }
 
         SUBCASE("array of arrays")
@@ -450,7 +417,6 @@ TEST_SUITE("json::serializer")
             const auto& obj = ser.value().object();
 
             CHECK_NOTHROW(ser->as_array("", test_val1));
-
             REQUIRE_FALSE(obj.empty());
             REQUIRE(obj.is_array());
             REQUIRE_EQ(obj.size(), test_val1.size());
@@ -463,29 +429,57 @@ TEST_SUITE("json::serializer")
             ser.emplace();
 
             CHECK_NOTHROW(ser->as_array("test_val", test_val2));
-
             REQUIRE_FALSE(obj.empty());
             REQUIRE(obj.is_object());
-            REQUIRE(obj.is_structured());
             REQUIRE(obj.contains("test_val"));
 
-            const auto& obj_val = obj.at("test_val");
+            const auto& sub_obj = obj.at("test_val");
 
-            REQUIRE(obj_val.is_array());
-            REQUIRE_EQ(obj_val.size(), test_val2.size());
-            REQUIRE(obj_val[0].is_array());
-            REQUIRE_EQ(obj_val[0].size(), test_val2[0].size());
-            REQUIRE(obj_val[0][0].is_array());
-            REQUIRE_EQ(obj_val[0][0].size(), test_val2[0][0].size());
-            REQUIRE(obj_val[0][0][0].is_number_float());
-            REQUIRE(std::equal(obj_val.begin(), obj_val.end(), test_val2.begin()));
+            REQUIRE(sub_obj.is_array());
+            REQUIRE_EQ(sub_obj.size(), test_val2.size());
+            REQUIRE(sub_obj[0].is_array());
+            REQUIRE_EQ(sub_obj[0].size(), test_val2[0].size());
+            REQUIRE(sub_obj[0][0].is_array());
+            REQUIRE_EQ(sub_obj[0][0].size(), test_val2[0][0].size());
+            REQUIRE(sub_obj[0][0][0].is_number_float());
+            REQUIRE(std::equal(sub_obj.begin(), sub_obj.end(), test_val2.begin()));
         }
 
         SUBCASE("array of maps") {}
         SUBCASE("array of tuples") {}
         SUBCASE("array of optionals") {}
         SUBCASE("array of variants") {}
-        SUBCASE("array of objects") {}
+        SUBCASE("array of objects")
+        {
+            const Person person1{ 10, "Timmy Johnson", {}, { Pet{ "Sparky", Pet::Species::Dog } },
+                { { Fruit::Banana, 2 }, { Fruit::Apple, 2 } } };
+
+            const Person person2{ 22, "Franky Johnson", { person1 },
+                { Pet{ "Tommy", Pet::Species::Turtle } },
+                { { Fruit::Apple, 1 }, { Fruit::Mango, 2 } } };
+
+            const Person person3{ 44, "Bertha Jenkins", {}, {}, { { Fruit::Kiwi, 12 } } };
+
+            const std::vector<Person> test_val1{ person1, person2, person3 };
+
+            std::optional<serializer> ser{};
+            ser.emplace();
+            const auto& obj = ser.value().object();
+
+            CHECK_NOTHROW(ser->as_array("", test_val1));
+            REQUIRE_FALSE(obj.empty());
+            REQUIRE(obj.is_array());
+            REQUIRE_EQ(obj.size(), test_val1.size());
+
+            for (int i = 0; i < test_val1.size(); ++i)
+            {
+                REQUIRE_FALSE(obj[i].empty());
+                REQUIRE(obj[i].is_object());
+                REQUIRE(obj[i].contains("age"));
+                REQUIRE(obj[i]["age"].is_number_integer());
+                REQUIRE_EQ(obj[i]["age"].get<int>(), test_val1[i].age);
+            }
+        }
     }
 
     TEST_CASE("as_map") {}
@@ -496,29 +490,21 @@ TEST_SUITE("json::serializer")
 
     TEST_CASE("as_object")
     {
-        Person test_val1{ 22, "Franky Johnson", {}, { Pet{ "Tommy", Pet::Species::Turtle } }, {} };
-        Person test_val2{ 44, "Bertha Jenkins", {}, {}, {} };
-        Person test_val3{ 10, "Timmy Radatz", {}, { Pet{ "Sparky", Pet::Species::Dog } }, {} };
+        const Person test_val1_friend{ 10, "Timmy Johnson", {},
+            { Pet{ "Sparky", Pet::Species::Dog } }, { { Fruit::Banana, 2 }, { Fruit::Apple, 2 } } };
 
-        test_val1.friends.push_back(test_val3);
-        test_val3.friends.push_back(test_val1);
+        const Person test_val1{ 22, "Franky Johnson", { test_val1_friend },
+            { Pet{ "Tommy", Pet::Species::Turtle } },
+            { { Fruit::Apple, 1 }, { Fruit::Mango, 2 } } };
 
-        test_val1.fruit_count[Fruit::Apple] = 1;
-        test_val1.fruit_count[Fruit::Mango] = 2;
-
-        test_val2.fruit_count[Fruit::Kiwi] = 12;
-
-        test_val3.fruit_count[Fruit::Banana] = 2;
-        test_val3.fruit_count[Fruit::Apple] = 2;
+        const Person test_val2{ 44, "Bertha Jenkins", {}, {}, { { Fruit::Kiwi, 12 } } };
 
         std::optional<serializer> ser{};
         ser.emplace();
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_object("", test_val1));
-
         REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_structured());
         REQUIRE(obj.is_object());
 
         REQUIRE(obj.contains("age"));
@@ -530,13 +516,11 @@ TEST_SUITE("json::serializer")
         REQUIRE(obj["name"].is_string());
         REQUIRE_EQ(obj["name"].get<std::string>(), test_val1.name);
 
-        // TODO(Jackson): Fix bug w/ `as_array()`
         REQUIRE(obj.contains("friends"));
         REQUIRE(obj["friends"].is_array());
         REQUIRE_EQ(obj["friends"].size(), test_val1.friends.size());
         REQUIRE_EQ(obj["friends"][0]["age"], test_val1.friends[0].age);
 
-        // TODO(Jackson): Fix bug w/ `as_optional()`
         REQUIRE(obj.contains("pet"));
         REQUIRE(obj["pet"].is_object());
         REQUIRE(obj["pet"].contains("name"));
@@ -550,13 +534,46 @@ TEST_SUITE("json::serializer")
         REQUIRE(obj["fruit_count"].is_object());
         REQUIRE(obj["fruit_count"].contains("0"));
         REQUIRE(obj["fruit_count"]["0"].is_number_integer());
-        REQUIRE_EQ(obj["fruit_count"]["0"], test_val1.fruit_count[Fruit::Apple]);
-        REQUIRE(obj["fruit_count"].contains("0"));
+        REQUIRE_EQ(obj["fruit_count"]["0"], test_val1.fruit_count.at(Fruit::Apple));
+        REQUIRE(obj["fruit_count"].contains("4"));
         REQUIRE(obj["fruit_count"]["4"].is_number_integer());
-        REQUIRE_EQ(obj["fruit_count"]["4"], test_val1.fruit_count[Fruit::Mango]);
+        REQUIRE_EQ(obj["fruit_count"]["4"], test_val1.fruit_count.at(Fruit::Mango));
 
-        //ser.reset();
-        //ser.emplace();
+        ser.reset();
+        ser.emplace();
+
+        CHECK_NOTHROW(ser->as_object("test_val", test_val2));
+        REQUIRE_FALSE(obj.empty());
+        REQUIRE(obj.is_object());
+        REQUIRE(obj.contains("test_val"));
+
+        const auto& sub_obj = obj.at("test_val");
+
+        REQUIRE_FALSE(sub_obj.empty());
+        REQUIRE(sub_obj.is_object());
+
+        REQUIRE(sub_obj.contains("age"));
+        REQUIRE(sub_obj["age"].is_number_integer());
+        REQUIRE_FALSE(sub_obj["age"].is_number_unsigned());
+        REQUIRE_EQ(sub_obj["age"].get<int>(), test_val2.age);
+
+        REQUIRE(sub_obj.contains("name"));
+        REQUIRE(sub_obj["name"].is_string());
+        REQUIRE_EQ(sub_obj["name"].get<std::string>(), test_val2.name);
+
+        REQUIRE(sub_obj.contains("friends"));
+        REQUIRE(sub_obj["friends"].is_array());
+        REQUIRE(sub_obj["friends"].empty());
+
+        REQUIRE(sub_obj.contains("pet"));
+        REQUIRE(sub_obj["pet"].is_null());
+
+        REQUIRE(sub_obj.contains("fruit_count"));
+        REQUIRE(sub_obj["fruit_count"].is_object());
+        REQUIRE_FALSE(sub_obj["fruit_count"].contains("0"));
+        REQUIRE(sub_obj["fruit_count"].contains("3"));
+        REQUIRE(sub_obj["fruit_count"]["3"].is_number_integer());
+        REQUIRE_EQ(sub_obj["fruit_count"]["3"], test_val2.fruit_count.at(Fruit::Kiwi));
     }
 }
 
