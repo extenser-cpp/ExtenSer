@@ -145,8 +145,7 @@ namespace detail_json
 
             for (const auto& subval : val)
             {
-                // BUG: Need to be able to use objects, not just primatives
-                arr.push_back(subval);
+                push_args(subval, arr);
             }
 
             subobject(key) = std::move(arr);
@@ -211,8 +210,8 @@ namespace detail_json
         {
             if (val.has_value())
             {
-                // BUG: Need to be able to use objects, not just primatives
-                subobject(key) = val.value();
+                auto& sub_obj = subobject(key);
+                push_arg(*val, sub_obj);
             }
             else
             {

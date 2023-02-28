@@ -709,7 +709,7 @@ public:
     template<typename T>
     EXTENSER_INLINE void as_int(const std::string_view key, T& val)
     {
-        static_assert(std::is_signed_v<T> && (std::is_integral_v<T> || std::is_enum_v<T>),
+        static_assert((std::is_signed_v<T> && std::is_integral_v<T>) || std::is_enum_v<T>,
             "T must be a signed integral type");
         (static_cast<serializer_t*>(this))->as_int(key, val);
     }
@@ -717,7 +717,7 @@ public:
     template<typename T>
     EXTENSER_INLINE void as_uint(const std::string_view key, T& val)
     {
-        static_assert(std::is_unsigned_v<T> && (std::is_integral_v<T> || std::is_enum_v<T>),
+        static_assert((std::is_unsigned_v<T> && std::is_integral_v<T>) || std::is_enum_v<T>,
             "T must be an unsigned integral type");
         (static_cast<serializer_t*>(this))->as_uint(key, val);
     }

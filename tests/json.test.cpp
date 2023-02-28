@@ -17,6 +17,8 @@
 #include <utility>
 #include <vector>
 
+namespace
+{
 enum class Fruit
 {
     Apple,
@@ -66,8 +68,8 @@ void serialize(extenser::generic_serializer<S>& ser, Person& person)
 {
     ser.as_int("age", person.age);
     ser.as_string("name", person.name);
-    //ser.as_array("friends", person.friends);
-    //ser.as_optional("pet", person.pet);
+    ser.as_array("friends", person.friends);
+    ser.as_optional("pet", person.pet);
     ser.as_map("fruit_count", person.fruit_count);
 }
 
@@ -99,6 +101,7 @@ auto create_3d_vec(size_t x_sz, size_t y_sz, size_t z_sz)
 
     return x;
 };
+} //namespace
 
 TEST_SUITE("json::serializer")
 {
@@ -528,20 +531,20 @@ TEST_SUITE("json::serializer")
         REQUIRE_EQ(obj["name"].get<std::string>(), test_val1.name);
 
         // TODO(Jackson): Fix bug w/ `as_array()`
-        //REQUIRE(obj.contains("friends"));
-        //REQUIRE(obj["friends"].is_array());
-        //REQUIRE_EQ(obj["friends"].size(), test_val1.friends.size());
-        //REQUIRE_EQ(obj["friends"][0]["age"], test_val1.friends[0].age);
+        REQUIRE(obj.contains("friends"));
+        REQUIRE(obj["friends"].is_array());
+        REQUIRE_EQ(obj["friends"].size(), test_val1.friends.size());
+        REQUIRE_EQ(obj["friends"][0]["age"], test_val1.friends[0].age);
 
         // TODO(Jackson): Fix bug w/ `as_optional()`
-        // REQUIRE(obj.contains("pet"));
-        // REQUIRE(obj["pet"].is_object());
-        // REQUIRE(obj["pet"].contains("name"));
-        // REQUIRE(obj["pet"]["name"].is_string());
-        // REQUIRE_EQ(obj["pet"]["name"].get<std::string>(), test_val1.pet->name);
-        // REQUIRE(obj["pet"].contains("species"));
-        // REQUIRE(obj["pet"]["species"].is_number_integer());
-        // REQUIRE_EQ(obj["pet"]["species"].get<int>(), static_cast<int>(test_val1.pet->species));
+        REQUIRE(obj.contains("pet"));
+        REQUIRE(obj["pet"].is_object());
+        REQUIRE(obj["pet"].contains("name"));
+        REQUIRE(obj["pet"]["name"].is_string());
+        REQUIRE_EQ(obj["pet"]["name"].get<std::string>(), test_val1.pet->name);
+        REQUIRE(obj["pet"].contains("species"));
+        REQUIRE(obj["pet"]["species"].is_number_integer());
+        REQUIRE_EQ(obj["pet"]["species"].get<int>(), static_cast<int>(test_val1.pet->species));
 
         REQUIRE(obj.contains("fruit_count"));
         REQUIRE(obj["fruit_count"].is_object());
