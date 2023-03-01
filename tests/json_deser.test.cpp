@@ -11,9 +11,11 @@
 #include <utility>
 #include <vector>
 
+namespace extenser::tests
+{
 TEST_SUITE("json::deserializer")
 {
-    using deserializer = extenser::json_adapter::deserializer_t;
+    using deserializer = json_adapter::deserializer_t;
 
     TEST_CASE("CTOR")
     {
@@ -156,3 +158,4 @@ TEST_SUITE("json::deserializer")
         // TODO: Implement test
     }
 }
+} //namespace extenser::tests

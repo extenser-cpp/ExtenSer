@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <vector>
 
+namespace extenser::tests
+{
 enum class Fruit
 {
     Apple,
@@ -95,4 +97,5 @@ inline auto create_3d_vec(size_t x_sz, size_t y_sz, size_t z_sz)
 
     return x;
 };
+} //namespace extenser::tests
 #endif //EXTENSER_JSON_TEST_HPP

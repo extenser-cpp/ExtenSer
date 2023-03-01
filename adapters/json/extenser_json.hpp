@@ -125,6 +125,15 @@ namespace detail_json
             static_assert(std::is_enum_v<T>, "T must be an enum type");
 
 #if defined(EXTENSER_USE_MAGIC_ENUM)
+            if (!magic_enum::enum_contains<T>(val))
+            {
+                throw std::runtime_error{ std::string{ "Invalid enum value: " }
+                                              .append(std::to_string(
+                                                  static_cast<std::underlying_type_t<T>>(val)))
+                                              .append(" for type: ")
+                                              .append(magic_enum::enum_type_name<T>()) };
+            }
+
             subobject(key) = magic_enum::enum_name<T>(val);
 #else
             subobject(key) = static_cast<std::underlying_type_t<T>>(val);
@@ -160,7 +169,10 @@ namespace detail_json
             {
                 nlohmann::json key_obj{};
                 push_arg(k, key_obj);
-                const auto key_str = key_obj.get<std::string>();
+
+                const auto key_str =
+                    key_obj.is_string() ? key_obj.get<std::string>() : key_obj.dump();
+
                 auto& val_obj = obj[key_str];
                 push_arg(v, val_obj);
             }
@@ -177,7 +189,9 @@ namespace detail_json
             {
                 nlohmann::json key_obj{};
                 push_arg(k, key_obj);
-                const auto key_str = key_obj.get<std::string>();
+
+                const auto key_str =
+                    key_obj.is_string() ? key_obj.get<std::string>() : key_obj.dump();
 
                 if (obj.find(key_str) == end(obj))
                 {
@@ -366,8 +380,7 @@ namespace detail_json
 
             if constexpr (!std::is_const_v<T>)
             {
-                std::transform(
-                    arr.cbegin(), arr.cend(), val.begin(), parse_arg<typename T::value_type>);
+                std::transform(arr.cbegin(), arr.cend(), val.begin(), parse_arg<T>);
             }
         }
 

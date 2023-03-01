@@ -7,12 +7,15 @@ FetchContent_Declare(doctest
     )
 FetchContent_MakeAvailable(doctest)
 
+add_library(doctest_runner OBJECT test_runner.cpp)
+target_link_libraries(doctest_runner PUBLIC doctest::doctest)
+
 add_executable(extenser-test test_main.cpp)
-target_link_libraries(extenser-test PRIVATE extenser-bitsery extenser-json doctest::doctest)
+target_link_libraries(extenser-test PRIVATE doctest_runner extenser-bitsery extenser-json)
 target_compile_features(extenser-test PRIVATE cxx_std_17)
 add_test(tester extenser-test)
 
-add_executable(json-test json.test.cpp json_deser.test.cpp json.ser.test.cpp json.test.hpp)
-target_link_libraries(json-test PRIVATE extenser-json doctest::doctest)
+add_executable(json-test json_deser.test.cpp json.ser.test.cpp json.test.hpp)
+target_link_libraries(json-test PRIVATE doctest_runner extenser-json)
 target_compile_features(json-test PRIVATE cxx_std_17)
 add_test(nlohmann-json json-test)

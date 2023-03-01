@@ -11,9 +11,11 @@
 #include <utility>
 #include <vector>
 
+namespace extenser::tests
+{
 TEST_SUITE("json::serializer")
 {
-    using serializer = extenser::json_adapter::serializer_t;
+    using serializer = json_adapter::serializer_t;
 
     TEST_CASE("CTOR")
     {
@@ -196,7 +198,75 @@ TEST_SUITE("json::serializer")
 
     TEST_CASE("as_enum")
     {
-        // TODO: Implement test
+        enum class TestCode : uint8_t
+        {
+            Code1 = 0x01U,
+            CodeA = 0x0AU,
+            CodeB = 0x0BU,
+            CodeX = 0xFFU,
+        };
+
+        enum PlainEnum
+        {
+            VALUE_1,
+            VALUE_2,
+            VALUE_3,
+            VALUE_XX = -1,
+        };
+
+        static constexpr Fruit test_val1{ Fruit::Pineapple };
+        static constexpr TestCode test_val2{ TestCode::CodeB };
+        static constexpr PlainEnum test_val3{ VALUE_XX };
+
+        std::optional<serializer> ser{};
+        ser.emplace();
+        const auto& obj = ser.value().object();
+
+        CHECK_NOTHROW(ser->as_enum("", test_val1));
+        REQUIRE_FALSE(obj.empty());
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+        REQUIRE(obj.is_string());
+        REQUIRE_EQ(obj.get<std::string>(), magic_enum::enum_name<Fruit>(test_val1));
+#else
+        REQUIRE(obj.is_number_integer());
+        REQUIRE_FALSE(obj.is_number_unsigned());
+        REQUIRE_EQ(obj.get<Fruit>(), test_val1);
+#endif
+
+        ser.emplace();
+
+        CHECK_NOTHROW(ser->as_enum("test_val", test_val2));
+        REQUIRE_FALSE(obj.empty());
+        REQUIRE(obj.is_object());
+        REQUIRE(obj.contains("test_val"));
+
+        const auto& sub_obj = obj.at("test_val");
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+        REQUIRE(sub_obj.is_string());
+        REQUIRE_EQ(sub_obj.get<std::string>(), magic_enum::enum_name<TestCode>(test_val2));
+#else
+        REQUIRE(sub_obj.is_number_integer());
+        REQUIRE(sub_obj.is_number_unsigned());
+        REQUIRE_EQ(sub_obj.get<TestCode>(), test_val2);
+#endif
+
+        CHECK_NOTHROW(ser->as_enum("test_val", test_val3));
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+        REQUIRE(sub_obj.is_string());
+        REQUIRE_EQ(sub_obj.get<std::string>(), magic_enum::enum_name<PlainEnum>(test_val3));
+#else
+        REQUIRE(sub_obj.is_number_integer());
+        REQUIRE_FALSE(sub_obj.is_number_unsigned());
+        REQUIRE_EQ(sub_obj.get<PlainEnum>(), test_val3);
+#endif
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+        static constexpr TestCode test_val4{ 0xCCU };
+
+        REQUIRE_THROWS(ser->as_enum("test_val", test_val4));
+#endif
     }
 
     TEST_CASE("as_string")
@@ -412,7 +482,183 @@ TEST_SUITE("json::serializer")
 
     TEST_CASE("as_variant")
     {
-        // TODO: Implement test
+        std::optional<serializer> ser{};
+        ser.emplace();
+        const auto& obj = ser.value().object();
+
+        SUBCASE("int-float-string")
+        {
+            using test_type1 = std::variant<int, float, std::string>;
+            const test_type1 test_val1_1{ 22 };
+            const test_type1 test_val1_2{ -87.111f };
+            const test_type1 test_val1_3{ "Hello, world" };
+
+            CHECK_NOTHROW(ser->as_variant("", test_val1_1));
+            REQUIRE_FALSE(obj.empty());
+            REQUIRE(obj.is_object());
+            REQUIRE(obj.contains("v_idx"));
+            REQUIRE(obj["v_idx"].is_number_unsigned());
+            REQUIRE_EQ(obj["v_idx"].get<size_t>(), test_val1_1.index());
+
+            REQUIRE(obj.contains("v_val"));
+            REQUIRE(obj["v_val"].is_number_integer());
+            REQUIRE_EQ(obj["v_val"].get<int>(), std::get<int>(test_val1_1));
+
+            CHECK_NOTHROW(ser->as_variant("", test_val1_2));
+            REQUIRE_FALSE(obj.empty());
+            REQUIRE(obj.is_object());
+            REQUIRE(obj.contains("v_idx"));
+            REQUIRE(obj["v_idx"].is_number_unsigned());
+            REQUIRE_EQ(obj["v_idx"].get<size_t>(), test_val1_2.index());
+
+            REQUIRE(obj.contains("v_val"));
+            REQUIRE(obj["v_val"].is_number_float());
+            REQUIRE_EQ(obj["v_val"].get<float>(), std::get<float>(test_val1_2));
+
+            CHECK_NOTHROW(ser->as_variant("", test_val1_3));
+            REQUIRE_FALSE(obj.empty());
+            REQUIRE(obj.is_object());
+            REQUIRE(obj.contains("v_idx"));
+            REQUIRE(obj["v_idx"].is_number_unsigned());
+            REQUIRE_EQ(obj["v_idx"].get<size_t>(), test_val1_3.index());
+
+            REQUIRE(obj.contains("v_val"));
+            REQUIRE(obj["v_val"].is_string());
+            REQUIRE_EQ(obj["v_val"].get<std::string>(), std::get<std::string>(test_val1_3));
+        }
+
+        SUBCASE("monostate-pair-object")
+        {
+            using test_type2 = std::variant<std::monostate, std::pair<double, double>, Pet>;
+            const test_type2 test_val2_1{};
+            const test_type2 test_val2_2{ std::pair{ 1234.5678, -0.99999999 } };
+            const test_type2 test_val2_3{ Pet{ "Barry", Pet::Species::Fish } };
+
+            ser.emplace();
+
+            CHECK_NOTHROW(ser->as_variant("test_val", test_val2_1));
+            REQUIRE_FALSE(obj.empty());
+            REQUIRE(obj.is_object());
+            REQUIRE(obj.contains("test_val"));
+
+            const auto& sub_obj = obj["test_val"];
+
+            REQUIRE(sub_obj.is_object());
+            REQUIRE(sub_obj.contains("v_idx"));
+
+            const auto& sub_idx = sub_obj["v_idx"];
+
+            REQUIRE(sub_idx.is_number_unsigned());
+            REQUIRE_EQ(sub_idx.get<size_t>(), test_val2_1.index());
+
+            REQUIRE(sub_obj.contains("v_val"));
+
+            const auto& sub_val = sub_obj["v_val"];
+
+            REQUIRE(sub_val.is_null());
+
+            CHECK_NOTHROW(ser->as_variant("test_val", test_val2_2));
+
+            REQUIRE(sub_obj.is_object());
+            REQUIRE(sub_obj.contains("v_idx"));
+            REQUIRE(sub_idx.is_number_unsigned());
+            REQUIRE_EQ(sub_idx.get<size_t>(), test_val2_2.index());
+
+            const auto& [test_1, test_2] = std::get<std::pair<double, double>>(test_val2_2);
+
+            REQUIRE(sub_obj.contains("v_val"));
+            REQUIRE(sub_val.is_object());
+            REQUIRE(sub_val.contains("first"));
+            REQUIRE(sub_val.contains("second"));
+            REQUIRE(sub_val["first"].is_number_float());
+            REQUIRE_EQ(sub_val["first"].get<double>(), test_1);
+            REQUIRE(sub_val["second"].is_number_float());
+            REQUIRE_EQ(sub_val["second"].get<double>(), test_2);
+
+            CHECK_NOTHROW(ser->as_variant("test_val", test_val2_3));
+
+            REQUIRE(sub_obj.is_object());
+            REQUIRE(sub_obj.contains("v_idx"));
+            REQUIRE(sub_idx.is_number_unsigned());
+            REQUIRE_EQ(sub_idx.get<size_t>(), test_val2_3.index());
+
+            REQUIRE(sub_obj.contains("v_val"));
+            REQUIRE(sub_val.is_object());
+            REQUIRE(sub_val.contains("name"));
+            REQUIRE(sub_val["name"].is_string());
+            REQUIRE_EQ(sub_val["name"].get<std::string>(), std::get<Pet>(test_val2_3).name);
+        }
+
+        SUBCASE("vector<enum>-vector<object>")
+        {
+            using test_type3 =
+                std::variant<std::vector<int>, std::vector<std::variant<Fruit, Pet>>>;
+
+            const test_type3 test_val3_1{ std::vector{ 1, 2, 7, 8, 9 } };
+            const test_type3 test_val3_2{ std::vector<std::variant<Fruit, Pet>>{
+                Fruit::Grape, Fruit::Orange, Pet{ "Sandra", Pet::Species::Snake } } };
+
+            CHECK_NOTHROW(ser->as_variant("test_val", test_val3_1));
+
+            const auto& sub_obj = obj["test_val"];
+
+            REQUIRE(sub_obj.is_object());
+            REQUIRE(sub_obj.contains("v_idx"));
+
+            const auto& sub_idx = sub_obj["v_idx"];
+
+            REQUIRE(sub_idx.is_number_unsigned());
+            REQUIRE_EQ(sub_idx.get<size_t>(), test_val3_1.index());
+
+            const auto& vec1 = std::get<std::vector<int>>(test_val3_1);
+
+            REQUIRE(sub_obj.contains("v_val"));
+
+            const auto& sub_val = sub_obj["v_val"];
+
+            REQUIRE(sub_val.is_array());
+            REQUIRE_EQ(sub_val.size(), vec1.size());
+            REQUIRE(std::equal(sub_val.begin(), sub_val.end(), vec1.begin()));
+
+            CHECK_NOTHROW(ser->as_variant("test_val", test_val3_2));
+
+            REQUIRE(sub_obj.is_object());
+            REQUIRE(sub_obj.contains("v_idx"));
+            REQUIRE(sub_idx.is_number_unsigned());
+            REQUIRE_EQ(sub_idx.get<size_t>(), test_val3_2.index());
+
+            const auto& vec2 = std::get<std::vector<std::variant<Fruit, Pet>>>(test_val3_2);
+
+            REQUIRE(sub_obj.contains("v_val"));
+            REQUIRE(sub_val.is_array());
+            REQUIRE_EQ(sub_val.size(), vec2.size());
+
+            REQUIRE(sub_val[0].is_object());
+            REQUIRE_EQ(sub_val[0]["v_idx"].get<size_t>(), vec2[0].index());
+            REQUIRE(sub_val[1].is_object());
+            REQUIRE_EQ(sub_val[1]["v_idx"].get<size_t>(), vec2[1].index());
+            REQUIRE(sub_val[2].is_object());
+            REQUIRE_EQ(sub_val[2]["v_idx"].get<size_t>(), vec2[2].index());
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+            REQUIRE(sub_val[0]["v_val"].is_string());
+            REQUIRE_EQ(sub_val[0]["v_val"].get<std::string>(),
+                magic_enum::enum_name<Fruit>(std::get<Fruit>(vec2[0])));
+            REQUIRE(sub_val[1]["v_val"].is_string());
+            REQUIRE_EQ(sub_val[1]["v_val"].get<std::string>(),
+                magic_enum::enum_name<Fruit>(std::get<Fruit>(vec2[1])));
+#else
+            REQUIRE(sub_val[0]["v_val"].is_number_integer());
+            REQUIRE_EQ(sub_val[0]["v_val"].get<Fruit>(), std::get<Fruit>(vec2[0]));
+            REQUIRE(sub_val[1]["v_val"].is_number_integer());
+            REQUIRE_EQ(sub_val[1]["v_val"].get<Fruit>(), std::get<Fruit>(vec2[1]));
+#endif
+
+            REQUIRE(sub_val[2]["v_val"].is_object());
+            REQUIRE(sub_val[2]["v_val"].contains("name"));
+            REQUIRE(sub_val[2]["v_val"]["name"].is_string());
+            REQUIRE_EQ(sub_val[2]["v_val"]["name"].get<std::string>(), std::get<Pet>(vec2[2]).name);
+        }
     }
 
     TEST_CASE("as_object")
@@ -524,3 +770,4 @@ TEST_SUITE("json::serializer")
 #endif
     }
 }
+} //namespace extenser::tests
