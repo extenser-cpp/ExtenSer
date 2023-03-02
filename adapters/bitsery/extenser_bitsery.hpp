@@ -110,7 +110,7 @@ namespace detail_bitsery
     class serializer : public serializer_base<serial_adapter, false>
     {
     public:
-        serializer() noexcept : m_ser(m_bytes) { m_bytes.reserve(64UL); }
+        serializer() : m_ser(m_bytes) { m_bytes.reserve(64UL); }
 
         [[nodiscard]] auto object() & -> const std::vector<uint8_t>&
         {

@@ -86,6 +86,7 @@ namespace detail_json
             return std::move(m_json);
         }
 
+        // TODO: move impl to private functions that convert T to json (for re-use)
         template<typename T>
         void as_bool(const std::string_view key, const T& val)
         {
@@ -295,6 +296,7 @@ namespace detail_json
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
         }
 
+        // TODO: move impl to private functions that convert json to T (for re-use)
         template<typename T>
         void as_bool(const std::string_view key, T& val) const
         {

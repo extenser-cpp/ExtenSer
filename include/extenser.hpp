@@ -59,21 +59,21 @@
 #  define EXTENSER_ASSERTION(EXPR) assert(EXPR)
 #elif defined(EXTENSER_ASSERT_STDERR)
 #  include <cstdio>
-#  define EXTENSER_ASSERTION(EXPR)                                                               \
-      if (!(EXPR))                                                                               \
-      std::fprintf(stderr,                                                                       \
-          "EXTENSER_ASSERTION: \"%s\" failed!\n  func: %s,\n  file: %s,\n  line: %d\n\n", #EXPR, \
-          __FUNCTION__, __FILE__, __LINE__)
+#  define EXTENSER_ASSERTION(EXPR)                                                             \
+    if (!(EXPR))                                                                               \
+    std::fprintf(stderr,                                                                       \
+        "EXTENSER_ASSERTION: \"%s\" failed!\n  func: %s,\n  file: %s,\n  line: %d\n\n", #EXPR, \
+        __FUNCTION__, __FILE__, __LINE__)
 #elif defined(EXTENSER_ASSERT_THROW)
 #  include <stdexcept>
 #  define EXTENSER_ASSERTION(EXPR) \
-      if (!(EXPR))                 \
-      throw std::runtime_error("EXTENSER_ASSERTION: \"" #EXPR "\" failed!")
+    if (!(EXPR))                   \
+    throw std::runtime_error("EXTENSER_ASSERTION: \"" #EXPR "\" failed!")
 #elif defined(EXTENSER_ASSERT_ABORT)
 #  include <cstdio>
 #  define EXTENSER_ASSERTION(EXPR) \
-      if (!(EXPR))                 \
-      std::abort()
+    if (!(EXPR))                   \
+    std::abort()
 #elif defined(EXTENSER_ASSERT_ASSUME)
 #  define EXTENSER_ASSERTION(EXPR) EXTENSER_ASSUME(EXPR)
 #else
@@ -97,21 +97,21 @@ namespace extenser
 namespace detail
 {
 #define EXTENSER_NOPAREN(...) __VA_ARGS__
-#define EXTENSER_CHECKER(NAME, EXPR1, EXPR2)                          \
-    template<typename C>                                              \
-    struct NAME                                                       \
-    {                                                                 \
-    private:                                                          \
-        template<typename T>                                          \
-        static constexpr auto check([[maybe_unused]] T* ptr) noexcept \
-            -> std::is_same<decltype(EXPR1), EXPR2>;                  \
-        template<typename>                                            \
-        static constexpr auto check(...) noexcept -> std::false_type; \
-        using type = decltype(check<C>(nullptr));                     \
-                                                                      \
-    public:                                                           \
-        static constexpr bool value = type::value;                    \
-    }
+#define EXTENSER_CHECKER(NAME, EXPR1, EXPR2)                      \
+  template<typename C>                                            \
+  struct NAME                                                     \
+  {                                                               \
+private:                                                          \
+    template<typename T>                                          \
+    static constexpr auto check([[maybe_unused]] T* ptr) noexcept \
+        -> std::is_same<decltype(EXPR1), EXPR2>;                  \
+    template<typename>                                            \
+    static constexpr auto check(...) noexcept -> std::false_type; \
+    using type = decltype(check<C>(nullptr));                     \
+                                                                  \
+public:                                                           \
+    static constexpr bool value = type::value;                    \
+  }
 
     EXTENSER_CHECKER(has_begin, std::declval<T>().begin(), typename T::iterator);
     EXTENSER_CHECKER(has_end, std::declval<T>().end(), typename T::iterator);
@@ -125,19 +125,19 @@ namespace detail
 
 #undef EXTENSER_CHECKER
 
-#define EXTENSER_TYPE_TRAIT(NAME, COND)      \
-    template<typename C>                     \
-    struct NAME : std::bool_constant<(COND)> \
-    {                                        \
-    };                                       \
-    template<typename C>                     \
-    inline constexpr bool NAME##_v = NAME<C>::value
+#define EXTENSER_TYPE_TRAIT(NAME, COND)    \
+  template<typename C>                     \
+  struct NAME : std::bool_constant<(COND)> \
+  {                                        \
+  };                                       \
+  template<typename C>                     \
+  inline constexpr bool NAME##_v = NAME<C>::value
 
 #define EXTENSER_CONJ_TYPE_TRAIT(NAME, ...) \
-    EXTENSER_TYPE_TRAIT(NAME, std::conjunction<EXTENSER_NOPAREN(__VA_ARGS__)>::value)
+  EXTENSER_TYPE_TRAIT(NAME, std::conjunction<EXTENSER_NOPAREN(__VA_ARGS__)>::value)
 
 #define EXTENSER_DISJ_TYPE_TRAIT(NAME, ...) \
-    EXTENSER_TYPE_TRAIT(NAME, std::disjunction<EXTENSER_NOPAREN(__VA_ARGS__)>::value)
+  EXTENSER_TYPE_TRAIT(NAME, std::disjunction<EXTENSER_NOPAREN(__VA_ARGS__)>::value)
 
     EXTENSER_TYPE_TRAIT(is_boolean_testable, (std::is_convertible_v<C, bool>));
     EXTENSER_DISJ_TYPE_TRAIT(is_stringlike, std::is_convertible<C, std::string>,
@@ -442,16 +442,14 @@ public:
 
     template<typename It,
         typename = std::enable_if_t<detail::constructible_from_iterator_v<element_type, It>>>
-    constexpr span(It first, size_type count)
-        : m_head_ptr(iterator{ first }.to_address()), m_sz(count)
+    constexpr span(It first, size_type count) : m_head_ptr(&*first), m_sz(count)
     {
     }
 
     template<typename It, typename End,
         typename = std::enable_if_t<detail::constructible_from_iterator_v<element_type, It>
             && !std::is_convertible_v<End, size_type>>>
-    constexpr span(It first, End last)
-        : m_head_ptr(iterator{ first }.to_address()), m_sz(last - first)
+    constexpr span(It first, End last) : m_head_ptr(&*first), m_sz(last - first)
     {
     }
 
@@ -571,6 +569,51 @@ static_assert(detail::is_container_v<span<int>>, "span is not container");
 
 template<typename T>
 using view = span<const T>;
+
+// serialization constexpr checks
+template<typename T>
+inline constexpr bool is_bool_serializable = detail::is_boolean_testable_v<T>;
+
+template<typename T>
+inline constexpr bool is_float_serializable = std::is_floating_point_v<T>;
+
+template<typename T>
+inline constexpr bool is_int_serializable = std::is_integral_v<T> && std::is_signed_v<T>;
+
+template<typename T>
+inline constexpr bool is_uint_serializable = std::is_integral_v<T> && std::is_unsigned_v<T>;
+
+template<typename T>
+inline constexpr bool is_enum_serializable = std::is_enum_v<T>;
+
+template<typename T>
+inline constexpr bool is_string_serializable = detail::is_stringlike_v<T>;
+
+template<typename T>
+inline constexpr bool is_array_serializable = detail::is_container_v<T> || std::is_array_v<T>;
+
+template<typename T>
+inline constexpr bool is_map_serializable = detail::is_map_v<T>;
+
+template<typename T>
+inline constexpr bool is_multimap_serializable = detail::is_multimap_v<T>;
+
+template<typename T>
+inline constexpr bool is_tuple_serializable = detail::is_tuple_v<T> || detail::is_pair_v<T>;
+
+template<typename T>
+inline constexpr bool is_optional_serializable = detail::is_optional_v<T>;
+
+template<typename T>
+inline constexpr bool is_variant_serializable = detail::is_variant_v<T>;
+
+template<typename T>
+inline constexpr bool is_null_serializable = std::is_null_pointer_v<T> || std::is_void_v<T>
+    || std::is_same_v<T, std::monostate> || std::is_same_v<T, std::nullopt_t>;
+
+// TODO: check if there is a `serialize` function via ASL or static member
+template<typename T>
+inline constexpr bool is_object_serializable = true;
 
 template<typename Derived>
 class generic_serializer
@@ -701,52 +744,49 @@ public:
     template<typename T>
     EXTENSER_INLINE void as_bool(const std::string_view key, T& val)
     {
-        static_assert(detail::is_boolean_testable_v<T>, "T must be convertible to bool");
+        static_assert(is_bool_serializable<T>, "T must be convertible to bool");
         (static_cast<serializer_t*>(this))->as_bool(key, val);
     }
 
     template<typename T>
     EXTENSER_INLINE void as_float(const std::string_view key, T& val)
     {
-        static_assert(std::is_floating_point_v<T>, "T must be a floating-point type");
+        static_assert(is_float_serializable<T>, "T must be a floating-point type");
         (static_cast<serializer_t*>(this))->as_float(key, val);
     }
 
     template<typename T>
     EXTENSER_INLINE void as_int(const std::string_view key, T& val)
     {
-        static_assert(
-            std::is_integral_v<T> && std::is_signed_v<T>, "T must be a signed integral type");
+        static_assert(is_int_serializable<T>, "T must be a signed integral type");
         (static_cast<serializer_t*>(this))->as_int(key, val);
     }
 
     template<typename T>
     EXTENSER_INLINE void as_uint(const std::string_view key, T& val)
     {
-        static_assert(
-            std::is_integral_v<T> && std::is_unsigned_v<T>, "T must be an unsigned integral type");
+        static_assert(is_uint_serializable<T>, "T must be an unsigned integral type");
         (static_cast<serializer_t*>(this))->as_uint(key, val);
     }
 
     template<typename T>
     EXTENSER_INLINE void as_enum(const std::string_view key, T& val)
     {
-        static_assert(std::is_enum_v<T>, "T must be an enum type");
+        static_assert(is_enum_serializable<T>, "T must be an enum type");
         (static_cast<serializer_t*>(this))->as_enum(key, val);
     }
 
     template<typename T>
     EXTENSER_INLINE void as_string(const std::string_view key, T& val)
     {
-        static_assert(detail::is_stringlike_v<T>, "T must be convertible to std::string_view");
+        static_assert(is_string_serializable<T>, "T must be convertible to std::string_view");
         (static_cast<serializer_t*>(this))->as_string(key, val);
     }
 
     template<typename T>
     EXTENSER_INLINE void as_array(const std::string_view key, T& val)
     {
-        static_assert(
-            detail::is_container_v<T> || std::is_array_v<T>, "T must have begin() and end()");
+        static_assert(is_array_serializable<T>, "T must have begin() and end()");
 
         (static_cast<serializer_t*>(this))->as_array(key, val);
     }
@@ -754,9 +794,10 @@ public:
     template<typename T>
     EXTENSER_INLINE void as_map(const std::string_view key, T& val)
     {
-        static_assert(detail::is_map_v<T>, "T must be a map type");
+        static_assert(
+            is_map_serializable<T> || is_multimap_serializable<T>, "T must be a map type");
 
-        if constexpr (detail::is_multimap_v<T>)
+        if constexpr (is_multimap_serializable<T>)
         {
             (static_cast<serializer_t*>(this))->as_multimap(key, val);
         }
@@ -796,6 +837,7 @@ public:
     template<typename T>
     EXTENSER_INLINE void as_object(const std::string_view key, T& val)
     {
+        static_assert(is_object_serializable<T>, "serialize function for T could not be found");
         (static_cast<serializer_t*>(this))->as_object(key, val);
     }
 

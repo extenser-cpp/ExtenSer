@@ -82,10 +82,10 @@ TEST_CASE("C++ Array")
 
 TEST_CASE("Span")
 {
-    auto dyn_arr = std::make_unique<int[]>(100);
-    std::iota(dyn_arr.get(), std::next(dyn_arr.get(), 100), 0);
+    std::vector<int> dyn_arr(100);
+    std::iota(dyn_arr.begin(), dyn_arr.end(), 0);
 
-    span<int> span(dyn_arr.get(), 50);
+    span<int> span(dyn_arr.begin(), 50);
 
     serializer<json_adapter> ser{};
     ser.serialize_object(span);
@@ -97,7 +97,7 @@ TEST_CASE("Span")
     REQUIRE_EQ(obj[0], 0);
     REQUIRE_EQ(obj[49], 49);
 
-    std::fill(dyn_arr.get(), std::next(dyn_arr.get(), 100), 0);
+    std::fill(dyn_arr.begin(), dyn_arr.end(), 0);
     obj[49] = 52;
 
     deserializer<json_adapter> dser{ obj };
@@ -134,10 +134,10 @@ TEST_CASE("Vector")
 
 TEST_CASE("View")
 {
-    auto dyn_arr = std::make_unique<int[]>(100);
-    std::iota(dyn_arr.get(), std::next(dyn_arr.get(), 100), 0);
+    std::vector<int> dyn_arr(100);
+    std::iota(dyn_arr.begin(), dyn_arr.end(), 0);
 
-    view<int> view(dyn_arr.get(), 50);
+    view<int> view(dyn_arr.begin(), 50);
 
     serializer<json_adapter> ser{};
     ser.serialize_object(view);
@@ -149,7 +149,7 @@ TEST_CASE("View")
     REQUIRE_EQ(obj[0], 0);
     REQUIRE_EQ(obj[49], 49);
 
-    std::fill(dyn_arr.get(), std::next(dyn_arr.get(), 100), 0);
+    std::fill(dyn_arr.begin(), dyn_arr.end(), 0);
     obj[49] = 52;
 
     deserializer<json_adapter> dser{ obj };

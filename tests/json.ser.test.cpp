@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <iostream>
 #include <limits>
 #include <optional>
 #include <string>
@@ -43,7 +42,7 @@ TEST_SUITE("json::serializer")
         REQUIRE(obj.is_number_integer());
         REQUIRE(obj.is_number_unsigned());
 
-        auto obj2 = std::move(ser).object();
+        const auto obj2 = std::move(ser).object();
 
         REQUIRE_FALSE(obj2.empty());
         REQUIRE(obj2.is_number());
@@ -88,8 +87,8 @@ TEST_SUITE("json::serializer")
     {
         static constexpr double test_epsilon{ 0.0001 };
         static constexpr float test_val1{ std::numeric_limits<float>::min() };
-        const double test_val2{ NAN };
-        static constexpr double test_val3{ M_PI };
+        static constexpr double test_val2{ std::numeric_limits<double>::quiet_NaN() };
+        static constexpr double test_val3{ 3.141592653589793 };
         static constexpr int64_t test_val4_i{ 1'234'567LL };
         static constexpr double test_val4{ test_val4_i };
 
@@ -449,7 +448,7 @@ TEST_SUITE("json::serializer")
             REQUIRE(obj.is_array());
             REQUIRE_EQ(obj.size(), test_val1.size());
 
-            for (int i = 0; i < test_val1.size(); ++i)
+            for (size_t i = 0; i < test_val1.size(); ++i)
             {
                 REQUIRE_FALSE(obj[i].empty());
                 REQUIRE(obj[i].is_object());

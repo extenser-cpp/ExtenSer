@@ -1,7 +1,6 @@
 #ifndef EXTENSER_JSON_TEST_HPP
 #define EXTENSER_JSON_TEST_HPP
 
-#define _USE_MATH_DEFINES
 #include "extenser.hpp"
 #include "json/extenser_json.hpp"
 
