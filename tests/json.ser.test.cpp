@@ -363,7 +363,9 @@ TEST_SUITE("json::serializer")
             REQUIRE(sub_obj.is_array());
             REQUIRE_EQ(sub_obj.size(), test_val5.size());
             REQUIRE(sub_obj[0].is_boolean());
-            REQUIRE(std::equal(sub_obj.begin(), sub_obj.end(), test_val5.begin()));
+            REQUIRE(std::equal(sub_obj.begin(), sub_obj.end(), test_val5.begin(),
+                [](const nlohmann::json& json_obj, const bool bool_val)
+                { return json_obj.get<bool>() == bool_val; }));
         }
 
         SUBCASE("array of arrays")
