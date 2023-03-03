@@ -32,6 +32,7 @@
 #define EXTENSER_JSON_HPP
 
 #include "extenser.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 #if defined(EXTENSER_USE_MAGIC_ENUM)
 #  include <magic_enum.hpp>
@@ -86,18 +87,17 @@ namespace detail_json
             return std::move(m_json);
         }
 
-        // TODO: move impl to private functions that convert T to json (for re-use)
         template<typename T>
         void as_bool(const std::string_view key, const T& val)
         {
-            subobject(key) = static_cast<bool>(val);
+            push_simple_type(static_cast<bool>(val), subobject(key));
         }
 
         template<typename T>
         void as_float(const std::string_view key, const T& val)
         {
             static_assert(!std::is_same_v<T, long double>, "long double is not supported");
-            subobject(key) = static_cast<double>(val);
+            push_simple_type(static_cast<double>(val), subobject(key));
         }
 
         template<typename T>
@@ -107,7 +107,7 @@ namespace detail_json
             static_assert(
                 std::is_integral_v<T> && std::is_signed_v<T>, "only signed integers are supported");
 
-            subobject(key) = val;
+            push_simple_type(val, subobject(key));
         }
 
         template<typename T>
@@ -117,142 +117,63 @@ namespace detail_json
             static_assert(std::is_integral_v<T> && std::is_unsigned_v<T>,
                 "only unsigned integers are supported");
 
-            subobject(key) = val;
+            push_simple_type(val, subobject(key));
         }
 
         template<typename T>
         void as_enum(const std::string_view key, const T& val)
         {
             static_assert(std::is_enum_v<T>, "T must be an enum type");
-
-#if defined(EXTENSER_USE_MAGIC_ENUM)
-            if (!magic_enum::enum_contains<T>(val))
-            {
-                throw std::runtime_error{ std::string{ "Invalid enum value: " }
-                                              .append(std::to_string(
-                                                  static_cast<std::underlying_type_t<T>>(val)))
-                                              .append(" for type: ")
-                                              .append(magic_enum::enum_type_name<T>()) };
-            }
-
-            subobject(key) = magic_enum::enum_name<T>(val);
-#else
-            subobject(key) = static_cast<std::underlying_type_t<T>>(val);
-#endif
+            push_enum(val, subobject(key));
         }
 
         template<typename T>
         void as_string(const std::string_view key, const T& val)
         {
             static_assert(detail::is_stringlike_v<T>, "T must be convertible to std::string_view");
-            subobject(key) = val;
+            push_string(val, subobject(key));
         }
 
         template<typename T>
         void as_array(const std::string_view key, const T& val)
         {
-            auto arr = nlohmann::json::array();
-
-            for (const auto& subval : val)
-            {
-                push_args(subval, arr);
-            }
-
-            subobject(key) = std::move(arr);
+            push_array(val, subobject(key));
         }
 
         template<typename T>
         void as_map(const std::string_view key, const T& val)
         {
-            auto obj = nlohmann::json::object();
-
-            for (const auto& [k, v] : val)
-            {
-                nlohmann::json key_obj{};
-                push_arg(k, key_obj);
-
-                const auto key_str =
-                    key_obj.is_string() ? key_obj.get<std::string>() : key_obj.dump();
-
-                auto& val_obj = obj[key_str];
-                push_arg(v, val_obj);
-            }
-
-            subobject(key) = std::move(obj);
+            push_map(val, subobject(key));
         }
 
         template<typename T>
         void as_multimap(const std::string_view key, const T& val)
         {
-            auto obj = nlohmann::json::object();
-
-            for (const auto& [k, v] : val)
-            {
-                nlohmann::json key_obj{};
-                push_arg(k, key_obj);
-
-                const auto key_str =
-                    key_obj.is_string() ? key_obj.get<std::string>() : key_obj.dump();
-
-                if (obj.find(key_str) == end(obj))
-                {
-                    obj[key_str] = nlohmann::json::array();
-                }
-
-                push_args(v, obj[key_str]);
-            }
-
-            subobject(key) = std::move(obj);
+            push_multimap(val, subobject(key));
         }
 
         template<typename T1, typename T2>
         void as_tuple(const std::string_view key, const std::pair<T1, T2>& val)
         {
-            auto obj = nlohmann::json::object();
-            auto& obj1 = obj["first"];
-            auto& obj2 = obj["second"];
-
-            push_arg(val.first, obj1);
-            push_arg(val.second, obj2);
-
-            subobject(key) = std::move(obj);
+            push_pair(val, subobject(key));
         }
 
         template<typename... Args>
         void as_tuple(const std::string_view key, const std::tuple<Args...>& val)
         {
-            // Need to create the subobject in case args is empty
-            auto& arg_arr = subobject(key);
-
-            detail::for_each_tuple(val,
-                [&arg_arr](auto&& elem)
-                { push_args(std::forward<decltype(elem)>(elem), arg_arr); });
+            push_tuple(val, subobject(key));
         }
 
         template<typename T>
         void as_optional(const std::string_view key, const std::optional<T>& val)
         {
-            if (val.has_value())
-            {
-                auto& sub_obj = subobject(key);
-                push_arg(*val, sub_obj);
-            }
-            else
-            {
-                subobject(key) = nullptr;
-            }
+            push_optional(val, subobject(key));
         }
 
         template<typename... Args>
         void as_variant(const std::string_view key, const std::variant<Args...>& val)
         {
-            auto& new_arg = subobject(key);
-            new_arg["v_idx"] = val.index();
-            auto& var_val = new_arg["v_val"];
-
-            std::visit([&var_val](auto&& l_val)
-                { push_arg(std::forward<decltype(l_val)>(l_val), var_val); },
-                val);
+            push_variant(val, subobject(key));
         }
 
         template<typename T>
@@ -270,11 +191,196 @@ namespace detail_json
         }
 
         template<typename T>
-        static void push_arg(T&& arg, nlohmann::json& obj)
+        static void push_simple_type(T&& arg, nlohmann::json& obj)
+        {
+            obj = std::forward<T>(arg);
+        }
+
+        template<typename T>
+        static void push_enum(T&& arg, nlohmann::json& obj)
+        {
+            using no_ref_t = detail::remove_cvref_t<T>;
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+            if (!magic_enum::enum_contains<no_ref_t>(val))
+            {
+                throw std::runtime_error{
+                    std::string{ "Invalid enum value: " }
+                        .append(std::to_string(static_cast<std::underlying_type_t<no_ref_t>>(val)))
+                        .append(" for type: ")
+                        .append(magic_enum::enum_type_name<no_ref_t>())
+                };
+            }
+
+            push_string(magic_enum::enum_name<no_ref_t>(val), obj);
+#else
+            push_simple_type(static_cast<std::underlying_type_t<no_ref_t>>(arg), obj);
+#endif
+        }
+
+        template<typename T>
+        static void push_string(T&& arg, nlohmann::json& obj)
+        {
+            obj = std::string_view{ std::forward<T>(arg) };
+        }
+
+        template<typename T>
+        static void push_array(T&& arg, nlohmann::json& obj)
+        {
+            obj = nlohmann::json::array();
+
+            for (const auto& subval : arg)
+            {
+                push_args(subval, obj);
+            }
+        }
+
+        template<typename T>
+        static void push_map(T&& arg, nlohmann::json& obj)
+        {
+            obj = nlohmann::json::object();
+
+            for (const auto& [k, v] : arg)
+            {
+                nlohmann::json key_obj{};
+                push_arg(k, key_obj);
+
+                const auto key_str =
+                    key_obj.is_string() ? key_obj.get<std::string>() : key_obj.dump();
+
+                auto& val_obj = obj[key_str];
+                push_arg(v, val_obj);
+            }
+        }
+
+        template<typename T>
+        static void push_multimap(T&& arg, nlohmann::json& obj)
+        {
+            obj = nlohmann::json::object();
+
+            for (const auto& [k, v] : arg)
+            {
+                nlohmann::json key_obj{};
+                push_arg(k, key_obj);
+
+                const auto key_str =
+                    key_obj.is_string() ? key_obj.get<std::string>() : key_obj.dump();
+
+                if (obj.find(key_str) == end(obj))
+                {
+                    obj[key_str] = nlohmann::json::array();
+                }
+
+                push_args(v, obj[key_str]);
+            }
+        }
+
+        template<typename T1, typename T2>
+        static void push_pair(const std::pair<T1, T2>& arg, nlohmann::json& obj)
+        {
+            obj = nlohmann::json::object();
+            auto& obj1 = obj["first"];
+            auto& obj2 = obj["second"];
+
+            push_arg(arg.first, obj1);
+            push_arg(arg.second, obj2);
+        }
+
+        template<typename... Args>
+        static void push_tuple(const std::tuple<Args...>& arg, nlohmann::json& obj)
+        {
+            detail::for_each_tuple(
+                arg, [&obj](auto&& elem) { push_args(std::forward<decltype(elem)>(elem), obj); });
+        }
+
+        template<typename T>
+        static void push_optional(const std::optional<T>& arg, nlohmann::json& obj)
+        {
+            if (arg.has_value())
+            {
+                push_arg(*arg, obj);
+            }
+            else
+            {
+                obj = nullptr;
+            }
+        }
+
+        template<typename... Args>
+        static void push_variant(const std::variant<Args...>& arg, nlohmann::json& obj)
+        {
+            obj["v_idx"] = arg.index();
+            auto& var_val = obj["v_val"];
+
+            std::visit([&var_val](auto&& l_val)
+                { push_arg(std::forward<decltype(l_val)>(l_val), var_val); },
+                arg);
+        }
+
+        template<typename T>
+        static void push_object(T&& arg, nlohmann::json& obj)
         {
             serializer ser{};
             ser.serialize_object(std::forward<T>(arg));
             obj = std::move(ser).object();
+        }
+
+        template<typename T>
+        static void push_arg(T&& arg, nlohmann::json& obj)
+        {
+            using no_ref_t = detail::remove_cvref_t<T>;
+
+            if constexpr (std::is_arithmetic_v<no_ref_t>)
+            {
+                push_simple_type(std::forward<T>(arg), obj);
+            }
+            else if constexpr (is_enum_serializable<no_ref_t>)
+            {
+                push_enum(std::forward<T>(arg), obj);
+            }
+            else if constexpr (is_string_serializable<no_ref_t>)
+            {
+                push_string(std::forward<T>(arg), obj);
+            }
+            else if constexpr (is_array_serializable<no_ref_t>)
+            {
+                push_array(std::forward<T>(arg), obj);
+            }
+            else if constexpr (is_multimap_serializable<no_ref_t>)
+            {
+                push_multimap(std::forward<T>(arg), obj);
+            }
+            else if constexpr (is_map_serializable<no_ref_t>)
+            {
+                push_map(std::forward<T>(arg), obj);
+            }
+            else if constexpr (is_optional_serializable<no_ref_t>)
+            {
+                push_optional(arg, obj);
+            }
+            else if constexpr (is_tuple_serializable<no_ref_t>)
+            {
+                if constexpr (detail::is_pair_v<no_ref_t>)
+                {
+                    push_pair(arg, obj);
+                }
+                else
+                {
+                    push_tuple(arg, obj);
+                }
+            }
+            else if constexpr (is_variant_serializable<no_ref_t>)
+            {
+                push_variant(arg, obj);
+            }
+            else if constexpr (is_null_serializable<no_ref_t>)
+            {
+                obj = nullptr;
+            }
+            else
+            {
+                push_object(std::forward<T>(arg), obj);
+            }
         }
 
         template<typename T>
