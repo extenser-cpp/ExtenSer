@@ -463,7 +463,55 @@ TEST_SUITE("json::serializer")
 
     TEST_CASE("as_map")
     {
-        // TODO: Implement test
+        const std::map<int, std::string> test_val1{ { 33, "Benjamin Burton" },
+            { 99, "John Johnson" }, { 444, "Reed Carmichael" } };
+        const std::unordered_map<std::string, Person> test_val2{
+            { "Henrietta",
+                Person{ 16, "Henrietta Payne", {}, Pet{ "Ron", Pet::Species::Fish }, {} } },
+            { "Jerome", Person{ 12, "Jerome Banks", {}, {}, {} } },
+            { "Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
+            { "Ricardo",
+                Person{ 19, "Ricardo Montoya", {}, Pet{ "Sinbad", Pet::Species::Cat }, {} } }
+        };
+
+        std::optional<serializer> ser{};
+        ser.emplace();
+        const auto& obj = ser.value().object();
+
+        CHECK_NOTHROW(ser->as_map("", test_val1));
+        REQUIRE_FALSE(obj.empty());
+        REQUIRE(obj.is_object());
+        REQUIRE_EQ(obj.size(), test_val1.size());
+
+        for (const auto& [k, v] : test_val1)
+        {
+            const auto key_str = std::to_string(k);
+
+            REQUIRE(obj.contains(key_str));
+            REQUIRE(obj[key_str].is_string());
+            REQUIRE_EQ(obj[key_str], v);
+        }
+
+        ser.emplace();
+
+        CHECK_NOTHROW(ser->as_map("test_val", test_val2));
+        REQUIRE_FALSE(obj.empty());
+        REQUIRE(obj.is_object());
+        REQUIRE(obj.contains("test_val"));
+
+        const auto& sub_obj = obj.at("test_val");
+
+        REQUIRE(sub_obj.is_object());
+        REQUIRE_EQ(sub_obj.size(), test_val2.size());
+
+        for (const auto& [k, v] : test_val2)
+        {
+            REQUIRE(sub_obj.contains(k));
+            REQUIRE(sub_obj[k].is_object());
+            REQUIRE(sub_obj[k].contains("age"));
+            REQUIRE(sub_obj[k]["age"].is_number_integer());
+            REQUIRE_EQ(sub_obj[k]["age"], v.age);
+        }
     }
 
     TEST_CASE("as_multimap")

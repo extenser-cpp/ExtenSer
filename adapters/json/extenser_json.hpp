@@ -32,7 +32,6 @@
 #define EXTENSER_JSON_HPP
 
 #include "extenser.hpp"
-#include "nlohmann/json_fwd.hpp"
 
 #if defined(EXTENSER_USE_MAGIC_ENUM)
 #  include <magic_enum.hpp>
@@ -402,7 +401,6 @@ namespace detail_json
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
         }
 
-        // TODO: move impl to private functions that convert json to T (for re-use)
         template<typename T>
         void as_bool(const std::string_view key, T& val) const
         {
