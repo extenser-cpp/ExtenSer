@@ -526,7 +526,7 @@ TEST_SUITE("json::serializer")
             const auto find_it = std::find(val_obj.cbegin(), val_obj.cend(), v);
             REQUIRE_NE(find_it, val_obj.cend());
             REQUIRE(std::any_of(val_obj.cbegin(), val_obj.cend(),
-                [&v](const nlohmann::json& subval) { return subval.get<std::string>() == v; }));
+                [&v = v](const nlohmann::json& subval) { return subval.get<std::string>() == v; }));
         }
 
         ser.emplace();
@@ -554,7 +554,7 @@ TEST_SUITE("json::serializer")
             const auto find_it = std::find(val_obj.cbegin(), val_obj.cend(), v);
             REQUIRE_NE(find_it, val_obj.cend());
             REQUIRE(std::any_of(val_obj.cbegin(), val_obj.cend(),
-                [&v](const nlohmann::json& subval) { return subval.get<std::string>() == v; }));
+                [&v = v](const nlohmann::json& subval) { return subval.get<std::string>() == v; }));
         }
     }
 
