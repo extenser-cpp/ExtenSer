@@ -56,8 +56,7 @@ TEST_SUITE("json::serializer")
 
     TEST_CASE("as_bool")
     {
-        std::optional<serializer> ser{};
-        ser.emplace();
+        std::optional<serializer> ser{ std::in_place };
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_bool("", true));
@@ -92,8 +91,7 @@ TEST_SUITE("json::serializer")
         static constexpr int64_t test_val4_i{ 1'234'567LL };
         static constexpr double test_val4{ test_val4_i };
 
-        std::optional<serializer> ser{};
-        ser.emplace();
+        std::optional<serializer> ser{ std::in_place };
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_float("", test_val1));
@@ -129,8 +127,7 @@ TEST_SUITE("json::serializer")
         static constexpr intmax_t test_val2{ std::numeric_limits<intmax_t>::min() };
         static constexpr int8_t test_val3{ 0x4A };
 
-        std::optional<serializer> ser{};
-        ser.emplace();
+        std::optional<serializer> ser{ std::in_place };
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_int("", test_val1));
@@ -165,8 +162,7 @@ TEST_SUITE("json::serializer")
         static constexpr uintmax_t test_val2{ std::numeric_limits<uintmax_t>::max() };
         static constexpr uint8_t test_val3{ 0x4A };
 
-        std::optional<serializer> ser{};
-        ser.emplace();
+        std::optional<serializer> ser{ std::in_place };
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_uint("", test_val1));
@@ -217,8 +213,7 @@ TEST_SUITE("json::serializer")
         static constexpr TestCode test_val2{ TestCode::CodeB };
         static constexpr PlainEnum test_val3{ VALUE_XX };
 
-        std::optional<serializer> ser{};
-        ser.emplace();
+        std::optional<serializer> ser{ std::in_place };
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_enum("", test_val1));
@@ -276,8 +271,7 @@ TEST_SUITE("json::serializer")
         static constexpr std::array<char, 6> test_val4{ 'Q', 'W', 'E', 'R', 'T', 'Y' };
         const std::string test_val5{ "Goodbye, cruel world!" };
 
-        std::optional<serializer> ser{};
-        ser.emplace();
+        std::optional<serializer> ser{ std::in_place };
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_string("", test_val1));
@@ -321,8 +315,7 @@ TEST_SUITE("json::serializer")
             const std::vector<bool> test_val5{ true, false, false, true, true, false, true, false,
                 false, true, true, true, true, false, false, false };
 
-            std::optional<serializer> ser{};
-            ser.emplace();
+            std::optional<serializer> ser{ std::in_place };
             const auto& obj = ser.value().object();
 
             CHECK_NOTHROW(ser->as_array("", test_val1));
@@ -376,8 +369,7 @@ TEST_SUITE("json::serializer")
 
             const auto test_val2 = create_3d_vec(5, 5, 5);
 
-            std::optional<serializer> ser{};
-            ser.emplace();
+            std::optional<serializer> ser{ std::in_place };
             const auto& obj = ser.value().object();
 
             CHECK_NOTHROW(ser->as_array("", test_val1));
@@ -441,8 +433,7 @@ TEST_SUITE("json::serializer")
 
             const std::vector<Person> test_val1{ person1, person2, person3 };
 
-            std::optional<serializer> ser{};
-            ser.emplace();
+            std::optional<serializer> ser{ std::in_place };
             const auto& obj = ser.value().object();
 
             CHECK_NOTHROW(ser->as_array("", test_val1));
@@ -474,8 +465,7 @@ TEST_SUITE("json::serializer")
                 Person{ 19, "Ricardo Montoya", {}, Pet{ "Sinbad", Pet::Species::Cat }, {} } }
         };
 
-        std::optional<serializer> ser{};
-        ser.emplace();
+        std::optional<serializer> ser{ std::in_place };
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_map("", test_val1));
@@ -489,7 +479,7 @@ TEST_SUITE("json::serializer")
 
             REQUIRE(obj.contains(key_str));
             REQUIRE(obj[key_str].is_string());
-            REQUIRE_EQ(obj[key_str], v);
+            REQUIRE_EQ(obj[key_str].get<std::string>(), v);
         }
 
         ser.emplace();
@@ -510,29 +500,155 @@ TEST_SUITE("json::serializer")
             REQUIRE(sub_obj[k].is_object());
             REQUIRE(sub_obj[k].contains("age"));
             REQUIRE(sub_obj[k]["age"].is_number_integer());
-            REQUIRE_EQ(sub_obj[k]["age"], v.age);
+            REQUIRE_EQ(sub_obj[k]["age"].get<int>(), v.age);
         }
     }
 
     TEST_CASE("as_multimap")
     {
-        // TODO: Implement test
+        std::optional<serializer> ser{ std::in_place };
+        const auto& obj = ser.value().object();
+
+        const std::multimap<char, std::string> test_val1{ { 'a', "Apple" }, { 'a', "Aardvark" },
+            { 'b', "Brush" }, { 'c', "Cleaver" }, { 'd', "Danger" }, { 'd', "Donut" } };
+        CHECK_NOTHROW(ser->as_multimap("", test_val1));
+        REQUIRE_FALSE(obj.empty());
+        REQUIRE(obj.is_object());
+
+        for (const auto& [k, v] : test_val1)
+        {
+            const auto key_str = std::to_string(k);
+            REQUIRE(obj.contains(key_str));
+
+            const auto& val_obj = obj.at(key_str);
+
+            REQUIRE(val_obj.is_array());
+            const auto find_it = std::find(val_obj.cbegin(), val_obj.cend(), v);
+            REQUIRE_NE(find_it, val_obj.cend());
+            REQUIRE(std::any_of(val_obj.cbegin(), val_obj.cend(),
+                [&v](const nlohmann::json& subval) { return subval.get<std::string>() == v; }));
+        }
+
+        ser.emplace();
+
+        const std::unordered_multimap<std::string, std::string> test_val2{ { "Stan Lee", "Marvel" },
+            { "Jack Kirby", "Marvel" }, { "Jack Kirby", "DC" }, { "Mike Mignola", "Dark Horse" },
+            { "Mike Mignola", "DC" }, { "Mike Mignola", "Marvel" }, { "Grant Morrison", "DC" } };
+
+        CHECK_NOTHROW(ser->as_multimap("test_val", test_val2));
+        REQUIRE_FALSE(obj.empty());
+        REQUIRE(obj.is_object());
+        REQUIRE(obj.contains("test_val"));
+
+        const auto& sub_obj = obj.at("test_val");
+
+        REQUIRE(sub_obj.is_object());
+
+        for (const auto& [k, v] : test_val2)
+        {
+            REQUIRE(sub_obj.contains(k));
+
+            const auto& val_obj = sub_obj.at(k);
+
+            REQUIRE(val_obj.is_array());
+            const auto find_it = std::find(val_obj.cbegin(), val_obj.cend(), v);
+            REQUIRE_NE(find_it, val_obj.cend());
+            REQUIRE(std::any_of(val_obj.cbegin(), val_obj.cend(),
+                [&v](const nlohmann::json& subval) { return subval.get<std::string>() == v; }));
+        }
     }
 
     TEST_CASE("as_tuple")
     {
-        // TODO: Implement test
+        const std::tuple<int, std::string, double> test_val1{ 14, "Yellow Bus", 78.48 };
+
+        std::optional<serializer> ser{ std::in_place };
+        const auto& obj = ser.value().object();
+
+        CHECK_NOTHROW(ser->as_tuple("", test_val1));
+        REQUIRE_FALSE(obj.empty());
+        REQUIRE(obj.is_array());
+        REQUIRE_EQ(obj.size(), std::tuple_size_v<decltype(test_val1)>);
+
+        REQUIRE(obj[0].is_number_integer());
+        REQUIRE_EQ(obj[0].get<int>(), std::get<0>(test_val1));
+
+        REQUIRE(obj[1].is_string());
+        REQUIRE_EQ(obj[1].get<std::string>(), std::get<1>(test_val1));
+
+        REQUIRE(obj[2].is_number_float());
+        REQUIRE_EQ(obj[2].get<double>(), doctest::Approx(std::get<2>(test_val1)).epsilon(0.0001));
+
+        ser.emplace();
+
+        const std::pair test_val2{ Fruit::Orange, Pet{ "Valerie", Pet::Species::Bird } };
+
+        CHECK_NOTHROW(ser->as_tuple("test_val", test_val2));
+        REQUIRE_FALSE(obj.empty());
+        REQUIRE(obj.is_object());
+        REQUIRE(obj.contains("test_val"));
+
+        const auto& sub_obj = obj.at("test_val");
+
+        REQUIRE(sub_obj.is_object());
+        REQUIRE_EQ(sub_obj.size(), 2);
+
+        REQUIRE(sub_obj.contains("first"));
+        REQUIRE(sub_obj["first"].is_number_integer());
+        REQUIRE_EQ(sub_obj["first"].get<Fruit>(), test_val2.first);
+
+        REQUIRE(sub_obj.contains("second"));
+        REQUIRE(sub_obj["second"].is_object());
+
+        REQUIRE(sub_obj["second"].contains("name"));
+        REQUIRE(sub_obj["second"]["name"].is_string());
+        REQUIRE_EQ(sub_obj["second"]["name"].get<std::string>(), test_val2.second.name);
+
+        REQUIRE(sub_obj["second"].contains("species"));
+        REQUIRE(sub_obj["second"]["species"].is_number_integer());
+        REQUIRE_EQ(sub_obj["second"]["species"].get<Pet::Species>(), test_val2.second.species);
+
+        static constexpr std::tuple<> test_val3{};
+        CHECK_NOTHROW(ser->as_tuple("test_val", test_val3));
+        REQUIRE(sub_obj.is_array());
+        REQUIRE(sub_obj.empty());
     }
 
     TEST_CASE("as_optional")
     {
-        // TODO: Implement test
+        std::optional<serializer> ser{ std::in_place };
+        const auto& obj = ser.value().object();
+
+        const std::optional<int> test_val1{ 22 };
+
+        CHECK_NOTHROW(ser->as_optional("", test_val1));
+        REQUIRE_FALSE(obj.empty());
+        REQUIRE(obj.is_number_integer());
+        REQUIRE_EQ(obj.get<int>(), test_val1.value());
+
+        ser.emplace();
+
+        const std::optional<Person> test_val2{};
+        CHECK_NOTHROW(ser->as_optional("test_val", test_val2));
+        REQUIRE_FALSE(obj.empty());
+        REQUIRE(obj.is_object());
+        REQUIRE(obj.contains("test_val"));
+
+        const auto& sub_obj = obj.at("test_val");
+
+        REQUIRE(sub_obj.is_null());
+
+        const std::optional<Person> test_val3{ Person{ 44, "Alex Herbert", {}, {}, {} } };
+        CHECK_NOTHROW(ser->as_optional("test_val", test_val3));
+        REQUIRE(sub_obj.is_object());
+        REQUIRE(sub_obj.contains("age"));
+        REQUIRE(sub_obj["age"].is_number_integer());
+        REQUIRE_EQ(sub_obj["age"].get<int>(), test_val3->age);
     }
 
     TEST_CASE("as_variant")
     {
-        std::optional<serializer> ser{};
-        ser.emplace();
+        std::optional<serializer> ser{ std::in_place };
         const auto& obj = ser.value().object();
 
         SUBCASE("int-float-string")
@@ -721,8 +837,7 @@ TEST_SUITE("json::serializer")
 
         const Person test_val2{ 44, "Bertha Jenkins", {}, {}, { { Fruit::Kiwi, 12 } } };
 
-        std::optional<serializer> ser{};
-        ser.emplace();
+        std::optional<serializer> ser{ std::in_place };
         const auto& obj = ser.value().object();
 
         CHECK_NOTHROW(ser->as_object("", test_val1));

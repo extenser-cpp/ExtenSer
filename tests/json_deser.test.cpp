@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <iostream>
 #include <limits>
 #include <optional>
 #include <string>
@@ -32,8 +31,7 @@ TEST_SUITE("json::deserializer")
         const nlohmann::json test_obj1 = nlohmann::json::parse("false");
         const nlohmann::json test_obj2 = nlohmann::json::parse(R"({"test_val": true})");
 
-        std::optional<deserializer> dser{};
-        dser.emplace(test_obj1);
+        std::optional<deserializer> dser{ test_obj1 };
 
         bool test_val{ true };
         REQUIRE_NOTHROW(dser->as_bool("", test_val));
@@ -51,8 +49,7 @@ TEST_SUITE("json::deserializer")
         const nlohmann::json test_obj2 = nlohmann::json::parse(R"({"test_val": 112E-6})");
         const nlohmann::json test_obj3 = NAN;
 
-        std::optional<deserializer> dser{};
-        dser.emplace(test_obj1);
+        std::optional<deserializer> dser{ test_obj1 };
 
         float test_float{};
         REQUIRE_NOTHROW(dser->as_float("", test_float));
@@ -72,12 +69,39 @@ TEST_SUITE("json::deserializer")
 
     TEST_CASE("as_int")
     {
-        // TODO: Implement test
+        const nlohmann::json test_obj1 = nlohmann::json::parse("12345");
+
+        std::optional<deserializer> dser{ test_obj1 };
+
+        int test_int{};
+        REQUIRE_NOTHROW(dser->as_int("", test_int));
+        REQUIRE_EQ(test_int, 12'345);
+
+        const nlohmann::json test_obj2 = nlohmann::json::parse(R"({"test_val": -2147483650})");
+        dser.emplace(test_obj2);
+
+        int64_t test_int2{};
+        REQUIRE_NOTHROW(dser->as_int("test_val", test_int2));
+        REQUIRE_EQ(test_int2, -2'147'483'650LL);
     }
 
     TEST_CASE("as_uint")
     {
-        // TODO: Implement test
+        const nlohmann::json test_obj1 = nlohmann::json::parse("12345");
+
+        std::optional<deserializer> dser{ test_obj1 };
+
+        unsigned test_uint{};
+        REQUIRE_NOTHROW(dser->as_uint("", test_uint));
+        REQUIRE_EQ(test_uint, 12'345U);
+
+        const nlohmann::json test_obj2 =
+            nlohmann::json::parse(R"({"test_val": 9223372036854775810})");
+        dser.emplace(test_obj2);
+
+        uint64_t test_uint2{};
+        REQUIRE_NOTHROW(dser->as_uint("test_val", test_uint2));
+        REQUIRE_EQ(test_uint2, 9'223'372'036'854'775'810ULL);
     }
 
     TEST_CASE("as_enum")
@@ -155,7 +179,26 @@ TEST_SUITE("json::deserializer")
 
     TEST_CASE("as_object")
     {
-        // TODO: Implement test
+        const nlohmann::json test_obj1 = nlohmann::json::parse(
+            R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": 2 }, "fruit_count": {}})");
+
+        std::optional<deserializer> dser{test_obj1};
+
+        Person test_val1{};
+        REQUIRE_NOTHROW(dser->as_object("", test_val1));
+        REQUIRE_EQ(test_val1.age, 18);
+        REQUIRE_EQ(test_val1.name, "Bill Garfield");
+        REQUIRE_EQ(test_val1.friends.size(), 0);
+        REQUIRE(test_val1.pet.has_value());
+        REQUIRE_EQ(test_val1.pet->species, Pet::Species::Dog);
+
+        const nlohmann::json test_obj2 = nlohmann::json::parse(
+            R"({"test_val": {"age": 18, "name": "Bill Garfield", "friends": [], "pet": null, "fruit_count": {}}})");
+        dser.emplace(test_obj2);
+
+        REQUIRE_NOTHROW(dser->as_object("test_val", test_val1));
+        REQUIRE_EQ(test_val1.age, 18);
+        REQUIRE_FALSE(test_val1.pet.has_value());
     }
 }
 } //namespace extenser::tests

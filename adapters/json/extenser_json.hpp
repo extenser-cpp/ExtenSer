@@ -288,6 +288,7 @@ namespace detail_json
         template<typename... Args>
         static void push_tuple(const std::tuple<Args...>& arg, nlohmann::json& obj)
         {
+            obj = nlohmann::json::array();
             detail::for_each_tuple(
                 arg, [&obj](auto&& elem) { push_args(std::forward<decltype(elem)>(elem), obj); });
         }
@@ -500,7 +501,7 @@ namespace detail_json
             for (const auto& [k, v] : obj.items())
             {
                 val.insert({ parse_arg<typename T::key_type>(nlohmann::json::parse(k).front()),
-                    parse_arg<typename T::value_type>(v) });
+                    parse_arg<typename T::mapped_type>(v) });
             }
         }
 
@@ -518,7 +519,7 @@ namespace detail_json
 
                 for (const auto& subval : v)
                 {
-                    val.insert({ parsed_key, parse_arg<typename T::value_type>(subval) });
+                    val.insert({ parsed_key, parse_arg<typename T::mapped_type>(subval) });
                 }
             }
         }
