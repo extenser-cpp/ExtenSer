@@ -16,42 +16,74 @@ TEST_SUITE("json::serializer")
 {
     using serializer = json_adapter::serializer_t;
 
-    TEST_CASE("CTOR")
+    SCENARIO("a JSON serializer can be constructed properly without throwing")
     {
-        std::optional<serializer> ser{};
-        REQUIRE_FALSE(ser.has_value());
+        GIVEN("an empty optional<serializer>")
+        {
+            std::optional<serializer> ser{};
+            REQUIRE_FALSE(ser.has_value());
 
-        REQUIRE_NOTHROW(ser.emplace());
-        REQUIRE(ser.has_value());
+            WHEN("the serializer is (default) constructed")
+            {
+                REQUIRE_NOTHROW(ser.emplace());
 
-        const auto& obj = ser->object();
+                THEN("the serializer is constructed without exception")
+                {
+                    REQUIRE(ser.has_value());
 
-        REQUIRE(obj.is_null());
-        REQUIRE(obj.empty());
+                    AND_THEN("the serializer object is null and empty")
+                    {
+                        CHECK(ser->object().is_null());
+                        CHECK(ser->object().empty());
+                    }
+                }
+            }
+        }
     }
 
-    TEST_CASE("object")
+    SCENARIO("a call to serializer::object() returns the underlying JSON without side effects")
     {
-        serializer ser{};
-        ser.as_uint("", 22U);
+        GIVEN("a serializer containing a value")
+        {
+            static constexpr unsigned test_val = 22U;
+            serializer ser{};
+            ser.as_uint("", test_val);
 
-        const auto& obj = ser.object();
+            WHEN("object(lvalue) is called on the serializer")
+            {
+                const auto& obj = ser.object();
 
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_number());
-        REQUIRE(obj.is_number_integer());
-        REQUIRE(obj.is_number_unsigned());
+                THEN("the object is not empty")
+                {
+                    REQUIRE_FALSE(obj.empty());
 
-        const auto obj2 = std::move(ser).object();
+                    AND_THEN("the object contains the correct value type")
+                    {
+                        CHECK(obj.is_number_unsigned());
+                    }
+                }
+            }
 
-        REQUIRE_FALSE(obj2.empty());
-        REQUIRE(obj2.is_number());
-        REQUIRE(obj2.is_number_integer());
-        REQUIRE(obj2.is_number_unsigned());
+            WHEN("object(rvalue) is called on the serializer")
+            {
+                const auto obj = std::move(ser).object();
 
-        // Verify json member is in a moved-from state
-        REQUIRE(obj.is_null());
-        REQUIRE(obj.empty());
+                THEN("the object is not empty")
+                {
+                    REQUIRE_FALSE(obj.empty());
+
+                    AND_THEN("the object contains the correct value type")
+                    {
+                        CHECK(obj.is_number_unsigned());
+                    }
+                    AND_THEN("the serializer's JSON member is in a valid, moved-from state")
+                    {
+                        CHECK(ser.object().is_null());
+                        CHECK(ser.object().empty());
+                    }
+                }
+            }
+        }
     }
 
     TEST_CASE("as_bool")
