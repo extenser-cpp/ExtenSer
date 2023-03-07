@@ -35,6 +35,7 @@
 #include <cstddef>
 #include <iterator>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -79,6 +80,12 @@
 #else
 #  include <cassert>
 #  define EXTENSER_ASSERTION(EXPR) assert(EXPR)
+#endif
+
+#if defined(EXTENSER_ASSERT_THROW)
+inline constexpr bool EXTENSER_ASSERT_NOTHROW = false;
+#else
+inline constexpr bool EXTENSER_ASSERT_NOTHROW = true;
 #endif
 
 #define EXTENSER_POSTCONDITION(EXPR) EXTENSER_ASSERTION(EXPR)
@@ -614,6 +621,24 @@ inline constexpr bool is_null_serializable = std::is_null_pointer_v<T> || std::i
 // TODO: check if there is a `serialize` function via ASL or static member
 template<typename T>
 inline constexpr bool is_object_serializable = true;
+
+class extenser_exception : public std::runtime_error
+{
+public:
+    using std::runtime_error::runtime_error;
+};
+
+class serialization_error : public extenser_exception
+{
+public:
+    using extenser_exception::extenser_exception;
+};
+
+class deserialization_error : public extenser_exception
+{
+public:
+    using extenser_exception::extenser_exception;
+};
 
 template<typename Derived>
 class generic_serializer

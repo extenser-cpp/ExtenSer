@@ -53,7 +53,7 @@ TEST_SUITE("json::deserializer")
 
         float test_float{};
         REQUIRE_NOTHROW(dser->as_float("", test_float));
-        REQUIRE_EQ(test_float, doctest::Approx(1.256f).epsilon(0.0001));
+        REQUIRE_EQ(static_cast<double>(test_float), doctest::Approx(1.256).epsilon(0.0001));
 
         dser.emplace(test_obj2);
 
@@ -180,9 +180,9 @@ TEST_SUITE("json::deserializer")
     TEST_CASE("as_object")
     {
         const nlohmann::json test_obj1 = nlohmann::json::parse(
-            R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": 2 }, "fruit_count": {}})");
+            R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": 2 }, "fruit_count": {"0": 2, "3": 4}})");
 
-        std::optional<deserializer> dser{test_obj1};
+        std::optional<deserializer> dser{ test_obj1 };
 
         Person test_val1{};
         REQUIRE_NOTHROW(dser->as_object("", test_val1));
@@ -191,14 +191,24 @@ TEST_SUITE("json::deserializer")
         REQUIRE_EQ(test_val1.friends.size(), 0);
         REQUIRE(test_val1.pet.has_value());
         REQUIRE_EQ(test_val1.pet->species, Pet::Species::Dog);
+        REQUIRE_EQ(test_val1.fruit_count.size(), 2);
+        REQUIRE_EQ(test_val1.fruit_count.at(Fruit::Apple), 2);
 
         const nlohmann::json test_obj2 = nlohmann::json::parse(
             R"({"test_val": {"age": 18, "name": "Bill Garfield", "friends": [], "pet": null, "fruit_count": {}}})");
+
         dser.emplace(test_obj2);
 
         REQUIRE_NOTHROW(dser->as_object("test_val", test_val1));
         REQUIRE_EQ(test_val1.age, 18);
         REQUIRE_FALSE(test_val1.pet.has_value());
+
+        const nlohmann::json test_obj3 = nlohmann::json::parse(
+            R"({"test_val": {"age": 18, "name": "Bill Garfield", "friends": [], "pet": [], "fruit_count": {}}})");
+
+        dser.emplace(test_obj3);
+
+        REQUIRE_THROWS_AS(dser->as_object("test_val", test_val1), deserialization_error);
     }
 }
 } //namespace extenser::tests

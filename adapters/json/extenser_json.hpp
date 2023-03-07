@@ -203,7 +203,7 @@ namespace detail_json
 #if defined(EXTENSER_USE_MAGIC_ENUM)
             if (!magic_enum::enum_contains<no_ref_t>(val))
             {
-                throw std::runtime_error{
+                throw serialization_error{
                     std::string{ "Invalid enum value: " }
                         .append(std::to_string(static_cast<std::underlying_type_t<no_ref_t>>(val)))
                         .append(" for type: ")
@@ -397,7 +397,8 @@ namespace detail_json
     class deserializer : public serializer_base<serial_adapter, true>
     {
     public:
-        explicit deserializer(const nlohmann::json& obj) : m_json(obj)
+        explicit deserializer(const nlohmann::json& obj) noexcept(EXTENSER_ASSERT_NOTHROW)
+            : m_json(obj)
         {
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
         }
@@ -405,25 +406,69 @@ namespace detail_json
         template<typename T>
         void as_bool(const std::string_view key, T& val) const
         {
-            val = subobject(key).get<bool>();
+            try
+            {
+                val = subobject(key).get<bool>();
+            }
+            catch (const deserialization_error&)
+            {
+                throw;
+            }
+            catch (const std::exception& ex)
+            {
+                throw deserialization_error{ ex.what() };
+            }
         }
 
         template<typename T>
         void as_float(const std::string_view key, T& val) const
         {
-            val = subobject(key).get<T>();
+            try
+            {
+                val = subobject(key).get<T>();
+            }
+            catch (const deserialization_error&)
+            {
+                throw;
+            }
+            catch (const std::exception& ex)
+            {
+                throw deserialization_error{ ex.what() };
+            }
         }
 
         template<typename T>
         void as_int(const std::string_view key, T& val) const
         {
-            val = subobject(key).get<T>();
+            try
+            {
+                val = subobject(key).get<T>();
+            }
+            catch (const deserialization_error&)
+            {
+                throw;
+            }
+            catch (const std::exception& ex)
+            {
+                throw deserialization_error{ ex.what() };
+            }
         }
 
         template<typename T>
         void as_uint(const std::string_view key, T& val) const
         {
-            val = subobject(key).get<T>();
+            try
+            {
+                val = subobject(key).get<T>();
+            }
+            catch (const deserialization_error&)
+            {
+                throw;
+            }
+            catch (const std::exception& ex)
+            {
+                throw deserialization_error{ ex.what() };
+            }
         }
 
         template<typename T>
@@ -431,17 +476,39 @@ namespace detail_json
         {
             static_assert(std::is_enum_v<T>, "T must be an enum type");
 
+            try
+            {
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-            val = magic_enum::enum_cast<T>(subobject(key).get<std::string>());
+                val = magic_enum::enum_cast<T>(subobject(key).get<std::string>());
 #else
-            val = static_cast<T>(subobject(key).get<std::underlying_type_t<T>>());
+                val = static_cast<T>(subobject(key).get<std::underlying_type_t<T>>());
 #endif
+            }
+            catch (const deserialization_error&)
+            {
+                throw;
+            }
+            catch (const std::exception& ex)
+            {
+                throw deserialization_error{ ex.what() };
+            }
         }
 
         template<typename T>
         void as_string(const std::string_view key, T& val) const
         {
-            val = subobject(key).get<std::string>();
+            try
+            {
+                val = subobject(key).get<std::string>();
+            }
+            catch (const deserialization_error&)
+            {
+                throw;
+            }
+            catch (const std::exception& ex)
+            {
+                throw deserialization_error{ ex.what() };
+            }
         }
 
         template<typename T>
@@ -482,7 +549,7 @@ namespace detail_json
 
             if (arr.size() != val.size())
             {
-                throw std::out_of_range{ "JSON error: array out of bounds" };
+                throw deserialization_error{ "JSON error: array out of bounds" };
             }
 
             if constexpr (!std::is_const_v<T>)
@@ -536,7 +603,7 @@ namespace detail_json
         {
             if (subobject(key).size() != sizeof...(Args))
             {
-                throw std::runtime_error{ "JSON error: invalid number of args" };
+                throw deserialization_error{ "JSON error: invalid number of args" };
             }
 
             [[maybe_unused]] size_t arg_counter = 0;
@@ -561,7 +628,7 @@ namespace detail_json
 
             if (v_idx >= arg_sz)
             {
-                throw std::runtime_error{
+                throw deserialization_error{
                     std::string{ "JSON error: variant index exceeded variant size: " }.append(
                         std::to_string(arg_sz))
                 };
@@ -666,7 +733,19 @@ namespace detail_json
         [[nodiscard]] auto subobject(const std::string_view key) const -> const nlohmann::json&
         {
             EXTENSER_PRECONDITION(key.empty() || m_json.is_object());
-            return key.empty() ? m_json : m_json.at(key);
+
+            try
+            {
+                return key.empty() ? m_json : m_json.at(key);
+            }
+            catch (const deserialization_error&)
+            {
+                throw;
+            }
+            catch (const std::exception& ex)
+            {
+                throw deserialization_error{ ex.what() };
+            }
         }
 
         template<typename T>
@@ -680,9 +759,9 @@ namespace detail_json
             {
                 return arg.is_boolean();
             }
-            else if constexpr (std::is_integral_v<T>)
+            else if constexpr (std::is_integral_v<T> || std::is_enum_v<T>)
             {
-                return arg.is_number() && (!arg.is_number_float());
+                return arg.is_number_integer();
             }
             else if constexpr (std::is_floating_point_v<T>)
             {
@@ -692,11 +771,11 @@ namespace detail_json
             {
                 return arg.is_string();
             }
-            else if constexpr (detail::is_map_v<T>)
+            else if constexpr (detail::is_map_v<T> || detail::is_pair_v<T>)
             {
                 return arg.is_object();
             }
-            else if constexpr (detail::is_container_v<T>)
+            else if constexpr (detail::is_container_v<T> || detail::is_tuple_v<T>)
             {
                 return arg.is_array();
             }
@@ -707,7 +786,7 @@ namespace detail_json
             }
             else
             {
-                return !arg.is_null();
+                return arg.is_object();
             }
         }
 
@@ -720,22 +799,49 @@ namespace detail_json
             if (!validate_arg<no_ref_t>(arg))
             {
 #ifdef EXTENSER_NO_RTTI
-                throw std::runtime_error{
+                throw deserialization_error{
                     std::string{ "JSON error: expected type: {NO-RTTI}, got type: " }.append(
                         arg.type_name())
                 };
 #else
-                throw std::runtime_error{ std::string{ "JSON error: expected type: " }
-                                              .append(typeid(no_ref_t).name())
-                                              .append(", got type: ")
-                                              .append(arg.type_name()) };
+                throw deserialization_error{ std::string{ "JSON error: expected type: " }
+                                                 .append(typeid(no_ref_t).name())
+                                                 .append(", got type: ")
+                                                 .append(arg.type_name()) };
 #endif
             }
 
             no_ref_t out_val;
             deserializer ser{ arg };
-            ser.deserialize_object(out_val);
+
+            try
+            {
+                ser.deserialize_object(out_val);
+            }
+            catch (const deserialization_error&)
+            {
+                throw;
+            }
+            catch (const std::exception& ex)
+            {
+                throw deserialization_error{ ex.what() };
+            }
+
             return out_val;
+        }
+
+        [[nodiscard]] static auto get_next_arg(const nlohmann::json& arg, size_t& index) noexcept
+            -> const nlohmann::json&
+        {
+            if (arg.is_array())
+            {
+                const auto old_idx = index;
+                ++index;
+
+                return arg[old_idx];
+            }
+
+            return arg;
         }
 
         template<typename T>
@@ -744,17 +850,23 @@ namespace detail_json
         {
             if (index >= arg_arr.size())
             {
-                throw std::runtime_error{ "JSON error: argument count mismatch" };
+                throw deserialization_error{ "JSON error: argument count mismatch" };
             }
 
-            if (arg_arr.is_array())
+            const auto& next_obj = get_next_arg(arg_arr, index);
+
+            try
             {
-                const auto old_idx = index;
-                ++index;
-                return parse_arg<T>(arg_arr[old_idx]);
+                return parse_arg<T>(next_obj);
             }
-
-            return parse_arg<T>(arg_arr);
+            catch (const deserialization_error&)
+            {
+                throw;
+            }
+            catch (const std::exception& ex)
+            {
+                throw deserialization_error{ ex.what() };
+            }
         }
 
         const nlohmann::json& m_json;

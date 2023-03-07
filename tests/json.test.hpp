@@ -38,8 +38,8 @@ struct Pet
         Turtle,
     };
 
-    std::string name;
-    Species species;
+    std::string name{};
+    Species species{};
 };
 
 template<typename S>
@@ -51,11 +51,11 @@ void serialize(extenser::generic_serializer<S>& ser, Pet& pet)
 
 struct Person
 {
-    int age;
-    std::string name;
-    std::vector<Person> friends;
-    std::optional<Pet> pet;
-    std::unordered_map<Fruit, int> fruit_count;
+    int age{};
+    std::string name{};
+    std::vector<Person> friends{};
+    std::optional<Pet> pet{};
+    std::unordered_map<Fruit, int> fruit_count{};
 };
 
 template<typename S>

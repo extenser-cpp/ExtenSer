@@ -98,7 +98,8 @@ TEST_SUITE("json::serializer")
         REQUIRE_FALSE(obj.empty());
         REQUIRE(obj.is_number());
         REQUIRE(obj.is_number_float());
-        REQUIRE_EQ(obj.get<float>(), doctest::Approx(test_val1).epsilon(test_epsilon));
+        REQUIRE_EQ(obj.get<double>(),
+            doctest::Approx(static_cast<double>(test_val1)).epsilon(test_epsilon));
 
         ser.emplace();
 
@@ -114,7 +115,7 @@ TEST_SUITE("json::serializer")
 
         CHECK_NOTHROW(ser->as_float("test_val", test_val3));
         REQUIRE(sub_obj.is_number_float());
-        REQUIRE_EQ(sub_obj.get<long double>(), doctest::Approx(test_val3).epsilon(test_epsilon));
+        REQUIRE_EQ(sub_obj.get<double>(), doctest::Approx(test_val3).epsilon(test_epsilon));
 
         CHECK_NOTHROW(ser->as_float("test_val", test_val4_i));
         REQUIRE(sub_obj.is_number_float());
