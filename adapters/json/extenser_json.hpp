@@ -42,7 +42,6 @@
 #include <array>
 #include <cstddef>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -74,21 +73,23 @@ namespace detail_json
     public:
         serializer() noexcept = default;
 
-        [[nodiscard]] auto object() const& -> const nlohmann::json&
+        [[nodiscard]] auto object() const& noexcept(EXTENSER_ASSERT_NOTHROW)
+            -> const nlohmann::json&
         {
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
             return m_json;
         }
 
-        [[nodiscard]] auto object() && -> nlohmann::json&&
+        [[nodiscard]] auto object() && noexcept(EXTENSER_ASSERT_NOTHROW) -> nlohmann::json&&
         {
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
             return std::move(m_json);
         }
 
         template<typename T>
-        void as_bool(const std::string_view key, const T& val)
+        void as_bool(const std::string_view key, const T& val) noexcept
         {
+            // TODO: as_bool should explicitly just take `bool`
             push_simple_type(static_cast<bool>(val), subobject(key));
         }
 
@@ -190,7 +191,7 @@ namespace detail_json
         }
 
         template<typename T>
-        static void push_simple_type(T&& arg, nlohmann::json& obj)
+        static void push_simple_type(T&& arg, nlohmann::json& obj) noexcept
         {
             obj = std::forward<T>(arg);
         }
