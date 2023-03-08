@@ -580,7 +580,7 @@ namespace detail_json
             {
                 const auto key_obj = (k.front() == '{' || k.front() == '[')
                     ? nlohmann::json::parse(k)
-                    : nlohmann::json{ k };
+                    : nlohmann::json::parse('[' + k + ']');
 
                 val.insert({ parse_arg<typename T::key_type>(key_obj.front()),
                     parse_arg<typename T::mapped_type>(v) });
@@ -596,12 +596,14 @@ namespace detail_json
 
             for (const auto& [k, v] : obj.items())
             {
-                const auto parsed_key =
-                    parse_arg<typename T::key_type>(nlohmann::json::parse(k).front());
+                const auto key_obj = (k.front() == '{' || k.front() == '[')
+                    ? nlohmann::json::parse(k)
+                    : nlohmann::json::parse('[' + k + ']');
 
                 for (const auto& subval : v)
                 {
-                    val.insert({ parsed_key, parse_arg<typename T::mapped_type>(subval) });
+                    val.insert({ (parse_arg<typename T::key_type>(key_obj.front())),
+                        parse_arg<typename T::mapped_type>(subval) });
                 }
             }
         }

@@ -7,9 +7,14 @@
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>
 
+#include <deque>
+#include <forward_list>
+#include <list>
 #include <optional>
+#include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace extenser::tests
@@ -95,6 +100,69 @@ inline auto create_3d_vec(size_t x_sz, size_t y_sz, size_t z_sz)
     }
 
     return x;
-};
+}
+
+template<typename T>
+auto create_test_val() -> T
+{
+    throw std::logic_error{ "Implementation missing" };
+}
+
+template<>
+inline auto create_test_val<std::array<int, 5>>() -> std::array<int, 5>
+{
+    return { 1, 2, 3, 4, 5 };
+}
+
+template<>
+inline auto create_test_val<std::string_view>() -> std::string_view
+{
+    return "Mary had a little lamb";
+}
+
+template<>
+inline auto create_test_val<std::vector<bool>>() -> std::vector<bool>
+{
+    return { true, false, false, true, true, false, true, false, false, true, true, true, true,
+        false, false, false };
+}
+
+template<>
+inline auto create_test_val<std::deque<std::vector<double>>>() -> std::deque<std::vector<double>>
+{
+    return { { 1, 1, 1, 1, 1 }, { 1, 2, 3, 4, 5 }, { 4, 6, 8, 9, 19 }, { -1, -3, 12, 13, 10 },
+        { 0, 0, 0, 0, 0 } };
+}
+
+template<>
+inline auto create_test_val<std::list<Person>>() -> std::list<Person>
+{
+    const Person person1{ 10, "Timmy Johnson", {}, { Pet{ "Sparky", Pet::Species::Dog } },
+        { { Fruit::Banana, 2 }, { Fruit::Apple, 2 } } };
+    const Person person2{ 22, "Franky Johnson", { person1 },
+        { Pet{ "Tommy", Pet::Species::Turtle } }, { { Fruit::Apple, 1 }, { Fruit::Mango, 2 } } };
+    const Person person3{ 44, "Bertha Jenkins", {}, {}, { { Fruit::Kiwi, 12 } } };
+
+    return { person1, person2, person3 };
+}
+
+template<>
+inline auto create_test_val<std::forward_list<std::string>>() -> std::forward_list<std::string>
+{
+    return { "Mary had a little lamb", "whose fleece", "was white as snow" };
+}
+
+template<>
+inline auto create_test_val<std::set<int>>() -> std::set<int>
+{
+    return { 1, 22, 333, 4444, 55555, 666666 };
+}
+
+template<>
+inline auto create_test_val<std::unordered_multiset<std::string>>()
+    -> std::unordered_multiset<std::string>
+{
+    return { "Red", "Green", "Red", "Black", "Blue", "Green", "Purple" };
+}
 } //namespace extenser::tests
 #endif //EXTENSER_JSON_TEST_HPP
