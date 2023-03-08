@@ -16,204 +16,330 @@ TEST_SUITE("json::deserializer")
 {
     using deserializer = json_adapter::deserializer_t;
 
-    TEST_CASE("CTOR")
+    SCENARIO("a JSON deserializer can be constructed properly without throwing")
     {
-        const nlohmann::json obj{};
-        std::optional<deserializer> dser{};
-        REQUIRE_FALSE(dser.has_value());
+        GIVEN("an empty JSON object and empty optional<deserializer>")
+        {
+            const nlohmann::json obj{};
+            std::optional<deserializer> dser{};
+            REQUIRE_FALSE(dser.has_value());
 
-        REQUIRE_NOTHROW(dser.emplace(obj));
-        REQUIRE(dser.has_value());
+            WHEN("the deserializer is constructed with the JSON object")
+            {
+                REQUIRE_NOTHROW(dser.emplace(obj));
+
+                THEN("the deserializer is constructed without exception")
+                {
+                    REQUIRE(dser.has_value());
+                }
+            }
+        }
     }
 
-    TEST_CASE("as_bool")
+    SCENARIO("a boolean can be deserialized from JSON")
     {
-        const nlohmann::json test_obj1 = nlohmann::json::parse("false");
-        const nlohmann::json test_obj2 = nlohmann::json::parse(R"({"test_val": true})");
+        GIVEN("a deserializer with a JSON value containing a boolean")
+        {
+            const nlohmann::json test_obj = false;
+            deserializer dser{ test_obj };
 
-        std::optional<deserializer> dser{ test_obj1 };
+            WHEN("a bool is deserialized")
+            {
+                bool test_val{ true };
 
-        bool test_val{ true };
-        REQUIRE_NOTHROW(dser->as_bool("", test_val));
-        REQUIRE_FALSE(test_val);
+                REQUIRE_NOTHROW(dser.as_bool("", test_val));
 
-        dser.emplace(test_obj2);
+                THEN("the bool is properly assigned")
+                {
+                    CHECK_FALSE(test_val);
+                }
+            }
+        }
 
-        REQUIRE_NOTHROW(dser->as_bool("test_val", test_val));
-        REQUIRE(test_val);
+        GIVEN("a deserializer with a JSON object containing a boolean")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = true;
+            deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                bool test_val{ false };
+
+                REQUIRE_NOTHROW(dser.as_bool("test_val", test_val));
+
+                THEN("the bool is properly assigned")
+                {
+                    CHECK(test_val);
+                }
+            }
+        }
     }
 
-    TEST_CASE("as_float")
+    SCENARIO_TEMPLATE("a float can be deserialized from JSON", T_Float, float, double)
     {
-        const nlohmann::json test_obj1 = nlohmann::json::parse("1.256");
-        const nlohmann::json test_obj2 = nlohmann::json::parse(R"({"test_val": 112E-6})");
-        const nlohmann::json test_obj3 = NAN;
+        static constexpr double test_epsilon{ 0.0001 };
 
-        std::optional<deserializer> dser{ test_obj1 };
+        GIVEN("a deserializer with a JSON value containing a float")
+        {
+            static constexpr auto expected_val = static_cast<T_Float>(1.256);
 
-        float test_float{};
-        REQUIRE_NOTHROW(dser->as_float("", test_float));
-        REQUIRE_EQ(static_cast<double>(test_float), doctest::Approx(1.256).epsilon(0.0001));
+            const nlohmann::json test_obj = expected_val;
+            deserializer dser{ test_obj };
 
-        dser.emplace(test_obj2);
+            WHEN("a float is deserialized")
+            {
+                T_Float test_val{};
 
-        double test_double{};
-        REQUIRE_NOTHROW(dser->as_float("test_val", test_double));
-        REQUIRE_EQ(test_double, doctest::Approx(112E-6).epsilon(0.0001));
+                REQUIRE_NOTHROW(dser.as_float("", test_val));
 
-        dser.emplace(test_obj3);
+                THEN("the float is properly assigned")
+                {
+                    CHECK_EQ(test_val,
+                        doctest::Approx(static_cast<double>(expected_val)).epsilon(test_epsilon));
+                }
+            }
+        }
 
-        REQUIRE_NOTHROW(dser->as_float("", test_double));
-        REQUIRE(doctest::IsNaN<double>(test_double));
+        GIVEN("a deserializer with a JSON value containing NaN")
+        {
+            const auto test_obj = std::numeric_limits<T_Float>::quiet_NaN();
+            deserializer dser{ test_obj };
+
+            WHEN("a float is deserialized")
+            {
+                T_Float test_val{};
+
+                REQUIRE_NOTHROW(dser.as_float("", test_val));
+
+                THEN("the float is properly assigned")
+                {
+                    CHECK(doctest::IsNaN<T_Float>(test_val));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a float")
+        {
+            static constexpr auto expected_val = static_cast<T_Float>(112E-6);
+
+            const auto test_obj = nlohmann::json::parse(R"({"test_val": 112E-6})");
+            deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Float test_val{};
+
+                REQUIRE_NOTHROW(dser.as_float("test_val", test_val));
+
+                THEN("the float is properly assigned")
+                {
+                    CHECK_EQ(test_val,
+                        doctest::Approx(static_cast<double>(expected_val)).epsilon(test_epsilon));
+                }
+            }
+        }
     }
 
-    TEST_CASE("as_int")
+    SCENARIO_TEMPLATE(
+        "a signed integer can be deserialized from JSON", T_Int, int8_t, int16_t, int32_t, int64_t)
     {
-        const nlohmann::json test_obj1 = nlohmann::json::parse("12345");
+        GIVEN("a deserializer with a JSON value containing a signed integer")
+        {
+            static constexpr auto expected_val = (std::numeric_limits<T_Int>::max)();
 
-        std::optional<deserializer> dser{ test_obj1 };
+            const nlohmann::json test_obj = expected_val;
+            deserializer dser{ test_obj };
 
-        int test_int{};
-        REQUIRE_NOTHROW(dser->as_int("", test_int));
-        REQUIRE_EQ(test_int, 12'345);
+            WHEN("the integer is deserialized")
+            {
+                T_Int test_val{};
 
-        const nlohmann::json test_obj2 = nlohmann::json::parse(R"({"test_val": -2147483650})");
-        dser.emplace(test_obj2);
+                REQUIRE_NOTHROW(dser.as_int("", test_val));
 
-        int64_t test_int2{};
-        REQUIRE_NOTHROW(dser->as_int("test_val", test_int2));
-        REQUIRE_EQ(test_int2, -2'147'483'650LL);
+                THEN("the integer is properly assigned")
+                {
+                    CHECK_EQ(test_val, expected_val);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a signed integer")
+        {
+            static constexpr auto expected_val = (std::numeric_limits<T_Int>::min)();
+
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Int test_val{};
+
+                REQUIRE_NOTHROW(dser.as_int("test_val", test_val));
+
+                THEN("the integer is properly assigned")
+                {
+                    CHECK_EQ(test_val, expected_val);
+                }
+            }
+        }
     }
 
-    TEST_CASE("as_uint")
+    SCENARIO_TEMPLATE("an unsigned integer can be deserialized from JSON", T_Int, uint8_t, uint16_t,
+        uint32_t, uint64_t)
     {
-        const nlohmann::json test_obj1 = nlohmann::json::parse("12345");
+        GIVEN("a deserializer with a JSON value containing an unsigned integer")
+        {
+            static constexpr auto expected_val = (std::numeric_limits<T_Int>::max)();
 
-        std::optional<deserializer> dser{ test_obj1 };
+            const nlohmann::json test_obj = expected_val;
+            deserializer dser{ test_obj };
 
-        unsigned test_uint{};
-        REQUIRE_NOTHROW(dser->as_uint("", test_uint));
-        REQUIRE_EQ(test_uint, 12'345U);
+            WHEN("the integer is deserialized")
+            {
+                T_Int test_val{};
 
-        const nlohmann::json test_obj2 =
-            nlohmann::json::parse(R"({"test_val": 9223372036854775810})");
-        dser.emplace(test_obj2);
+                REQUIRE_NOTHROW(dser.as_uint("", test_val));
 
-        uint64_t test_uint2{};
-        REQUIRE_NOTHROW(dser->as_uint("test_val", test_uint2));
-        REQUIRE_EQ(test_uint2, 9'223'372'036'854'775'810ULL);
+                THEN("the integer is properly assigned")
+                {
+                    CHECK_EQ(test_val, expected_val);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a signed integer")
+        {
+            static constexpr auto expected_val = (std::numeric_limits<T_Int>::min)();
+
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Int test_val{};
+
+                REQUIRE_NOTHROW(dser.as_uint("test_val", test_val));
+
+                THEN("the integer is properly assigned")
+                {
+                    CHECK_EQ(test_val, expected_val);
+                }
+            }
+        }
     }
 
-    TEST_CASE("as_enum")
+    SCENARIO("an enum can be deserialized from JSON")
     {
         // TODO: Implement test
     }
 
-    TEST_CASE("as_string")
+    SCENARIO("a string can be deserialized from JSON")
     {
         // TODO: Implement test
     }
 
-    TEST_CASE("as_array")
-    {
-        SUBCASE("array of values")
-        {
-            // TODO: Implement test
-        }
-
-        SUBCASE("array of arrays")
-        {
-            // TODO: Implement test
-        }
-
-        SUBCASE("array of maps")
-        {
-            // TODO: Implement test
-        }
-
-        SUBCASE("array of tuples")
-        {
-            // TODO: Implement test
-        }
-
-        SUBCASE("array of optionals")
-        {
-            // TODO: Implement test
-        }
-
-        SUBCASE("array of variants")
-        {
-            // TODO: Implement test
-        }
-
-        SUBCASE("array of objects")
-        {
-            // TODO: Implement test
-        }
-    }
-
-    TEST_CASE("as_map")
+    SCENARIO("an array-like container can be deserialized from JSON")
     {
         // TODO: Implement test
     }
 
-    TEST_CASE("as_multimap")
+    SCENARIO("a map-like container can be deserialized from JSON")
     {
         // TODO: Implement test
     }
 
-    TEST_CASE("as_tuple")
+    SCENARIO("a multimap-like container can be deserialized from JSON")
     {
         // TODO: Implement test
     }
 
-    TEST_CASE("as_optional")
+    SCENARIO("a tuple can be deserialized from JSON")
     {
         // TODO: Implement test
     }
 
-    TEST_CASE("as_variant")
+    SCENARIO("an optional can be deserialized from JSON")
     {
         // TODO: Implement test
     }
 
-    TEST_CASE("as_object")
+    SCENARIO("a variant can be deserialized from JSON")
     {
+        // TODO: Implement test
+    }
+
+    SCENARIO("a user-defined class can be deserialized from JSON")
+    {
+        GIVEN("a deserializer with a JSON object representing a class")
+        {
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-        const nlohmann::json test_obj1 = nlohmann::json::parse(
-            R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": "Dog" }, "fruit_count": {"Apple": 2, "Kiwi": 4}})");
+            const nlohmann::json test_obj = nlohmann::json::parse(
+                R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": "Dog" }, "fruit_count": {"Apple": 2, "Kiwi": 4}})");
 #else
-        const nlohmann::json test_obj1 = nlohmann::json::parse(
-            R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": 2 }, "fruit_count": {"0": 2, "3": 4}})");
+            const nlohmann::json test_obj = nlohmann::json::parse(
+                R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": 2 }, "fruit_count": {"0": 2, "3": 4}})");
 #endif
 
-        std::optional<deserializer> dser{ test_obj1 };
+            deserializer dser{ test_obj };
 
-        Person test_val1{};
-        REQUIRE_NOTHROW(dser->as_object("", test_val1));
-        REQUIRE_EQ(test_val1.age, 18);
-        REQUIRE_EQ(test_val1.name, "Bill Garfield");
-        REQUIRE_EQ(test_val1.friends.size(), 0);
-        REQUIRE(test_val1.pet.has_value());
-        REQUIRE_EQ(test_val1.pet->species, Pet::Species::Dog);
-        REQUIRE_EQ(test_val1.fruit_count.size(), 2);
-        REQUIRE_EQ(test_val1.fruit_count.at(Fruit::Apple), 2);
+            WHEN("the class is deserialized")
+            {
+                Person test_val{};
 
-        const nlohmann::json test_obj2 = nlohmann::json::parse(
-            R"({"test_val": {"age": 18, "name": "Bill Garfield", "friends": [], "pet": null, "fruit_count": {}}})");
+                REQUIRE_NOTHROW(dser.as_object("", test_val));
 
-        dser.emplace(test_obj2);
+                THEN("the class is properly assigned")
+                {
+                    CHECK_EQ(test_val.age, 18);
+                    CHECK_EQ(test_val.name, "Bill Garfield");
+                    CHECK_EQ(test_val.friends.size(), 0);
+                    REQUIRE(test_val.pet.has_value());
+                    CHECK_EQ(test_val.pet->species, Pet::Species::Dog);
+                    CHECK_EQ(test_val.fruit_count.size(), 2);
+                    CHECK_EQ(test_val.fruit_count.at(Fruit::Apple), 2);
+                }
+            }
+        }
 
-        REQUIRE_NOTHROW(dser->as_object("test_val", test_val1));
-        REQUIRE_EQ(test_val1.age, 18);
-        REQUIRE_FALSE(test_val1.pet.has_value());
+        GIVEN("a deserializer with a JSON object containing a sub-object representing a class")
+        {
+            const nlohmann::json test_obj = nlohmann::json::parse(
+                R"({"test_val": {"age": 18, "name": "Bill Garfield", "friends": [], "pet": null, "fruit_count": {}}})");
+            deserializer dser{ test_obj };
 
-        const nlohmann::json test_obj3 = nlohmann::json::parse(
-            R"({"test_val": {"age": 18, "name": "Bill Garfield", "friends": [], "pet": [], "fruit_count": {}}})");
+            WHEN("the sub-object is deserialized")
+            {
+                Person test_val{};
 
-        dser.emplace(test_obj3);
+                REQUIRE_NOTHROW(dser.as_object("test_val", test_val));
 
-        REQUIRE_THROWS_AS(dser->as_object("test_val", test_val1), deserialization_error);
+                THEN("the class is properly assigned")
+                {
+                    CHECK_EQ(test_val.age, 18);
+                    CHECK_FALSE(test_val.pet.has_value());
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object that does not correctly represent a class")
+        {
+            const nlohmann::json test_obj = nlohmann::json::parse(
+                R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": [], "fruit_count": {}})");
+            deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                Person test_val{};
+
+                THEN("a deserialization_error is thrown")
+                {
+                    REQUIRE_THROWS_AS(dser.as_object("", test_val), deserialization_error);
+                }
+            }
+        }
     }
 }
 } //namespace extenser::tests
