@@ -8,7 +8,7 @@ FetchContent_Declare(doctest
 FetchContent_MakeAvailable(doctest)
 
 add_library(doctest_runner OBJECT test_runner.cpp)
-target_link_libraries(doctest_runner PUBLIC doctest::doctest)
+target_link_libraries_system(doctest_runner PUBLIC doctest::doctest)
 
 add_executable(extenser-test test_main.cpp)
 target_link_libraries(extenser-test PRIVATE doctest_runner extenser-bitsery extenser-json)
@@ -24,7 +24,7 @@ target_compile_options(json-test PRIVATE ${FULL_WARNING})
 if (CODE_COVERAGE)
   setup_target_for_coverage_gcovr_html(NAME json_gcovr EXECUTABLE json-test DEPENDENCIES json-test)
   setup_target_for_coverage_lcov(NAME json_lcov EXECUTABLE json-test DEPENDENCIES json-test)
-  target_link_libraries(json-test PRIVATE gcov)
+  target_link_libraries_system(json-test PRIVATE gcov)
   target_compile_definitions(json-test PRIVATE EXTENSER_ASSERT_NONE)
 endif ()
 

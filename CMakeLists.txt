@@ -230,6 +230,8 @@ target_include_directories(
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 include(FetchContent)
+include(system_link)
+
 FetchContent_Declare(nlohmann_json
         GIT_REPOSITORY https://github.com/nlohmann/json.git
         GIT_TAG bc889afb4c5bf1c0d8ee29ef35eaaf4c8bef8a5d
@@ -237,7 +239,7 @@ FetchContent_Declare(nlohmann_json
 FetchContent_MakeAvailable(nlohmann_json)
 
 add_library(extenser-json INTERFACE adapters/json/extenser_json.hpp)
-target_link_libraries(extenser-json INTERFACE extenser nlohmann_json::nlohmann_json)
+target_link_libraries_system(extenser-json INTERFACE extenser nlohmann_json::nlohmann_json)
 
 if (USE_MAGIC_ENUM)
     FetchContent_Declare(magic_enum
@@ -245,7 +247,7 @@ if (USE_MAGIC_ENUM)
             GIT_TAG e1a68e9dd3d2e9180b04c8aeacd4975db745e6b8
             )
     FetchContent_MakeAvailable(magic_enum)
-    target_link_libraries(extenser-json INTERFACE magic_enum::magic_enum)
+    target_link_libraries_system(extenser-json INTERFACE magic_enum::magic_enum)
     target_compile_definitions(extenser-json INTERFACE EXTENSER_USE_MAGIC_ENUM)
 endif ()
 
@@ -259,7 +261,7 @@ FetchContent_Declare(bitsery
 FetchContent_MakeAvailable(bitsery)
 
 add_library(extenser-bitsery INTERFACE adapters/bitsery/extenser_bitsery.hpp)
-target_link_libraries(extenser-bitsery INTERFACE extenser Bitsery::bitsery)
+target_link_libraries_system(extenser-bitsery INTERFACE extenser Bitsery::bitsery)
 target_include_directories(extenser-bitsery INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/adapters>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 

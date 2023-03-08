@@ -2,12 +2,15 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <magic_enum.hpp>
 #include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace extenser::tests
@@ -157,7 +160,7 @@ TEST_SUITE("json::serializer")
                 THEN("the JSON object holds a NaN")
                 {
                     REQUIRE(obj.is_number_float());
-                    CHECK(doctest::IsNaN(obj.get<double>()));
+                    CHECK(doctest::IsNaN<double>(obj.get<double>()));
                 }
             }
 
@@ -411,8 +414,9 @@ TEST_SUITE("json::serializer")
 #if defined(EXTENSER_USE_MAGIC_ENUM)
                     AND_THEN("the sub-object holds the enum name")
                     {
-                        REQUIRE(obj.is_string());
-                        CHECK_EQ(obj.get<std::string>(), magic_enum::enum_name<Fruit>(test_val));
+                        REQUIRE(sub_obj.is_string());
+                        CHECK_EQ(
+                            sub_obj.get<std::string>(), magic_enum::enum_name<Fruit>(test_val));
                     }
 #else
                     AND_THEN("the sub-object holds an integer")
@@ -449,6 +453,7 @@ TEST_SUITE("json::serializer")
         }
     }
 
+    // TODO: Refactor as BDD-style test
     TEST_CASE("as_array")
     {
         SUBCASE("array of types")
@@ -597,200 +602,373 @@ TEST_SUITE("json::serializer")
         }
     }
 
-    TEST_CASE("as_map")
+    SCENARIO("a map can be serialized to JSON")
     {
-        const std::map<int, std::string> test_val1{ { 33, "Benjamin Burton" },
-            { 99, "John Johnson" }, { 444, "Reed Carmichael" } };
-        const std::unordered_map<std::string, Person> test_val2{
-            { "Henrietta",
-                Person{ 16, "Henrietta Payne", {}, Pet{ "Ron", Pet::Species::Fish }, {} } },
-            { "Jerome", Person{ 12, "Jerome Banks", {}, {}, {} } },
-            { "Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
-            { "Ricardo",
-                Person{ 19, "Ricardo Montoya", {}, Pet{ "Sinbad", Pet::Species::Cat }, {} } }
-        };
-
-        std::optional<serializer> ser{ std::in_place };
-        const auto& obj = ser.value().object();
-
-        CHECK_NOTHROW(ser->as_map("", test_val1));
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_object());
-        REQUIRE_EQ(obj.size(), test_val1.size());
-
-        for (const auto& [k, v] : test_val1)
+        GIVEN("a default-init serializer")
         {
-            const auto key_str = std::to_string(k);
+            serializer ser{};
+            const auto& obj = ser.object();
 
-            REQUIRE(obj.contains(key_str));
-            REQUIRE(obj[key_str].is_string());
-            REQUIRE_EQ(obj[key_str].get<std::string>(), v);
-        }
+            WHEN("a std::map is serialized")
+            {
+                const std::map<int, std::string> test_val{ { 33, "Benjamin Burton" },
+                    { 99, "John Johnson" }, { 444, "Reed Carmichael" } };
 
-        ser.emplace();
+                REQUIRE_NOTHROW(ser.as_map("", test_val));
 
-        CHECK_NOTHROW(ser->as_map("test_val", test_val2));
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_object());
-        REQUIRE(obj.contains("test_val"));
+                THEN("the JSON object holds an object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE_FALSE(obj.empty());
 
-        const auto& sub_obj = obj.at("test_val");
+                    AND_THEN("the object holds all of its members")
+                    {
+                        CHECK_EQ(obj.size(), test_val.size());
 
-        REQUIRE(sub_obj.is_object());
-        REQUIRE_EQ(sub_obj.size(), test_val2.size());
+                        for (const auto& [k, v] : test_val)
+                        {
+                            const auto key_str = std::to_string(k);
 
-        for (const auto& [k, v] : test_val2)
-        {
-            REQUIRE(sub_obj.contains(k));
-            REQUIRE(sub_obj[k].is_object());
-            REQUIRE(sub_obj[k].contains("age"));
-            REQUIRE(sub_obj[k]["age"].is_number_integer());
-            REQUIRE_EQ(sub_obj[k]["age"].get<int>(), v.age);
+                            REQUIRE(obj.contains(key_str));
+                            REQUIRE(obj[key_str].is_string());
+                            CHECK_EQ(obj[key_str].get<std::string>(), v);
+                        }
+                    }
+                }
+            }
+
+            WHEN("a std::unordered_map is serialized")
+            {
+                const std::unordered_map<std::string, Person> test_val{
+                    { "Henrietta",
+                        Person{ 16, "Henrietta Payne", {}, Pet{ "Ron", Pet::Species::Fish }, {} } },
+                    { "Jerome", Person{ 12, "Jerome Banks", {}, {}, {} } },
+                    { "Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
+                    { "Ricardo",
+                        Person{
+                            19, "Ricardo Montoya", {}, Pet{ "Sinbad", Pet::Species::Cat }, {} } }
+                };
+
+                REQUIRE_NOTHROW(ser.as_map("", test_val));
+
+                THEN("the JSON object holds an object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE_FALSE(obj.empty());
+
+                    AND_THEN("the object holds all of its members")
+                    {
+                        CHECK_EQ(obj.size(), test_val.size());
+
+                        for (const auto& [k, v] : test_val)
+                        {
+                            REQUIRE(obj.contains(k));
+                            REQUIRE(obj[k].is_object());
+                            REQUIRE(obj[k].contains("age"));
+                            REQUIRE(obj[k]["age"].is_number_integer());
+                            CHECK_EQ(obj[k]["age"], v.age);
+                        }
+                    }
+                }
+            }
+
+            WHEN("a std::map is serialized as a subobject")
+            {
+                const std::map<int, std::string> test_val{ { 33, "Benjamin Burton" },
+                    { 99, "John Johnson" }, { 444, "Reed Carmichael" } };
+
+                REQUIRE_NOTHROW(ser.as_map("test_val", test_val));
+
+                THEN("the JSON object has a sub-object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE(obj.contains("test_val"));
+                    const auto& sub_obj = obj["test_val"];
+
+                    AND_THEN("the sub-object holds an object")
+                    {
+                        REQUIRE(sub_obj.is_object());
+                        REQUIRE_FALSE(sub_obj.empty());
+
+                        AND_THEN("the object holds all of its members")
+                        {
+                            CHECK_EQ(sub_obj.size(), test_val.size());
+
+                            for (const auto& [k, v] : test_val)
+                            {
+                                const auto key_str = std::to_string(k);
+
+                                REQUIRE(sub_obj.contains(key_str));
+                                REQUIRE(sub_obj[key_str].is_string());
+                                CHECK_EQ(sub_obj[key_str].get<std::string>(), v);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
-    TEST_CASE("as_multimap")
+    SCENARIO("a multimap can be serialized to JSON")
     {
-        std::optional<serializer> ser{ std::in_place };
-        const auto& obj = ser.value().object();
-
-        const std::multimap<char, std::string> test_val1{ { 'a', "Apple" }, { 'a', "Aardvark" },
-            { 'b', "Brush" }, { 'c', "Cleaver" }, { 'd', "Danger" }, { 'd', "Donut" } };
-        CHECK_NOTHROW(ser->as_multimap("", test_val1));
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_object());
-
-        for (const auto& [k, v] : test_val1)
+        GIVEN("a default-init serializer")
         {
-            const auto key_str = std::to_string(k);
-            REQUIRE(obj.contains(key_str));
+            serializer ser{};
+            const auto& obj = ser.object();
 
-            const auto& val_obj = obj.at(key_str);
+            WHEN("a std::multimap is serialized")
+            {
+                const std::multimap<char, std::string> test_val{ { 'a', "Apple" },
+                    { 'a', "Aardvark" }, { 'b', "Brush" }, { 'c', "Cleaver" }, { 'd', "Danger" },
+                    { 'd', "Donut" } };
 
-            REQUIRE(val_obj.is_array());
-            const auto find_it = std::find(val_obj.cbegin(), val_obj.cend(), v);
-            REQUIRE_NE(find_it, val_obj.cend());
-            REQUIRE(std::any_of(val_obj.cbegin(), val_obj.cend(),
-                [&v = v](const nlohmann::json& subval) { return subval.get<std::string>() == v; }));
+                REQUIRE_NOTHROW(ser.as_multimap("", test_val));
+
+                THEN("the JSON object holds an object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE_FALSE(obj.empty());
+
+                    AND_THEN("the object holds all of its members")
+                    {
+                        for (const auto& [k, v] : test_val)
+                        {
+                            const auto key_str = std::to_string(k);
+                            REQUIRE(obj.contains(key_str));
+                            const auto& val_obj = obj[key_str];
+
+                            REQUIRE(val_obj.is_array());
+                            const auto find_it = std::find(val_obj.cbegin(), val_obj.cend(), v);
+                            CHECK_NE(find_it, val_obj.cend());
+                        }
+                    }
+                }
+            }
+
+            WHEN("a std::unordered_multimap is serialized")
+            {
+                const std::unordered_multimap<std::string, std::string> test_val{
+                    { "Stan Lee", "Marvel" }, { "Jack Kirby", "Marvel" }, { "Jack Kirby", "DC" },
+                    { "Mike Mignola", "Dark Horse" }, { "Mike Mignola", "DC" },
+                    { "Mike Mignola", "Marvel" }, { "Grant Morrison", "DC" }
+                };
+
+                REQUIRE_NOTHROW(ser.as_multimap("", test_val));
+
+                THEN("the JSON object holds an object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE_FALSE(obj.empty());
+
+                    AND_THEN("the object holds all of its members")
+                    {
+                        for (const auto& [k, v] : test_val)
+                        {
+                            REQUIRE(obj.contains(k));
+                            const auto& val_obj = obj.at(k);
+
+                            REQUIRE(val_obj.is_array());
+                            const auto find_it = std::find(val_obj.cbegin(), val_obj.cend(), v);
+                            CHECK_NE(find_it, val_obj.cend());
+                        }
+                    }
+                }
+            }
+
+            WHEN("a std::multimap is serialized as a subobject")
+            {
+                const std::multimap<char, std::string> test_val{ { 'a', "Apple" },
+                    { 'a', "Aardvark" }, { 'b', "Brush" }, { 'c', "Cleaver" }, { 'd', "Danger" },
+                    { 'd', "Donut" } };
+
+                REQUIRE_NOTHROW(ser.as_multimap("test_val", test_val));
+
+                THEN("the JSON object has a sub-object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE(obj.contains("test_val"));
+                    const auto& sub_obj = obj["test_val"];
+
+                    AND_THEN("the sub-object holds an object")
+                    {
+                        REQUIRE(sub_obj.is_object());
+                        REQUIRE_FALSE(sub_obj.empty());
+
+                        AND_THEN("the object holds all of its members")
+                        {
+                            for (const auto& [k, v] : test_val)
+                            {
+                                const auto key_str = std::to_string(k);
+                                REQUIRE(sub_obj.contains(key_str));
+                                const auto& val_obj = sub_obj[key_str];
+
+                                REQUIRE(val_obj.is_array());
+                                const auto find_it = std::find(val_obj.cbegin(), val_obj.cend(), v);
+                                CHECK_NE(find_it, val_obj.cend());
+                            }
+                        }
+                    }
+                }
+            }
         }
+    }
 
-        ser.emplace();
-
-        const std::unordered_multimap<std::string, std::string> test_val2{ { "Stan Lee", "Marvel" },
-            { "Jack Kirby", "Marvel" }, { "Jack Kirby", "DC" }, { "Mike Mignola", "Dark Horse" },
-            { "Mike Mignola", "DC" }, { "Mike Mignola", "Marvel" }, { "Grant Morrison", "DC" } };
-
-        CHECK_NOTHROW(ser->as_multimap("test_val", test_val2));
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_object());
-        REQUIRE(obj.contains("test_val"));
-
-        const auto& sub_obj = obj.at("test_val");
-
-        REQUIRE(sub_obj.is_object());
-
-        for (const auto& [k, v] : test_val2)
+    SCENARIO("a tuple can be serialized to JSON")
+    {
+        GIVEN("a default-init serializer")
         {
-            REQUIRE(sub_obj.contains(k));
+            serializer ser{};
+            const auto& obj = ser.object();
 
-            const auto& val_obj = sub_obj.at(k);
+            WHEN("a std::tuple is serialized")
+            {
+                const std::tuple<int, std::string, double> test_val{ 14, "Yellow Bus", 78.48 };
 
-            REQUIRE(val_obj.is_array());
-            const auto find_it = std::find(val_obj.cbegin(), val_obj.cend(), v);
-            REQUIRE_NE(find_it, val_obj.cend());
-            REQUIRE(std::any_of(val_obj.cbegin(), val_obj.cend(),
-                [&v = v](const nlohmann::json& subval) { return subval.get<std::string>() == v; }));
+                REQUIRE_NOTHROW(ser.as_tuple("", test_val));
+
+                THEN("the JSON object holds an array")
+                {
+                    REQUIRE(obj.is_array());
+
+                    AND_THEN("the array holds all its members")
+                    {
+                        REQUIRE_EQ(obj.size(), std::tuple_size_v<decltype(test_val)>);
+
+                        REQUIRE(obj[0].is_number_integer());
+                        CHECK_EQ(obj[0].get<int>(), std::get<0>(test_val));
+
+                        REQUIRE(obj[1].is_string());
+                        CHECK_EQ(obj[1].get<std::string>(), std::get<1>(test_val));
+
+                        REQUIRE(obj[2].is_number_float());
+                        CHECK_EQ(obj[2].get<double>(),
+                            doctest::Approx(std::get<2>(test_val)).epsilon(0.0001));
+                    }
+                }
+            }
+
+            WHEN("a std::pair is serialized")
+            {
+                const std::pair test_val{ Fruit::Orange, Pet{ "Valerie", Pet::Species::Bird } };
+
+                REQUIRE_NOTHROW(ser.as_tuple("", test_val));
+
+                THEN("the JSON object holds an object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE_FALSE(obj.empty());
+
+                    AND_THEN("the object holds 'first' and 'second'")
+                    {
+                        REQUIRE(obj.contains("first"));
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+                        REQUIRE(obj["first"].is_string());
+                        CHECK_EQ(obj["first"].get<std::string>(),
+                            magic_enum::enum_name<Fruit>(test_val.first));
+#else
+                        REQUIRE(obj["first"].is_number_integer());
+                        CHECK_EQ(obj["first"].get<Fruit>(), test_val.first);
+#endif
+
+                        REQUIRE(obj.contains("second"));
+                        REQUIRE(obj["second"].is_object());
+
+                        REQUIRE(obj["second"].contains("name"));
+                        REQUIRE(obj["second"]["name"].is_string());
+                        CHECK_EQ(obj["second"]["name"].get<std::string>(), test_val.second.name);
+
+                        REQUIRE(obj["second"].contains("species"));
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+                        REQUIRE(obj["second"]["species"].is_string());
+                        CHECK_EQ(obj["second"]["species"].get<std::string>(),
+                            magic_enum::enum_name<Pet::Species>(test_val.second.species));
+#else
+                        REQUIRE(obj["second"]["species"].is_number_integer());
+                        CHECK_EQ(
+                            obj["second"]["species"].get<Pet::Species>(), test_val.second.species);
+#endif
+                    }
+                }
+            }
+
+            WHEN("an empty std::tuple is serialized as a subobject")
+            {
+                static constexpr std::tuple<> test_val{};
+
+                REQUIRE_NOTHROW(ser.as_tuple("test_val", test_val));
+
+                THEN("the JSON object has a sub-object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE(obj.contains("test_val"));
+                    const auto& sub_obj = obj["test_val"];
+
+                    AND_THEN("the sub-object holds an empty array")
+                    {
+                        CHECK(sub_obj.is_array());
+                        CHECK(sub_obj.empty());
+                    }
+                }
+            }
         }
     }
 
-    TEST_CASE("as_tuple")
+    SCENARIO("an optional can be serialized to JSON")
     {
-        const std::tuple<int, std::string, double> test_val1{ 14, "Yellow Bus", 78.48 };
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
 
-        std::optional<serializer> ser{ std::in_place };
-        const auto& obj = ser.value().object();
+            WHEN("an optional with a value is serialized")
+            {
+                const std::optional<int> test_val{ 22 };
 
-        CHECK_NOTHROW(ser->as_tuple("", test_val1));
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_array());
-        REQUIRE_EQ(obj.size(), std::tuple_size_v<decltype(test_val1)>);
+                REQUIRE_NOTHROW(ser.as_optional("", test_val));
 
-        REQUIRE(obj[0].is_number_integer());
-        REQUIRE_EQ(obj[0].get<int>(), std::get<0>(test_val1));
+                THEN("the JSON object holds the value type")
+                {
+                    REQUIRE(obj.is_number_integer());
+                    CHECK_FALSE(obj.is_number_unsigned());
+                    CHECK_EQ(obj.get<int>(), test_val.value());
+                }
+            }
 
-        REQUIRE(obj[1].is_string());
-        REQUIRE_EQ(obj[1].get<std::string>(), std::get<1>(test_val1));
+            WHEN("an optional without a value is serialized")
+            {
+                const std::optional<Person> test_val{};
 
-        REQUIRE(obj[2].is_number_float());
-        REQUIRE_EQ(obj[2].get<double>(), doctest::Approx(std::get<2>(test_val1)).epsilon(0.0001));
+                REQUIRE_NOTHROW(ser.as_optional("", test_val));
 
-        ser.emplace();
+                THEN("the JSON object holds null")
+                {
+                    CHECK(obj.is_null());
+                }
+            }
 
-        const std::pair test_val2{ Fruit::Orange, Pet{ "Valerie", Pet::Species::Bird } };
+            WHEN("an optional with a value is serialized as a sub-object")
+            {
+                const std::optional<std::string> test_val{ "Hello, world!" };
 
-        CHECK_NOTHROW(ser->as_tuple("test_val", test_val2));
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_object());
-        REQUIRE(obj.contains("test_val"));
+                REQUIRE_NOTHROW(ser.as_optional("test_val", test_val));
 
-        const auto& sub_obj = obj.at("test_val");
+                THEN("the JSON object has a sub-object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE(obj.contains("test_val"));
+                    const auto& sub_obj = obj["test_val"];
 
-        REQUIRE(sub_obj.is_object());
-        REQUIRE_EQ(sub_obj.size(), 2);
-
-        REQUIRE(sub_obj.contains("first"));
-        REQUIRE(sub_obj["first"].is_number_integer());
-        REQUIRE_EQ(sub_obj["first"].get<Fruit>(), test_val2.first);
-
-        REQUIRE(sub_obj.contains("second"));
-        REQUIRE(sub_obj["second"].is_object());
-
-        REQUIRE(sub_obj["second"].contains("name"));
-        REQUIRE(sub_obj["second"]["name"].is_string());
-        REQUIRE_EQ(sub_obj["second"]["name"].get<std::string>(), test_val2.second.name);
-
-        REQUIRE(sub_obj["second"].contains("species"));
-        REQUIRE(sub_obj["second"]["species"].is_number_integer());
-        REQUIRE_EQ(sub_obj["second"]["species"].get<Pet::Species>(), test_val2.second.species);
-
-        static constexpr std::tuple<> test_val3{};
-        CHECK_NOTHROW(ser->as_tuple("test_val", test_val3));
-        REQUIRE(sub_obj.is_array());
-        REQUIRE(sub_obj.empty());
+                    AND_THEN("the sub-object holds the value type")
+                    {
+                        REQUIRE(sub_obj.is_string());
+                        CHECK_EQ(sub_obj.get<std::string>(), test_val.value());
+                    }
+                }
+            }
+        }
     }
 
-    TEST_CASE("as_optional")
-    {
-        std::optional<serializer> ser{ std::in_place };
-        const auto& obj = ser.value().object();
-
-        const std::optional<int> test_val1{ 22 };
-
-        CHECK_NOTHROW(ser->as_optional("", test_val1));
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_number_integer());
-        REQUIRE_EQ(obj.get<int>(), test_val1.value());
-
-        ser.emplace();
-
-        const std::optional<Person> test_val2{};
-        CHECK_NOTHROW(ser->as_optional("test_val", test_val2));
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_object());
-        REQUIRE(obj.contains("test_val"));
-
-        const auto& sub_obj = obj.at("test_val");
-
-        REQUIRE(sub_obj.is_null());
-
-        const std::optional<Person> test_val3{ Person{ 44, "Alex Herbert", {}, {}, {} } };
-        CHECK_NOTHROW(ser->as_optional("test_val", test_val3));
-        REQUIRE(sub_obj.is_object());
-        REQUIRE(sub_obj.contains("age"));
-        REQUIRE(sub_obj["age"].is_number_integer());
-        REQUIRE_EQ(sub_obj["age"].get<int>(), test_val3->age);
-    }
-
+    // TODO: Refactor as BDD-style test
     TEST_CASE("as_variant")
     {
         std::optional<serializer> ser{ std::in_place };
@@ -971,112 +1149,206 @@ TEST_SUITE("json::serializer")
         }
     }
 
-    TEST_CASE("as_object")
+    SCENARIO("a user-defined class can be serialized to JSON")
     {
-        const Person test_val1_friend{ 10, "Timmy Johnson", {},
-            { Pet{ "Sparky", Pet::Species::Dog } }, { { Fruit::Banana, 2 }, { Fruit::Apple, 2 } } };
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
 
-        const Person test_val1{ 22, "Franky Johnson", { test_val1_friend },
-            { Pet{ "Tommy", Pet::Species::Turtle } },
-            { { Fruit::Apple, 1 }, { Fruit::Mango, 2 } } };
+            WHEN("a user-defined class is serialized")
+            {
+                const Person test_val_friend{ 10, "Timmy Johnson", {},
+                    { Pet{ "Sparky", Pet::Species::Dog } },
+                    { { Fruit::Banana, 2 }, { Fruit::Apple, 2 } } };
 
-        const Person test_val2{ 44, "Bertha Jenkins", {}, {}, { { Fruit::Kiwi, 12 } } };
+                const Person test_val{ 22, "Franky Johnson", { test_val_friend },
+                    { Pet{ "Tommy", Pet::Species::Turtle } },
+                    { { Fruit::Apple, 1 }, { Fruit::Mango, 2 } } };
 
-        std::optional<serializer> ser{ std::in_place };
-        const auto& obj = ser.value().object();
+                REQUIRE_NOTHROW(ser.as_object("", test_val));
 
-        CHECK_NOTHROW(ser->as_object("", test_val1));
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_object());
+                THEN("the JSON object holds an object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE_FALSE(obj.empty());
 
-        REQUIRE(obj.contains("age"));
-        REQUIRE(obj["age"].is_number_integer());
-        REQUIRE_FALSE(obj["age"].is_number_unsigned());
-        REQUIRE_EQ(obj["age"].get<int>(), test_val1.age);
+                    AND_THEN("the object holds all of its members")
+                    {
+                        REQUIRE(obj.contains("age"));
+                        REQUIRE(obj["age"].is_number_integer());
+                        REQUIRE_FALSE(obj["age"].is_number_unsigned());
+                        CHECK_EQ(obj["age"].get<int>(), test_val.age);
 
-        REQUIRE(obj.contains("name"));
-        REQUIRE(obj["name"].is_string());
-        REQUIRE_EQ(obj["name"].get<std::string>(), test_val1.name);
+                        REQUIRE(obj.contains("name"));
+                        REQUIRE(obj["name"].is_string());
+                        CHECK_EQ(obj["name"].get<std::string>(), test_val.name);
 
-        REQUIRE(obj.contains("friends"));
-        REQUIRE(obj["friends"].is_array());
-        REQUIRE_EQ(obj["friends"].size(), test_val1.friends.size());
-        REQUIRE_EQ(obj["friends"][0]["age"], test_val1.friends[0].age);
+                        REQUIRE(obj.contains("friends"));
+                        REQUIRE(obj["friends"].is_array());
+                        CHECK_EQ(obj["friends"].size(), test_val.friends.size());
+                        CHECK_EQ(obj["friends"][0]["age"], test_val.friends[0].age);
 
-        REQUIRE(obj.contains("pet"));
-        REQUIRE(obj["pet"].is_object());
-        REQUIRE(obj["pet"].contains("name"));
-        REQUIRE(obj["pet"]["name"].is_string());
-        REQUIRE_EQ(obj["pet"]["name"].get<std::string>(), test_val1.pet->name);
-        REQUIRE(obj["pet"].contains("species"));
+                        REQUIRE(obj.contains("pet"));
+                        REQUIRE(obj["pet"].is_object());
+                        REQUIRE(obj["pet"].contains("name"));
+                        REQUIRE(obj["pet"]["name"].is_string());
+                        CHECK_EQ(obj["pet"]["name"].get<std::string>(), test_val.pet->name);
+                        REQUIRE(obj["pet"].contains("species"));
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-        REQUIRE(obj["pet"]["species"].is_string());
-        REQUIRE_EQ(obj["pet"]["species"].get<std::string>(),
-            magic_enum::enum_name<Pet::Species>(test_val1.pet->species));
+                        REQUIRE(obj["pet"]["species"].is_string());
+                        CHECK_EQ(obj["pet"]["species"].get<std::string>(),
+                            magic_enum::enum_name<Pet::Species>(test_val.pet->species));
 #else
-        REQUIRE(obj["pet"]["species"].is_number_integer());
-        REQUIRE_EQ(obj["pet"]["species"].get<int>(), static_cast<int>(test_val1.pet->species));
+                        REQUIRE(obj["pet"]["species"].is_number_integer());
+                        CHECK_EQ(obj["pet"]["species"].get<int>(),
+                            static_cast<int>(test_val.pet->species));
 #endif
 
-        REQUIRE(obj.contains("fruit_count"));
-        REQUIRE(obj["fruit_count"].is_object());
+                        REQUIRE(obj.contains("fruit_count"));
+                        REQUIRE(obj["fruit_count"].is_object());
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-        REQUIRE(obj["fruit_count"].contains("Apple"));
-        REQUIRE(obj["fruit_count"]["Apple"].is_number_integer());
-        REQUIRE_EQ(obj["fruit_count"]["Apple"], test_val1.fruit_count.at(Fruit::Apple));
-        REQUIRE(obj["fruit_count"].contains("Mango"));
-        REQUIRE(obj["fruit_count"]["Mango"].is_number_integer());
-        REQUIRE_EQ(obj["fruit_count"]["Mango"], test_val1.fruit_count.at(Fruit::Mango));
+                        REQUIRE(obj["fruit_count"].contains("Apple"));
+                        REQUIRE(obj["fruit_count"]["Apple"].is_number_integer());
+                        CHECK_EQ(
+                            obj["fruit_count"]["Apple"], test_val.fruit_count.at(Fruit::Apple));
+                        REQUIRE(obj["fruit_count"].contains("Mango"));
+                        REQUIRE(obj["fruit_count"]["Mango"].is_number_integer());
+                        CHECK_EQ(
+                            obj["fruit_count"]["Mango"], test_val.fruit_count.at(Fruit::Mango));
 #else
-        REQUIRE(obj["fruit_count"].contains("0"));
-        REQUIRE(obj["fruit_count"]["0"].is_number_integer());
-        REQUIRE_EQ(obj["fruit_count"]["0"], test_val1.fruit_count.at(Fruit::Apple));
-        REQUIRE(obj["fruit_count"].contains("4"));
-        REQUIRE(obj["fruit_count"]["4"].is_number_integer());
-        REQUIRE_EQ(obj["fruit_count"]["4"], test_val1.fruit_count.at(Fruit::Mango));
+                        REQUIRE(obj["fruit_count"].contains("0"));
+                        REQUIRE(obj["fruit_count"]["0"].is_number_integer());
+                        CHECK_EQ(obj["fruit_count"]["0"], test_val.fruit_count.at(Fruit::Apple));
+                        REQUIRE(obj["fruit_count"].contains("4"));
+                        REQUIRE(obj["fruit_count"]["4"].is_number_integer());
+                        CHECK_EQ(obj["fruit_count"]["4"], test_val.fruit_count.at(Fruit::Mango));
 #endif
+                    }
+                }
+            }
 
-        ser.emplace();
+            WHEN("a user-defined class is serialized as a sub-object")
+            {
+                const Person test_val{ 44, "Bertha Jenkins", {}, {}, { { Fruit::Kiwi, 12 } } };
 
-        CHECK_NOTHROW(ser->as_object("test_val", test_val2));
-        REQUIRE_FALSE(obj.empty());
-        REQUIRE(obj.is_object());
-        REQUIRE(obj.contains("test_val"));
+                REQUIRE_NOTHROW(ser.as_object("test_val", test_val));
 
-        const auto& sub_obj = obj.at("test_val");
+                THEN("the JSON object has a sub-object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE(obj.contains("test_val"));
+                    const auto& sub_obj = obj["test_val"];
 
-        REQUIRE_FALSE(sub_obj.empty());
-        REQUIRE(sub_obj.is_object());
+                    AND_THEN("the sub-object holds an object")
+                    {
+                        REQUIRE(sub_obj.is_object());
+                        REQUIRE_FALSE(sub_obj.empty());
 
-        REQUIRE(sub_obj.contains("age"));
-        REQUIRE(sub_obj["age"].is_number_integer());
-        REQUIRE_FALSE(sub_obj["age"].is_number_unsigned());
-        REQUIRE_EQ(sub_obj["age"].get<int>(), test_val2.age);
+                        AND_THEN("the object holds all its members")
+                        {
+                            REQUIRE(sub_obj.contains("age"));
+                            REQUIRE(sub_obj["age"].is_number_integer());
+                            REQUIRE_FALSE(sub_obj["age"].is_number_unsigned());
+                            CHECK_EQ(sub_obj["age"].get<int>(), test_val.age);
 
-        REQUIRE(sub_obj.contains("name"));
-        REQUIRE(sub_obj["name"].is_string());
-        REQUIRE_EQ(sub_obj["name"].get<std::string>(), test_val2.name);
+                            REQUIRE(sub_obj.contains("name"));
+                            REQUIRE(sub_obj["name"].is_string());
+                            CHECK_EQ(sub_obj["name"].get<std::string>(), test_val.name);
 
-        REQUIRE(sub_obj.contains("friends"));
-        REQUIRE(sub_obj["friends"].is_array());
-        REQUIRE(sub_obj["friends"].empty());
+                            REQUIRE(sub_obj.contains("friends"));
+                            REQUIRE(sub_obj["friends"].is_array());
+                            CHECK(sub_obj["friends"].empty());
 
-        REQUIRE(sub_obj.contains("pet"));
-        REQUIRE(sub_obj["pet"].is_null());
+                            REQUIRE(sub_obj.contains("pet"));
+                            CHECK(sub_obj["pet"].is_null());
 
-        REQUIRE(sub_obj.contains("fruit_count"));
-        REQUIRE(sub_obj["fruit_count"].is_object());
+                            REQUIRE(sub_obj.contains("fruit_count"));
+                            REQUIRE(sub_obj["fruit_count"].is_object());
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-        REQUIRE_FALSE(sub_obj["fruit_count"].contains("Apple"));
-        REQUIRE(sub_obj["fruit_count"].contains("Kiwi"));
-        REQUIRE(sub_obj["fruit_count"]["Kiwi"].is_number_integer());
-        REQUIRE_EQ(sub_obj["fruit_count"]["Kiwi"], test_val2.fruit_count.at(Fruit::Kiwi));
+                            CHECK_FALSE(sub_obj["fruit_count"].contains("Apple"));
+                            REQUIRE(sub_obj["fruit_count"].contains("Kiwi"));
+                            REQUIRE(sub_obj["fruit_count"]["Kiwi"].is_number_integer());
+                            CHECK_EQ(sub_obj["fruit_count"]["Kiwi"],
+                                test_val.fruit_count.at(Fruit::Kiwi));
 #else
-        REQUIRE_FALSE(sub_obj["fruit_count"].contains("0"));
-        REQUIRE(sub_obj["fruit_count"].contains("3"));
-        REQUIRE(sub_obj["fruit_count"]["3"].is_number_integer());
-        REQUIRE_EQ(sub_obj["fruit_count"]["3"], test_val2.fruit_count.at(Fruit::Kiwi));
+                            CHECK_FALSE(sub_obj["fruit_count"].contains("0"));
+                            REQUIRE(sub_obj["fruit_count"].contains("3"));
+                            REQUIRE(sub_obj["fruit_count"]["3"].is_number_integer());
+                            CHECK_EQ(
+                                sub_obj["fruit_count"]["3"], test_val.fruit_count.at(Fruit::Kiwi));
 #endif
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    SCENARIO("null types can be serialized to JSON")
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a null value is serialized")
+            {
+                REQUIRE_NOTHROW(ser.as_null(""));
+
+                THEN("the JSON object holds null")
+                {
+                    CHECK(obj.is_null());
+                }
+            }
+
+            WHEN("a null value is serialized as a sub-object")
+            {
+                REQUIRE_NOTHROW(ser.as_null("test_val"));
+
+                THEN("the JSON object has a sub-object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE(obj.contains("test_val"));
+                    const auto& sub_obj = obj["test_val"];
+
+                    AND_THEN("the sub-object holds null")
+                    {
+                        CHECK(sub_obj.is_null());
+                    }
+                }
+            }
+
+            WHEN("a nullptr is serialized")
+            {
+                REQUIRE_NOTHROW(ser.as_object("", nullptr));
+
+                THEN("the JSON object holds null")
+                {
+                    CHECK(obj.is_null());
+                }
+            }
+
+            WHEN("a std::nullopt is serialized")
+            {
+                REQUIRE_NOTHROW(ser.as_object("", std::nullopt));
+
+                THEN("the JSON object holds null")
+                {
+                    CHECK(obj.is_null());
+                }
+            }
+
+            WHEN("a std::monostate is serialized")
+            {
+                REQUIRE_NOTHROW(ser.as_object("", std::monostate{}));
+
+                THEN("the JSON object holds null")
+                {
+                    CHECK(obj.is_null());
+                }
+            }
+        }
     }
 }
 } //namespace extenser::tests

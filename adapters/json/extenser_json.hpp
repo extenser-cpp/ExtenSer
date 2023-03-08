@@ -202,17 +202,17 @@ namespace detail_json
             using no_ref_t = detail::remove_cvref_t<T>;
 
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-            if (!magic_enum::enum_contains<no_ref_t>(val))
+            if (!magic_enum::enum_contains<no_ref_t>(arg))
             {
                 throw serialization_error{
                     std::string{ "Invalid enum value: " }
-                        .append(std::to_string(static_cast<std::underlying_type_t<no_ref_t>>(val)))
+                        .append(std::to_string(static_cast<std::underlying_type_t<no_ref_t>>(arg)))
                         .append(" for type: ")
                         .append(magic_enum::enum_type_name<no_ref_t>())
                 };
             }
 
-            push_string(magic_enum::enum_name<no_ref_t>(val), obj);
+            push_string(magic_enum::enum_name<no_ref_t>(arg), obj);
 #else
             push_simple_type(static_cast<std::underlying_type_t<no_ref_t>>(arg), obj);
 #endif
@@ -331,7 +331,11 @@ namespace detail_json
         {
             using no_ref_t = detail::remove_cvref_t<T>;
 
-            if constexpr (std::is_arithmetic_v<no_ref_t>)
+            if constexpr (is_null_serializable<no_ref_t>)
+            {
+                obj = nullptr;
+            }
+            else if constexpr (std::is_arithmetic_v<no_ref_t>)
             {
                 push_simple_type(std::forward<T>(arg), obj);
             }
@@ -373,10 +377,6 @@ namespace detail_json
             else if constexpr (is_variant_serializable<no_ref_t>)
             {
                 push_variant(arg, obj);
-            }
-            else if constexpr (is_null_serializable<no_ref_t>)
-            {
-                obj = nullptr;
             }
             else
             {
@@ -480,7 +480,17 @@ namespace detail_json
             try
             {
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-                val = magic_enum::enum_cast<T>(subobject(key).get<std::string>());
+                auto result = magic_enum::enum_cast<T>(subobject(key).get<std::string>());
+
+                if (!result.has_value())
+                {
+                    throw deserialization_error{ std::string{ "Invalid enum value: \"" }
+                                                     .append(subobject(key).get<std::string>())
+                                                     .append("\" for type: ")
+                                                     .append(magic_enum::enum_type_name<T>()) };
+                }
+
+                val = *result;
 #else
                 val = static_cast<T>(subobject(key).get<std::underlying_type_t<T>>());
 #endif
@@ -568,7 +578,11 @@ namespace detail_json
 
             for (const auto& [k, v] : obj.items())
             {
-                val.insert({ parse_arg<typename T::key_type>(nlohmann::json::parse(k).front()),
+                const auto key_obj = (k.front() == '{' || k.front() == '[')
+                    ? nlohmann::json::parse(k)
+                    : nlohmann::json{ k };
+
+                val.insert({ parse_arg<typename T::key_type>(key_obj.front()),
                     parse_arg<typename T::mapped_type>(v) });
             }
         }
@@ -760,9 +774,17 @@ namespace detail_json
             {
                 return arg.is_boolean();
             }
-            else if constexpr (std::is_integral_v<T> || std::is_enum_v<T>)
+            else if constexpr (std::is_integral_v<T>)
             {
                 return arg.is_number_integer();
+            }
+            else if constexpr (std::is_enum_v<T>)
+            {
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+                return arg.is_string();
+#else
+                return arg.is_number_integer();
+#endif
             }
             else if constexpr (std::is_floating_point_v<T>)
             {

@@ -64,7 +64,7 @@ TEST_SUITE("json::deserializer")
         dser.emplace(test_obj3);
 
         REQUIRE_NOTHROW(dser->as_float("", test_double));
-        REQUIRE(doctest::IsNaN(test_double));
+        REQUIRE(doctest::IsNaN<double>(test_double));
     }
 
     TEST_CASE("as_int")
@@ -179,8 +179,13 @@ TEST_SUITE("json::deserializer")
 
     TEST_CASE("as_object")
     {
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+        const nlohmann::json test_obj1 = nlohmann::json::parse(
+            R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": "Dog" }, "fruit_count": {"Apple": 2, "Kiwi": 4}})");
+#else
         const nlohmann::json test_obj1 = nlohmann::json::parse(
             R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": 2 }, "fruit_count": {"0": 2, "3": 4}})");
+#endif
 
         std::optional<deserializer> dser{ test_obj1 };
 
