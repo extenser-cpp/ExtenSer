@@ -162,8 +162,8 @@ public:                                                           \
 
     template<typename T, typename It>
     struct constructible_from_iterator :
-        std::bool_constant<std::is_trivially_constructible_v<T,
-            std::remove_reference_t<decltype(*std::declval<It&>())>>>
+        std::bool_constant<
+            std::is_constructible_v<T, std::remove_reference_t<decltype(*std::declval<It&>())>>>
     {
     };
 

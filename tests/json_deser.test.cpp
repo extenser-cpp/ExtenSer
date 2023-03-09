@@ -236,12 +236,54 @@ TEST_SUITE("json::deserializer")
         // TODO: Implement test
     }
 
-    SCENARIO("a string can be deserialized from JSON")
+    // TODO: Support more types (string_view should be nop, mutable containers should std::copy, vector is push_back'ed)
+    SCENARIO_TEMPLATE("a string can be deserialized from JSON", T_Str, std::string)
     {
-        // TODO: Implement test
+        GIVEN("a deserializer with a JSON value respresenting a string")
+        {
+            static constexpr std::string_view expected_val = "Mary had a little lamb";
+
+            const nlohmann::json test_obj = expected_val;
+            deserializer dser{ test_obj };
+
+            WHEN("the string is deserialized")
+            {
+                T_Str test_val{};
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the string is properly assigned")
+                {
+                    CHECK_EQ(test_val, expected_val);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a string")
+        {
+            static constexpr std::string_view expected_val =
+                "Hello from a really quite lengthy string";
+
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Str test_val{};
+
+                REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
+
+                THEN("the string is properly assigned")
+                {
+                    CHECK_EQ(test_val, expected_val);
+                }
+            }
+        }
     }
 
-    SCENARIO("an array-like container can be deserialized from JSON")
+    SCENARIO_TEMPLATE(
+        "an array-like container can be deserialized from JSON", T_Arr, std::vector<bool>)
     {
         // TODO: Implement test
     }

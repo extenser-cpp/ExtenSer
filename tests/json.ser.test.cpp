@@ -461,7 +461,7 @@ TEST_SUITE("json::serializer")
     SCENARIO_TEMPLATE("an array-like container can be serialized to JSON", T_Arr,
         std::array<int, 5>, std::string_view, std::vector<bool>, std::deque<std::vector<double>>,
         std::list<Person>, std::forward_list<std::string>, std::set<int>,
-        std::unordered_multiset<std::string>)
+        std::unordered_multiset<std::string>, span<Person>)
     {
         GIVEN("a default-init serializer")
         {

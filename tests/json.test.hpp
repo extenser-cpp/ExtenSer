@@ -164,5 +164,19 @@ inline auto create_test_val<std::unordered_multiset<std::string>>()
 {
     return { "Red", "Green", "Red", "Black", "Blue", "Green", "Purple" };
 }
+
+template<>
+inline auto create_test_val<span<Person>>() -> span<Person>
+{
+    static std::vector<Person> person_list;
+
+    if (person_list.empty())
+    {
+        auto tmp_list = create_test_val<std::list<Person>>();
+        std::copy(tmp_list.begin(), tmp_list.end(), std::back_inserter(person_list));
+    }
+
+    return { person_list.begin(), person_list.end() };
+}
 } //namespace extenser::tests
 #endif //EXTENSER_JSON_TEST_HPP

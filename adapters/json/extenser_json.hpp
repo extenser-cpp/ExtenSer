@@ -508,6 +508,10 @@ namespace detail_json
         template<typename T>
         void as_string(const std::string_view key, T& val) const
         {
+            // TODO: Create a type check for other types with storage (ex. vector, array) OR mutable access (ex. span, NOT string_view)
+            static_assert(std::is_same_v<T, std::string>,
+                "deserialization output must have storage (only std::string supported for now)");
+
             try
             {
                 val = subobject(key).get<std::string>();
