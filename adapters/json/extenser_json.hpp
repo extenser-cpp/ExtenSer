@@ -398,11 +398,7 @@ namespace detail_json
     class deserializer : public serializer_base<serial_adapter, true>
     {
     public:
-        explicit deserializer(const nlohmann::json& obj) noexcept(EXTENSER_ASSERT_NOTHROW)
-            : m_json(obj)
-        {
-            EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
-        }
+        explicit deserializer(const nlohmann::json& obj) noexcept : m_json(obj) {}
 
         template<typename T>
         void as_bool(const std::string_view key, T& val) const
@@ -531,30 +527,30 @@ namespace detail_json
         {
             const auto& arr = subobject(key);
 
-            if constexpr (std::is_default_constructible_v<typename T::value_type>)
-            {
-                val.resize(arr.size());
-                std::transform(
-                    arr.cbegin(), arr.cend(), std::begin(val), parse_arg<typename T::value_type>);
-            }
-            else
-            {
-                // TODO: Is there way to avoid extra copy (inserter perhaps)?
-                std::vector<typename T::value_type> buf;
-                buf.reserve(arr.size());
-                std::transform(arr.cbegin(), arr.cend(), std::back_inserter(buf),
-                    parse_arg<typename T::value_type>);
+            // TODO: Need some sort of container traits to determine efficient insertion
+            //if constexpr (std::is_default_constructible_v<typename T::value_type>)
+            //{
+            //    val.resize(arr.size());
+            //    std::transform(
+            //        arr.cbegin(), arr.cend(), std::begin(val), parse_arg<typename T::value_type>);
+            //}
+            //else
+            //{
+            // TODO: Is there way to avoid extra copy (inserter perhaps)?
+            std::vector<typename T::value_type> buf;
+            buf.reserve(arr.size());
+            std::transform(arr.cbegin(), arr.cend(), std::back_inserter(buf),
+                parse_arg<typename T::value_type>);
 
-                val = T{ buf.begin(), buf.end() };
-            }
+            val = T{ buf.begin(), buf.end() };
+            //}
         }
 
         template<typename T, size_t N>
         void as_array(const std::string_view key, std::array<T, N>& val) const
         {
             const auto& arr = subobject(key);
-            std::transform(
-                arr.cbegin(), arr.cend(), val.begin(), parse_arg<typename T::value_type>);
+            std::transform(arr.cbegin(), arr.cend(), val.begin(), parse_arg<T>);
         }
 
         template<typename T>

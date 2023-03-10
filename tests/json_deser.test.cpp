@@ -282,10 +282,92 @@ TEST_SUITE("json::deserializer")
         }
     }
 
-    SCENARIO_TEMPLATE(
-        "an array-like container can be deserialized from JSON", T_Arr, std::vector<bool>)
+    SCENARIO_TEMPLATE("an array-like container can be deserialized from JSON", T_Arr,
+        std::vector<int>, std::list<int>, std::deque<int>, std::forward_list<int>, std::set<int>,
+        std::unordered_set<int>, std::multiset<int>, std::unordered_multiset<int>,
+        std::array<int, 5>, span<int>)
     {
-        // TODO: Implement test
+        GIVEN("a deserializer with a JSON array")
+        {
+            const auto test_obj = nlohmann::json::parse("[1, 2, 3, 4, 5]");
+            deserializer dser{ test_obj };
+
+            WHEN("the array is deserialized")
+            {
+                T_Arr test_val{};
+
+                if constexpr (std::is_same_v<T_Arr, span<int>>)
+                {
+                    static std::array<int, 5> tmp_arr{};
+                    span<int> tmp_span = tmp_arr;
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_array("", test_val));
+
+                THEN("the array is properly assigned")
+                {
+                    for (int i = 0; i < 5; ++i)
+                    {
+                        CHECK_EQ(*std::next(std::begin(test_val), i), i + 1);
+                    }
+                }
+            }
+        }
+
+        GIVEN("a deserializer with an empty JSON array")
+        {
+            const auto test_obj = nlohmann::json::parse("[]");
+            deserializer dser{ test_obj };
+
+            WHEN("the array is deserialized")
+            {
+                T_Arr test_val{};
+
+                REQUIRE_NOTHROW(dser.as_array("", test_val));
+
+                THEN("the deserialized array is empty")
+                {
+                    if constexpr (std::is_same_v<T_Arr, std::array<int, 5>>)
+                    {
+                        CHECK(std::all_of(std::begin(test_val), std::end(test_val),
+                            [](const int n) { return n == 0; }));
+                    }
+                    else
+                    {
+                        CHECK(std::empty(test_val));
+                    }
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing an array")
+        {
+            const auto test_obj = nlohmann::json::parse(R"({"test_val": [0, 1, 2, 3, 4]})");
+            deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Arr test_val{};
+
+                if constexpr (std::is_same_v<T_Arr, span<int>>)
+                {
+                    static std::array<int, 5> tmp_arr{};
+                    span<int> tmp_span = tmp_arr;
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_array("test_val", test_val));
+
+                THEN("the array is properly assigned")
+                {
+                    for (int i = 0; i < 5; ++i)
+                    {
+                        CHECK_EQ(*std::next(std::begin(test_val), i), i);
+                    }
+                }
+            }
+        }
     }
 
     SCENARIO("a map-like container can be deserialized from JSON")
@@ -305,7 +387,46 @@ TEST_SUITE("json::deserializer")
 
     SCENARIO("an optional can be deserialized from JSON")
     {
-        // TODO: Implement test
+        GIVEN("a deserializer with a JSON value representing an empty optional")
+        {
+            const nlohmann::json test_obj = nullptr;
+            deserializer dser{ test_obj };
+
+            WHEN("the value is deserialized")
+            {
+                std::optional<Person> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_optional("", test_val));
+
+                THEN("the optional is assigned as nullopt")
+                {
+                    CHECK_FALSE(test_val.has_value());
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON value representing an (non-empty) optional")
+        {
+            const auto test_obj = nlohmann::json::parse(
+                R"({ "age": 33, "name": "Angela Barnes", "pet": null, "friends": [], "fruit_count": {} })");
+            deserializer dser{ test_obj };
+
+            WHEN("the value is deserialized")
+            {
+                std::optional<Person> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_optional("", test_val));
+
+                THEN("the optional is assigned a value")
+                {
+                    REQUIRE(test_val.has_value());
+                    CHECK_EQ(test_val->age, 33);
+                    CHECK_EQ(test_val->name, "Angela Barnes");
+                    CHECK_FALSE(test_val->pet.has_value());
+                    CHECK(test_val->fruit_count.empty());
+                }
+            }
+        }
     }
 
     SCENARIO("a variant can be deserialized from JSON")
