@@ -16,7 +16,7 @@ target_compile_features(extenser-test PRIVATE cxx_std_17)
 target_compile_options(extenser-test PRIVATE ${FULL_WARNING})
 add_test(tester extenser-test)
 
-add_executable(json-test json_deser.test.cpp json.ser.test.cpp json.test.hpp)
+add_executable(json-test json.deser.test.cpp json.ser.test.cpp json.test.hpp)
 target_link_libraries(json-test PRIVATE doctest_runner extenser-json)
 target_compile_features(json-test PRIVATE cxx_std_17)
 target_compile_options(json-test PRIVATE ${FULL_WARNING})

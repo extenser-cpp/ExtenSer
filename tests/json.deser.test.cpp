@@ -41,7 +41,7 @@ TEST_SUITE("json::deserializer")
         GIVEN("a deserializer with a JSON value containing a boolean")
         {
             const nlohmann::json test_obj = false;
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("a bool is deserialized")
             {
@@ -60,7 +60,7 @@ TEST_SUITE("json::deserializer")
         {
             nlohmann::json test_obj;
             test_obj["test_val"] = true;
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
             {
@@ -85,7 +85,7 @@ TEST_SUITE("json::deserializer")
             static constexpr auto expected_val = static_cast<T_Float>(1.256);
 
             const nlohmann::json test_obj = expected_val;
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("a float is deserialized")
             {
@@ -104,7 +104,7 @@ TEST_SUITE("json::deserializer")
         GIVEN("a deserializer with a JSON value containing NaN")
         {
             const nlohmann::json test_obj = std::numeric_limits<T_Float>::quiet_NaN();
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("a float is deserialized")
             {
@@ -124,7 +124,7 @@ TEST_SUITE("json::deserializer")
             static constexpr auto expected_val = static_cast<T_Float>(112E-6);
 
             const auto test_obj = nlohmann::json::parse(R"({"test_val": 112E-6})");
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
             {
@@ -149,7 +149,7 @@ TEST_SUITE("json::deserializer")
             static constexpr auto expected_val = (std::numeric_limits<T_Int>::max)();
 
             const nlohmann::json test_obj = expected_val;
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the integer is deserialized")
             {
@@ -170,7 +170,7 @@ TEST_SUITE("json::deserializer")
 
             nlohmann::json test_obj;
             test_obj["test_val"] = expected_val;
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
             {
@@ -194,7 +194,7 @@ TEST_SUITE("json::deserializer")
             static constexpr auto expected_val = (std::numeric_limits<T_Int>::max)();
 
             const nlohmann::json test_obj = expected_val;
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the integer is deserialized")
             {
@@ -215,7 +215,7 @@ TEST_SUITE("json::deserializer")
 
             nlohmann::json test_obj;
             test_obj["test_val"] = expected_val;
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
             {
@@ -244,7 +244,7 @@ TEST_SUITE("json::deserializer")
             static constexpr std::string_view expected_val = "Mary had a little lamb";
 
             const nlohmann::json test_obj = expected_val;
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the string is deserialized")
             {
@@ -266,7 +266,7 @@ TEST_SUITE("json::deserializer")
 
             nlohmann::json test_obj;
             test_obj["test_val"] = expected_val;
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
             {
@@ -289,7 +289,7 @@ TEST_SUITE("json::deserializer")
         GIVEN("a deserializer with a JSON array")
         {
             const auto test_obj = nlohmann::json::parse("[1, 2, 3, 4, 5]");
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the array is deserialized")
             {
@@ -317,7 +317,7 @@ TEST_SUITE("json::deserializer")
         GIVEN("a deserializer with an empty JSON array")
         {
             const auto test_obj = nlohmann::json::parse("[]");
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the array is deserialized")
             {
@@ -343,7 +343,7 @@ TEST_SUITE("json::deserializer")
         GIVEN("a deserializer with a JSON object containing an array")
         {
             const auto test_obj = nlohmann::json::parse(R"({"test_val": [0, 1, 2, 3, 4]})");
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
             {
@@ -381,7 +381,48 @@ TEST_SUITE("json::deserializer")
 
     SCENARIO("a tuple can be deserialized from JSON")
     {
-        // TODO: Implement test
+        GIVEN("a deserializer with a JSON array representing a tuple")
+        {
+            const std::tuple<int, double, std::string> expected_val{874, 9941.5523, "Germany"};
+
+            const auto test_obj = nlohmann::json::parse(R"([874, 9941.5523, "Germany"])");
+            const deserializer dser{test_obj};
+
+            WHEN("the array is deserialized")
+            {
+                std::tuple<int, double, std::string> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_tuple("", test_val));
+
+                THEN("the tuple is properly assigned")
+                {
+                    CHECK_EQ(std::get<0>(test_val), std::get<0>(expected_val));
+                    CHECK_EQ(std::get<1>(test_val), doctest::Approx(std::get<1>(expected_val)).epsilon(0.0001));
+                    CHECK_EQ(std::get<2>(test_val), std::get<2>(expected_val));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON array representing a pair")
+        {
+            const std::pair<Fruit, int> expected_val{ Fruit::Grape, 45 };
+
+            const auto test_obj = nlohmann::json::parse(R"([2, 45])");
+            const deserializer dser{test_obj};
+
+            WHEN("the object is deserialized")
+            {
+                std::pair<Fruit, int> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_tuple("", test_val));
+
+                THEN("the pair is properly assigned")
+                {
+                    CHECK_EQ(test_val.first, expected_val.first);
+                    CHECK_EQ(test_val.second, expected_val.second);
+                }
+            }
+        }
     }
 
     SCENARIO("an optional can be deserialized from JSON")
@@ -389,7 +430,7 @@ TEST_SUITE("json::deserializer")
         GIVEN("a deserializer with a JSON value representing an empty optional")
         {
             const nlohmann::json test_obj = nullptr;
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the value is deserialized")
             {
@@ -408,7 +449,7 @@ TEST_SUITE("json::deserializer")
         {
             const auto test_obj = nlohmann::json::parse(
                 R"({ "age": 33, "name": "Angela Barnes", "pet": null, "friends": [], "fruit_count": {} })");
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the value is deserialized")
             {
@@ -444,8 +485,7 @@ TEST_SUITE("json::deserializer")
             const nlohmann::json test_obj = nlohmann::json::parse(
                 R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": 2 }, "fruit_count": {"0": 2, "3": 4}})");
 #endif
-
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the class is deserialized")
             {
@@ -470,7 +510,7 @@ TEST_SUITE("json::deserializer")
         {
             const nlohmann::json test_obj = nlohmann::json::parse(
                 R"({"test_val": {"age": 18, "name": "Bill Garfield", "friends": [], "pet": null, "fruit_count": {}}})");
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the sub-object is deserialized")
             {
@@ -490,7 +530,7 @@ TEST_SUITE("json::deserializer")
         {
             const nlohmann::json test_obj = nlohmann::json::parse(
                 R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": [], "fruit_count": {}})");
-            deserializer dser{ test_obj };
+            const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
             {

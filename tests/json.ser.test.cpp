@@ -736,39 +736,36 @@ TEST_SUITE("json::serializer")
 
                 REQUIRE_NOTHROW(ser.as_tuple("", test_val));
 
-                THEN("the JSON object holds an object")
+                THEN("the JSON object holds an array")
                 {
-                    REQUIRE(obj.is_object());
-                    REQUIRE_FALSE(obj.empty());
+                    REQUIRE(obj.is_array());
+                    REQUIRE_EQ(obj.size(), 2);
 
-                    AND_THEN("the object holds 'first' and 'second'")
+                    AND_THEN("the array holds both values")
                     {
-                        REQUIRE(obj.contains("first"));
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-                        REQUIRE(obj["first"].is_string());
-                        CHECK_EQ(obj["first"].get<std::string>(),
+                        REQUIRE(obj[0].is_string());
+                        CHECK_EQ(obj[0].get<std::string>(),
                             magic_enum::enum_name<Fruit>(test_val.first));
 #else
-                        REQUIRE(obj["first"].is_number_integer());
-                        CHECK_EQ(obj["first"].get<Fruit>(), test_val.first);
+                        REQUIRE(obj[0].is_number_integer());
+                        CHECK_EQ(obj[0].get<Fruit>(), test_val.first);
 #endif
+                        REQUIRE(obj[1].is_object());
 
-                        REQUIRE(obj.contains("second"));
-                        REQUIRE(obj["second"].is_object());
+                        REQUIRE(obj[1].contains("name"));
+                        REQUIRE(obj[1]["name"].is_string());
+                        CHECK_EQ(obj[1]["name"].get<std::string>(), test_val.second.name);
 
-                        REQUIRE(obj["second"].contains("name"));
-                        REQUIRE(obj["second"]["name"].is_string());
-                        CHECK_EQ(obj["second"]["name"].get<std::string>(), test_val.second.name);
-
-                        REQUIRE(obj["second"].contains("species"));
+                        REQUIRE(obj[1].contains("species"));
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-                        REQUIRE(obj["second"]["species"].is_string());
-                        CHECK_EQ(obj["second"]["species"].get<std::string>(),
+                        REQUIRE(obj[1]["species"].is_string());
+                        CHECK_EQ(obj[1]["species"].get<std::string>(),
                             magic_enum::enum_name<Pet::Species>(test_val.second.species));
 #else
-                        REQUIRE(obj["second"]["species"].is_number_integer());
+                        REQUIRE(obj[1]["species"].is_number_integer());
                         CHECK_EQ(
-                            obj["second"]["species"].get<Pet::Species>(), test_val.second.species);
+                            obj[1]["species"].get<Pet::Species>(), test_val.second.species);
 #endif
                     }
                 }

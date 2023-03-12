@@ -278,12 +278,9 @@ namespace detail_json
         template<typename T1, typename T2>
         static void push_pair(const std::pair<T1, T2>& arg, nlohmann::json& obj)
         {
-            obj = nlohmann::json::object();
-            auto& obj1 = obj["first"];
-            auto& obj2 = obj["second"];
-
-            push_arg(arg.first, obj1);
-            push_arg(arg.second, obj2);
+            obj = nlohmann::json::array();
+            push_args(arg.first, obj);
+            push_args(arg.second, obj);
         }
 
         template<typename... Args>
@@ -612,7 +609,7 @@ namespace detail_json
         void as_tuple(const std::string_view key, std::pair<T1, T2>& val) const
         {
             const auto& obj = subobject(key);
-            val = { parse_arg<T1>(obj.at("first")), parse_arg<T2>(obj.at("second")) };
+            val = { parse_arg<T1>(obj.at(0)), parse_arg<T2>(obj.at(1)) };
         }
 
         template<typename... Args>
