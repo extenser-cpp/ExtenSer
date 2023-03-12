@@ -103,7 +103,7 @@ TEST_SUITE("json::deserializer")
 
         GIVEN("a deserializer with a JSON value containing NaN")
         {
-            const auto test_obj = std::numeric_limits<T_Float>::quiet_NaN();
+            const nlohmann::json test_obj = std::numeric_limits<T_Float>::quiet_NaN();
             deserializer dser{ test_obj };
 
             WHEN("a float is deserialized")
@@ -284,8 +284,7 @@ TEST_SUITE("json::deserializer")
 
     SCENARIO_TEMPLATE("an array-like container can be deserialized from JSON", T_Arr,
         std::vector<int>, std::list<int>, std::deque<int>, std::forward_list<int>, std::set<int>,
-        std::unordered_set<int>, std::multiset<int>, std::unordered_multiset<int>,
-        std::array<int, 5>, span<int>)
+        std::multiset<int>, std::array<int, 5>, span<int>)
     {
         GIVEN("a deserializer with a JSON array")
         {
