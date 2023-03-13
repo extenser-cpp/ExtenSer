@@ -406,7 +406,7 @@ TEST_SUITE("json::deserializer")
 
         GIVEN("a deserializer with a JSON array representing a pair")
         {
-            const std::pair<Fruit, int> expected_val{ Fruit::Grape, 45 };
+            static constexpr std::pair<Fruit, int> expected_val{ Fruit::Grape, 45 };
 
             const auto test_obj = nlohmann::json::parse(R"([2, 45])");
             const deserializer dser{ test_obj };
@@ -472,7 +472,115 @@ TEST_SUITE("json::deserializer")
 
     SCENARIO("a variant can be deserialized from JSON")
     {
-        // TODO: Implement test
+        using test_type = std::variant<std::monostate, int, double, std::string, Person>;
+
+        GIVEN("a deserializer with a JSON object representing a variant (monostate)")
+        {
+            const auto test_obj = nlohmann::json::parse(R"({"v_idx": 0, "v_val": null})");
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                test_type test_val{};
+
+                REQUIRE_NOTHROW(dser.as_variant("", test_val));
+
+                THEN("the variant is assigned as a monostate")
+                {
+                    REQUIRE(std::holds_alternative<std::monostate>(test_val));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object representing a variant (int)")
+        {
+            const auto test_obj = nlohmann::json::parse(R"({"v_idx": 1, "v_val": -8481})");
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                test_type test_val{};
+
+                REQUIRE_NOTHROW(dser.as_variant("", test_val));
+
+                THEN("the variant is assigned as an int")
+                {
+                    REQUIRE(std::holds_alternative<int>(test_val));
+                    CHECK_EQ(std::get<int>(test_val), -8481);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object representing a variant (double)")
+        {
+            const auto test_obj = nlohmann::json::parse(R"({"v_idx": 2, "v_val": 566421.532})");
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                test_type test_val{};
+
+                REQUIRE_NOTHROW(dser.as_variant("", test_val));
+
+                THEN("the variant is assigned as a double")
+                {
+                    REQUIRE(std::holds_alternative<double>(test_val));
+                    CHECK_EQ(std::get<double>(test_val), 566421.532);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object representing a variant (int)")
+        {
+            const auto test_obj =
+                nlohmann::json::parse(R"({"v_idx": 3, "v_val": "Variants are great!"})");
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                test_type test_val{};
+
+                REQUIRE_NOTHROW(dser.as_variant("", test_val));
+
+                THEN("the variant is assigned as a string")
+                {
+                    REQUIRE(std::holds_alternative<std::string>(test_val));
+                    CHECK_EQ(std::get<std::string>(test_val), "Variants are great!");
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a sub-object representing a variant "
+              "(Person)")
+        {
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+            const auto test_obj = nlohmann::json::parse(
+                R"({"test_val": {"v_idx": 4, "v_val": {"age": 91, "name": "Gretl Hansel", "pet": {"name": "Fritz", "species": "Cat"}, "friends": [], "fruit_count": {}}}})");
+#else
+            const auto test_obj = nlohmann::json::parse(
+                R"({"test_val": {"v_idx": 4, "v_val": {"age": 91, "name": "Gretl Hansel", "pet": {"name": "Fritz", "species": 1}, "friends": [], "fruit_count": {}}}})");
+#endif
+            const deserializer dser{ test_obj };
+
+            WHEN("the sub-object is deserialized")
+            {
+                test_type test_val{};
+
+                REQUIRE_NOTHROW(dser.as_variant("test_val", test_val));
+
+                THEN("the variant is assigned as a class")
+                {
+                    REQUIRE(std::holds_alternative<Person>(test_val));
+
+                    const auto& [age, name, friends, pet, fruit_count] = std::get<Person>(test_val);
+                    CHECK_EQ(age, 91);
+                    CHECK_EQ(name, "Gretl Hansel");
+                    CHECK(pet.has_value());
+                    CHECK(friends.empty());
+                    CHECK(fruit_count.empty());
+                }
+            }
+        }
     }
 
     SCENARIO("a user-defined class can be deserialized from JSON")
