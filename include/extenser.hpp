@@ -456,8 +456,10 @@ public:
     template<typename It, typename End,
         typename = std::enable_if_t<detail::constructible_from_iterator_v<element_type, It>
             && !std::is_convertible_v<End, size_type>>>
-    constexpr span(It first, End last) : m_head_ptr(&*first), m_sz(last - first)
+    constexpr span(It first, End last)
+        : m_head_ptr(&*first), m_sz(static_cast<size_type>(std::distance(first, last)))
     {
+        EXTENSER_PRECONDITION(std::distance(first, last) >= 0);
     }
 
     template<std::size_t N>
@@ -618,7 +620,7 @@ template<typename T>
 inline constexpr bool is_null_serializable = std::is_null_pointer_v<T> || std::is_void_v<T>
     || std::is_same_v<T, std::monostate> || std::is_same_v<T, std::nullopt_t>;
 
-// TODO: check if there is a `serialize` function via ASL or static member
+// TODO: check if there is a `serialize` function via ADL or static member
 template<typename T>
 inline constexpr bool is_object_serializable = true;
 

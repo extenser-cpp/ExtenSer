@@ -95,7 +95,7 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the float is properly assigned")
                 {
-                    CHECK_EQ(test_val,
+                    CHECK_EQ(static_cast<double>(test_val),
                         doctest::Approx(static_cast<double>(expected_val)).epsilon(test_epsilon));
                 }
             }
@@ -134,7 +134,7 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the float is properly assigned")
                 {
-                    CHECK_EQ(test_val,
+                    CHECK_EQ(static_cast<double>(test_val),
                         doctest::Approx(static_cast<double>(expected_val)).epsilon(test_epsilon));
                 }
             }
@@ -383,10 +383,10 @@ TEST_SUITE("json::deserializer")
     {
         GIVEN("a deserializer with a JSON array representing a tuple")
         {
-            const std::tuple<int, double, std::string> expected_val{874, 9941.5523, "Germany"};
+            const std::tuple<int, double, std::string> expected_val{ 874, 9941.5523, "Germany" };
 
             const auto test_obj = nlohmann::json::parse(R"([874, 9941.5523, "Germany"])");
-            const deserializer dser{test_obj};
+            const deserializer dser{ test_obj };
 
             WHEN("the array is deserialized")
             {
@@ -397,7 +397,8 @@ TEST_SUITE("json::deserializer")
                 THEN("the tuple is properly assigned")
                 {
                     CHECK_EQ(std::get<0>(test_val), std::get<0>(expected_val));
-                    CHECK_EQ(std::get<1>(test_val), doctest::Approx(std::get<1>(expected_val)).epsilon(0.0001));
+                    CHECK_EQ(std::get<1>(test_val),
+                        doctest::Approx(std::get<1>(expected_val)).epsilon(0.0001));
                     CHECK_EQ(std::get<2>(test_val), std::get<2>(expected_val));
                 }
             }
@@ -408,7 +409,7 @@ TEST_SUITE("json::deserializer")
             const std::pair<Fruit, int> expected_val{ Fruit::Grape, 45 };
 
             const auto test_obj = nlohmann::json::parse(R"([2, 45])");
-            const deserializer dser{test_obj};
+            const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
             {
