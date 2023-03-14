@@ -63,6 +63,16 @@ struct Pet
     Species species{};
 };
 
+inline bool operator==(const Pet& lhs, const Pet& rhs) noexcept
+{
+    return lhs.name == rhs.name && lhs.species == rhs.species;
+}
+
+inline bool operator!=(const Pet& lhs, const Pet& rhs) noexcept
+{
+    return !(lhs == rhs);
+}
+
 template<typename S>
 void serialize(extenser::generic_serializer<S>& ser, Pet& pet)
 {
@@ -78,6 +88,27 @@ struct Person
     std::optional<Pet> pet{};
     std::unordered_map<Fruit, int> fruit_count{};
 };
+
+inline bool operator==(const Person& lhs, const Person& rhs) noexcept
+{
+    if (lhs.age != rhs.age || lhs.name != rhs.name || lhs.friends.size() != rhs.friends.size()
+        || lhs.fruit_count != rhs.fruit_count)
+    {
+        return false;
+    }
+
+    if (lhs.pet.has_value() != rhs.pet.has_value())
+    {
+        return false;
+    }
+
+    return lhs.pet.has_value() ? (*lhs.pet == *rhs.pet) : true;
+}
+
+inline bool operator!=(const Person& lhs, const Person& rhs) noexcept
+{
+    return !(lhs == rhs);
+}
 
 template<typename S>
 void serialize(extenser::generic_serializer<S>& ser, Person& person)

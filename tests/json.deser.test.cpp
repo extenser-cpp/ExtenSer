@@ -450,12 +450,143 @@ TEST_SUITE("json::deserializer")
 
     SCENARIO("a map-like container can be deserialized from JSON")
     {
-        // TODO: Implement test
+        GIVEN("a deserializer with a JSON object representing a map")
+        {
+            const std::map<int, std::string> expected_val{ { 33, "Benjamin Burton" },
+                { 99, "John Johnson" }, { 444, "Reed Carmichael" } };
+
+            const auto test_obj = nlohmann::json::parse(
+                R"({"@33": "Benjamin Burton", "@99": "John Johnson", "@444": "Reed Carmichael"})");
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                std::map<int, std::string> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_map("", test_val));
+
+                THEN("the map is properly assigned")
+                {
+                    for (const auto& [k, v] : test_val)
+                    {
+                        CHECK_EQ(v, expected_val.at(k));
+                    }
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object representing an unordered_map")
+        {
+            const std::unordered_map<std::string, Person> expected_val{
+                { "Henrietta",
+                    Person{ 16, "Henrietta Payne", {}, Pet{ "Ron", Pet::Species::Fish }, {} } },
+                { "Jerome", Person{ 12, "Jerome Banks", {}, {}, {} } },
+                { "Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
+                { "Ricardo",
+                    Person{ 19, "Ricardo Montoya", {}, Pet{ "Sinbad", Pet::Species::Cat }, {} } }
+            };
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+            const auto test_obj = nlohmann::json::parse(R"({
+"Henrietta": {"age": 16, "name": "Henrietta Payne", "friends": [], "pet": {"name": "Ron", "species": "Fish"}, "fruit_count": {}},
+"Jerome": {"age": 12, "name": "Jerome Banks", "friends": [], "pet": null, "fruit_count": {}},
+"Rachel": {"age": 22, "name": "Rachel Franks", "friends": [], "pet": null, "fruit_count": {}},
+"Ricardo": {"age": 19, "name": "Ricardo Montoya", "friends": [], "pet": {"name": "Sinbad", "species": "Cat"}, "fruit_count": {}}
+})");
+#else
+            const auto test_obj = nlohmann::json::parse(R"({
+"Henrietta": {"age": 16, "name": "Henrietta Payne", "friends": [], "pet": {"name": "Ron", "species": 3}, "fruit_count": {}},
+"Jerome": {"age": 12, "name": "Jerome Banks", "friends": [], "pet": null, "fruit_count": {}},
+"Rachel": {"age": 22, "name": "Rachel Franks", "friends": [], "pet": null, "fruit_count": {}},
+"Ricardo": {"age": 19, "name": "Ricardo Montoya", "friends": [], "pet": {"name": "Sinbad", "species": 1}, "fruit_count": {}}
+})");
+#endif
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                std::unordered_map<std::string, Person> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_map("", test_val));
+
+                THEN("the unordered_map is properly assigned")
+                {
+                    for (const auto& [k, v] : test_val)
+                    {
+                        CHECK_EQ(v, expected_val.at(k));
+                    }
+                }
+            }
+        }
     }
 
     SCENARIO("a multimap-like container can be deserialized from JSON")
     {
-        // TODO: Implement test
+        GIVEN("a deserializer with a JSON object representing a multimap")
+        {
+            const std::multimap<char, std::string> expected_val{ { 'a', "Apple" },
+                { 'a', "Aardvark" }, { 'b', "Brush" }, { 'c', "Cleaver" }, { 'd', "Danger" },
+                { 'd', "Donut" } };
+
+            const auto test_obj = nlohmann::json::parse(R"({
+"@97": ["Apple", "Aardvark"],
+"@98": ["Brush"],
+"@99": ["Cleaver"],
+"@100": ["Danger", "Donut"]
+})");
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                std::multimap<char, std::string> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_multimap("", test_val));
+
+                THEN("the multimap is properly assigned")
+                {
+                    for (const auto& pair : test_val)
+                    {
+                        const auto find_it =
+                            std::find(expected_val.cbegin(), expected_val.cend(), pair);
+                        CHECK_NE(find_it, expected_val.cend());
+                    }
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object representing an unordered_multimap")
+        {
+            const std::unordered_multimap<std::string, std::string> expected_val{
+                { "Stan Lee", "Marvel" }, { "Jack Kirby", "Marvel" }, { "Jack Kirby", "DC" },
+                { "Mike Mignola", "Dark Horse" }, { "Mike Mignola", "DC" },
+                { "Mike Mignola", "Marvel" }, { "Grant Morrison", "DC" }
+            };
+
+            const auto test_obj = nlohmann::json::parse(R"({
+"Stan Lee": ["Marvel"],
+"Jack Kirby": ["Marvel", "DC"],
+"Mike Mignola": ["Dark Horse", "DC", "Marvel"],
+"Grant Morrison": ["DC"]
+})");
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                std::unordered_map<std::string, std::string> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_multimap("", test_val));
+
+                THEN("the unordered_multimap is properly assigned")
+                {
+                    for (const auto& pair : test_val)
+                    {
+                        const auto find_it =
+                            std::find(expected_val.cbegin(), expected_val.cend(), pair);
+                        CHECK_NE(find_it, expected_val.cend());
+                    }
+                }
+            }
+        }
     }
 
     SCENARIO("a tuple can be deserialized from JSON")
