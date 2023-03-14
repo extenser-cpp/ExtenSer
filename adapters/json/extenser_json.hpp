@@ -34,7 +34,14 @@
 #include "extenser.hpp"
 
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-#  include <magic_enum.hpp>
+#  if defined(__GNUC__) && !defined(__clang__)
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wconversion"
+#    include <magic_enum.hpp>
+#    pragma GCC diagnostic pop
+#  else
+#    include <magic_enum.hpp>
+#  endif
 #endif
 
 #include <nlohmann/json.hpp>
