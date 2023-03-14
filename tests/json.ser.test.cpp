@@ -19,7 +19,11 @@
 
 namespace extenser::tests
 {
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+TEST_SUITE("json::serializer (magic_enum)")
+#else
 TEST_SUITE("json::serializer")
+#endif
 {
     using serializer = json_adapter::serializer_t;
 
@@ -297,22 +301,6 @@ TEST_SUITE("json::serializer")
 
     SCENARIO("an enum can be serialized to JSON")
     {
-        enum class TestCode : uint8_t
-        {
-            Code1 = 0x01U,
-            CodeA = 0x0AU,
-            CodeB = 0x0BU,
-            CodeX = 0xFFU,
-        };
-
-        enum PlainEnum
-        {
-            VALUE_1,
-            VALUE_2,
-            VALUE_3,
-            VALUE_XX = -1,
-        };
-
         GIVEN("a default-init serializer")
         {
             serializer ser{};
@@ -510,7 +498,7 @@ TEST_SUITE("json::serializer")
 
                         for (const auto& [k, v] : test_val)
                         {
-                            const auto key_str = std::to_string(k);
+                            const auto key_str = "@" + std::to_string(k);
 
                             REQUIRE(obj.contains(key_str));
                             REQUIRE(obj[key_str].is_string());
@@ -579,7 +567,7 @@ TEST_SUITE("json::serializer")
 
                             for (const auto& [k, v] : test_val)
                             {
-                                const auto key_str = std::to_string(k);
+                                const auto key_str = "@" + std::to_string(k);
 
                                 REQUIRE(sub_obj.contains(key_str));
                                 REQUIRE(sub_obj[key_str].is_string());
@@ -616,7 +604,7 @@ TEST_SUITE("json::serializer")
                     {
                         for (const auto& [k, v] : test_val)
                         {
-                            const auto key_str = std::to_string(k);
+                            const auto key_str = "@" + std::to_string(k);
                             REQUIRE(obj.contains(key_str));
                             const auto& val_obj = obj[key_str];
 
@@ -681,7 +669,7 @@ TEST_SUITE("json::serializer")
                         {
                             for (const auto& [k, v] : test_val)
                             {
-                                const auto key_str = std::to_string(k);
+                                const auto key_str = "@" + std::to_string(k);
                                 REQUIRE(sub_obj.contains(key_str));
                                 const auto& val_obj = sub_obj[key_str];
 
@@ -764,8 +752,7 @@ TEST_SUITE("json::serializer")
                             magic_enum::enum_name<Pet::Species>(test_val.second.species));
 #else
                         REQUIRE(obj[1]["species"].is_number_integer());
-                        CHECK_EQ(
-                            obj[1]["species"].get<Pet::Species>(), test_val.second.species);
+                        CHECK_EQ(obj[1]["species"].get<Pet::Species>(), test_val.second.species);
 #endif
                     }
                 }
@@ -1055,12 +1042,12 @@ TEST_SUITE("json::serializer")
                         CHECK_EQ(
                             obj["fruit_count"]["Mango"], test_val.fruit_count.at(Fruit::Mango));
 #else
-                        REQUIRE(obj["fruit_count"].contains("0"));
-                        REQUIRE(obj["fruit_count"]["0"].is_number_integer());
-                        CHECK_EQ(obj["fruit_count"]["0"], test_val.fruit_count.at(Fruit::Apple));
-                        REQUIRE(obj["fruit_count"].contains("4"));
-                        REQUIRE(obj["fruit_count"]["4"].is_number_integer());
-                        CHECK_EQ(obj["fruit_count"]["4"], test_val.fruit_count.at(Fruit::Mango));
+                        REQUIRE(obj["fruit_count"].contains("@0"));
+                        REQUIRE(obj["fruit_count"]["@0"].is_number_integer());
+                        CHECK_EQ(obj["fruit_count"]["@0"], test_val.fruit_count.at(Fruit::Apple));
+                        REQUIRE(obj["fruit_count"].contains("@4"));
+                        REQUIRE(obj["fruit_count"]["@4"].is_number_integer());
+                        CHECK_EQ(obj["fruit_count"]["@4"], test_val.fruit_count.at(Fruit::Mango));
 #endif
                     }
                 }
@@ -1110,11 +1097,11 @@ TEST_SUITE("json::serializer")
                             CHECK_EQ(sub_obj["fruit_count"]["Kiwi"],
                                 test_val.fruit_count.at(Fruit::Kiwi));
 #else
-                            CHECK_FALSE(sub_obj["fruit_count"].contains("0"));
-                            REQUIRE(sub_obj["fruit_count"].contains("3"));
-                            REQUIRE(sub_obj["fruit_count"]["3"].is_number_integer());
+                            CHECK_FALSE(sub_obj["fruit_count"].contains("@0"));
+                            REQUIRE(sub_obj["fruit_count"].contains("@3"));
+                            REQUIRE(sub_obj["fruit_count"]["@3"].is_number_integer());
                             CHECK_EQ(
-                                sub_obj["fruit_count"]["3"], test_val.fruit_count.at(Fruit::Kiwi));
+                                sub_obj["fruit_count"]["@3"], test_val.fruit_count.at(Fruit::Kiwi));
 #endif
                         }
                     }

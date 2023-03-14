@@ -241,14 +241,17 @@ FetchContent_MakeAvailable(nlohmann_json)
 add_library(extenser-json INTERFACE adapters/json/extenser_json.hpp)
 target_link_libraries_system(extenser-json INTERFACE extenser nlohmann_json::nlohmann_json)
 
-if (USE_MAGIC_ENUM)
+if (USE_MAGIC_ENUM OR BUILD_TESTING)
     FetchContent_Declare(magic_enum
             GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
             GIT_TAG e1a68e9dd3d2e9180b04c8aeacd4975db745e6b8
             )
     FetchContent_MakeAvailable(magic_enum)
-    target_link_libraries_system(extenser-json INTERFACE magic_enum::magic_enum)
-    target_compile_definitions(extenser-json INTERFACE EXTENSER_USE_MAGIC_ENUM)
+
+    if (USE_MAGIC_ENUM)
+        target_link_libraries_system(extenser-json INTERFACE magic_enum::magic_enum)
+        target_compile_definitions(extenser-json INTERFACE EXTENSER_USE_MAGIC_ENUM)
+    endif ()
 endif ()
 
 target_include_directories(extenser-json INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/adapters>

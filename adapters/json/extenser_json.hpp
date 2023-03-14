@@ -245,8 +245,9 @@ namespace detail_json
                 nlohmann::json key_obj{};
                 push_arg(k, key_obj);
 
+                // TODO: Catch case where key_obj.is_string() and starts with a @
                 const auto key_str =
-                    key_obj.is_string() ? key_obj.get<std::string>() : key_obj.dump();
+                    key_obj.is_string() ? key_obj.get<std::string>() : "@" + key_obj.dump();
 
                 auto& val_obj = obj[key_str];
                 push_arg(v, val_obj);
@@ -263,8 +264,9 @@ namespace detail_json
                 nlohmann::json key_obj{};
                 push_arg(k, key_obj);
 
+                // TODO: Catch case where key_obj.is_string() and starts with a @
                 const auto key_str =
-                    key_obj.is_string() ? key_obj.get<std::string>() : key_obj.dump();
+                    key_obj.is_string() ? key_obj.get<std::string>() : "@" + key_obj.dump();
 
                 if (obj.find(key_str) == end(obj))
                 {
@@ -575,11 +577,11 @@ namespace detail_json
 
             for (const auto& [k, v] : obj.items())
             {
-                const auto key_obj = (k.front() == '{' || k.front() == '[')
-                    ? nlohmann::json::parse(k)
-                    : nlohmann::json::parse('[' + k + ']');
+                const auto key_obj = (k.front() == '@')
+                    ? nlohmann::json::parse(std::next(k.begin()), k.end()).front()
+                    : nlohmann::json::parse('"' + k + '"');
 
-                val.insert({ parse_arg<typename T::key_type>(key_obj.front()),
+                val.insert({ parse_arg<typename T::key_type>(key_obj),
                     parse_arg<typename T::mapped_type>(v) });
             }
         }
@@ -593,13 +595,13 @@ namespace detail_json
 
             for (const auto& [k, v] : obj.items())
             {
-                const auto key_obj = (k.front() == '{' || k.front() == '[')
-                    ? nlohmann::json::parse(k)
-                    : nlohmann::json::parse('[' + k + ']');
+                const auto key_obj = (k.front() == '@')
+                    ? nlohmann::json::parse(std::next(k.begin()), k.end()).front()
+                    : nlohmann::json::parse('"' + k + '"');
 
                 for (const auto& subval : v)
                 {
-                    val.insert({ (parse_arg<typename T::key_type>(key_obj.front())),
+                    val.insert({ (parse_arg<typename T::key_type>(key_obj)),
                         parse_arg<typename T::mapped_type>(subval) });
                 }
             }

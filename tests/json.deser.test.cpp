@@ -12,7 +12,11 @@
 
 namespace extenser::tests
 {
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+TEST_SUITE("json::deserializer (magic_enum)")
+#else
 TEST_SUITE("json::deserializer")
+#endif
 {
     using deserializer = json_adapter::deserializer_t;
 
@@ -233,7 +237,82 @@ TEST_SUITE("json::deserializer")
 
     SCENARIO("an enum can be deserialized from JSON")
     {
-        // TODO: Implement test
+        GIVEN("a deserializer with a JSON value representing an enum")
+        {
+            static constexpr auto expected_val{ Fruit::Orange };
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+            const nlohmann::json test_obj = "Orange";
+#else
+            const nlohmann::json test_obj = 5;
+#endif
+            const deserializer dser{ test_obj };
+
+            WHEN("the enum is deserialized")
+            {
+                Fruit test_val{};
+
+                REQUIRE_NOTHROW(dser.as_enum("", test_val));
+
+                THEN("the enum is properly assigned")
+                {
+                    CHECK_EQ(test_val, expected_val);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing an enum")
+        {
+            static constexpr auto expected_val{ PlainEnum::VALUE_2 };
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+            const nlohmann::json test_obj = "VALUE_2";
+#else
+            const nlohmann::json test_obj = 1;
+#endif
+            const deserializer dser{ test_obj };
+
+            WHEN("the enum is deserialized")
+            {
+                PlainEnum test_val{};
+
+                REQUIRE_NOTHROW(dser.as_enum("", test_val));
+
+                THEN("the enum is properly assigned")
+                {
+                    CHECK_EQ(test_val, expected_val);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON value representing an out-of-range enum")
+        {
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+            const nlohmann::json test_obj = "CodeC";
+#else
+            const nlohmann::json test_obj = 0x0CU;
+#endif
+            const deserializer dser{ test_obj };
+
+            WHEN("the enum is deserialized")
+            {
+                TestCode test_val{};
+
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+                THEN("an exception is thrown")
+                {
+                    CHECK_THROWS_AS(dser.as_enum("", test_val), deserialization_error);
+                }
+#else
+                REQUIRE_NOTHROW(dser.as_enum("", test_val));
+
+                THEN("the enum holds an invalid value")
+                {
+                    CHECK_EQ(static_cast<unsigned>(test_val), 0x0CU);
+                }
+#endif
+            }
+        }
     }
 
     // TODO: Support more types (string_view should be nop, mutable containers should std::copy, vector is push_back'ed)
@@ -408,7 +487,11 @@ TEST_SUITE("json::deserializer")
         {
             static constexpr std::pair<Fruit, int> expected_val{ Fruit::Grape, 45 };
 
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+            const auto test_obj = nlohmann::json::parse(R"(["Grape", 45])");
+#else
             const auto test_obj = nlohmann::json::parse(R"([2, 45])");
+#endif
             const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
@@ -588,11 +671,11 @@ TEST_SUITE("json::deserializer")
         GIVEN("a deserializer with a JSON object representing a class")
         {
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-            const nlohmann::json test_obj = nlohmann::json::parse(
+            const auto test_obj = nlohmann::json::parse(
                 R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": "Dog" }, "fruit_count": {"Apple": 2, "Kiwi": 4}})");
 #else
-            const nlohmann::json test_obj = nlohmann::json::parse(
-                R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": 2 }, "fruit_count": {"0": 2, "3": 4}})");
+            const auto test_obj = nlohmann::json::parse(
+                R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": 2 }, "fruit_count": {"@0": 2, "@3": 4}})");
 #endif
             const deserializer dser{ test_obj };
 
@@ -617,7 +700,7 @@ TEST_SUITE("json::deserializer")
 
         GIVEN("a deserializer with a JSON object containing a sub-object representing a class")
         {
-            const nlohmann::json test_obj = nlohmann::json::parse(
+            const auto test_obj = nlohmann::json::parse(
                 R"({"test_val": {"age": 18, "name": "Bill Garfield", "friends": [], "pet": null, "fruit_count": {}}})");
             const deserializer dser{ test_obj };
 

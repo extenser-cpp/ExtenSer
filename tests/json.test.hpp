@@ -31,6 +31,22 @@ enum class Fruit
     Strawberry,
 };
 
+enum class TestCode : uint8_t
+{
+    Code1 = 0x01U,
+    CodeA = 0x0AU,
+    CodeB = 0x0BU,
+    CodeX = 0xFFU,
+};
+
+enum PlainEnum
+{
+    VALUE_1,
+    VALUE_2,
+    VALUE_3,
+    VALUE_XX = -1,
+};
+
 struct Pet
 {
     enum class Species
