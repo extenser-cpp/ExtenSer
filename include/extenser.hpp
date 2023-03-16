@@ -423,21 +423,40 @@ public:                                                           \
 } //namespace detail
 
 template<typename Container>
-struct container_adapter
+class container_adapter;
+
+template<typename Container>
+struct container_traits
 {
     using container_type = Container;
-    using value_type = void;
+    using size_type = typename Container::size_type;
+    using value_type = typename Container::value_type;
+    using adapter_type = container_adapter<Container>;
 
-    static constexpr bool has_dynamic_extent = false;
-    static constexpr size_t max_extent = 0;
-    static constexpr bool is_mutable = false;
+    static constexpr bool has_fixed_size = false;
+    static constexpr bool is_contiguous = false;
+    static constexpr bool is_mutable = true;
+    static constexpr bool is_sequential = true;
+};
+
+template<typename Traits>
+class container_adapter_base
+{
+public:
+    using adapter_type = typename Traits::adapter_type;
+    using container_type = typename Traits::container_type;
+    using size_type = typename Traits::size_type;
+
+    EXTENSER_INLINE auto size(const container_type& container) const -> size_type
+    {
+        return (static_cast<const adapter_type*>(this))->size(container);
+    }
 
     template<typename InputIt, typename ConversionOp>
-    static void assign_from_range(
+    EXTENSER_INLINE void assign_from_range(
         container_type& container, InputIt first, InputIt last, ConversionOp convert_fn)
     {
-        static_assert(std::is_void_v<container_type>,
-            "Please provide container_adapter for this container type");
+        (static_cast<adapter_type*>(this))->assign_from_range(container, first, last, convert_fn);
     }
 };
 

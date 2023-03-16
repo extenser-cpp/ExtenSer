@@ -531,22 +531,23 @@ namespace detail_json
         template<typename T>
         void as_array(const std::string_view key, T& val) const
         {
+            using traits_t = container_traits<T>;
             using adapter_t = container_adapter<T>;
 
-            if constexpr (adapter_t::is_mutable)
+            if constexpr (traits_t::is_mutable)
             {
                 const auto& arr = subobject(key);
 
-                if constexpr (!adapter_t::has_dynamic_extent)
+                if constexpr (traits_t::has_fixed_size)
                 {
-                    if (arr.size() != adapter_t::max_extent)
+                    if (arr.size() != adapter_t::size(val))
                     {
                         throw deserialization_error{ "JSON error: array out of bounds" };
                     }
                 }
 
                 adapter_t::assign_from_range(
-                    val, arr.cbegin(), arr.cend(), parse_arg<typename adapter_t::value_type>);
+                    val, arr.cbegin(), arr.cend(), parse_arg<typename traits_t::value_type>);
             }
         }
 

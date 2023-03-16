@@ -11,20 +11,34 @@
 namespace extenser
 {
 template<typename T, size_t N>
-struct container_adapter<std::array<T, N>>
+struct container_traits<std::array<T, N>>
 {
     using container_type = std::array<T, N>;
-    using value_type = typename container_type::value_type;
+    using size_type = typename std::array<T, N>::size_type;
+    using value_type = T;
+    using adapter_type = container_adapter<std::array<T, N>>;
 
-    static constexpr bool has_dynamic_extent = false;
-    static constexpr size_t max_extent = N;
+    static constexpr bool has_fixed_size = true;
+    static constexpr bool is_contiguous = true;
     static constexpr bool is_mutable = !std::is_const_v<T>;
+    static constexpr bool is_sequential = true;
+};
+
+template<typename T, size_t N>
+class container_adapter<std::array<T, N>> :
+    public container_adapter_base<container_traits<std::array<T, N>>>
+{
+public:
+    static constexpr auto size(const std::array<T, N>& container) -> size_t
+    {
+        return container.size();
+    }
 
     template<typename InputIt, typename ConversionOp>
     static void assign_from_range(
-        container_type& container, InputIt first, InputIt last, ConversionOp convert_fn)
+        std::array<T, N>& container, InputIt first, InputIt last, ConversionOp convert_fn)
     {
-        EXTENSER_PRECONDITION(std::distance(first, last) == max_extent);
+        EXTENSER_PRECONDITION(std::distance(first, last) == N);
         std::transform(first, last, container.begin(), convert_fn);
     }
 };

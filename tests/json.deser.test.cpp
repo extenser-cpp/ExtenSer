@@ -362,12 +362,15 @@ TEST_SUITE("json::deserializer")
     }
 
     SCENARIO_TEMPLATE("an array-like container can be deserialized from JSON", T_Arr,
-        std::vector<int>, std::list<int>, std::deque<int>, std::forward_list<int>, std::set<int>,
-        std::multiset<int>, std::array<int, 5>, span<int>)
+        std::vector<int>, std::list<int>, std::deque<int>, std::forward_list<int>,
+        std::array<int, 5>, span<int>, std::set<int>, std::multiset<int>, std::unordered_set<int>,
+        std::unordered_multiset<int>)
     {
         GIVEN("a deserializer with a JSON array")
         {
-            const auto test_obj = nlohmann::json::parse("[1, 2, 3, 4, 5]");
+            static constexpr std::array expected_val{ 1, 5, 3, 4, 2 };
+
+            const auto test_obj = nlohmann::json::parse("[1, 5, 3, 4, 2]");
             const deserializer dser{ test_obj };
 
             WHEN("the array is deserialized")
@@ -385,9 +388,17 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the array is properly assigned")
                 {
-                    for (int i = 0; i < 5; ++i)
+                    REQUIRE_EQ(container_adapter<T_Arr>::size(test_val), std::size(expected_val));
+
+                    if constexpr (container_traits<T_Arr>::is_sequential)
                     {
-                        CHECK_EQ(*std::next(std::begin(test_val), i), i + 1);
+                        CHECK(std::equal(
+                            std::begin(test_val), std::end(test_val), std::begin(expected_val)));
+                    }
+                    else
+                    {
+                        CHECK(std::is_permutation(
+                            std::begin(test_val), std::end(test_val), std::begin(expected_val)));
                     }
                 }
             }
@@ -416,7 +427,8 @@ TEST_SUITE("json::deserializer")
 
         GIVEN("a deserializer with a JSON object containing an array")
         {
-            const auto test_obj = nlohmann::json::parse(R"({"test_val": [0, 1, 2, 3, 4]})");
+            static constexpr std::array expected_val{ 0, 4, 2, 3, 2 };
+            const auto test_obj = nlohmann::json::parse(R"({"test_val": [0, 4, 2, 3, 2]})");
             const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
@@ -434,9 +446,15 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the array is properly assigned")
                 {
-                    for (int i = 0; i < 5; ++i)
+                    if constexpr (container_traits<T_Arr>::is_sequential)
                     {
-                        CHECK_EQ(*std::next(std::begin(test_val), i), i);
+                        CHECK(std::equal(
+                            std::begin(test_val), std::end(test_val), std::begin(expected_val)));
+                    }
+                    else
+                    {
+                        CHECK(std::is_permutation(
+                            std::begin(test_val), std::end(test_val), std::begin(expected_val)));
                     }
                 }
             }
