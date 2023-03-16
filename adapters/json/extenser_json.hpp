@@ -234,8 +234,6 @@ namespace detail_json
         template<typename T>
         static void push_array(T&& arg, nlohmann::json& obj)
         {
-            using adapter_t = container_adapter<T>;
-
             obj = nlohmann::json::array();
 
             for (const auto& subval : arg)

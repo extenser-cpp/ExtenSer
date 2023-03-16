@@ -198,7 +198,6 @@ elseif(CXX_CLANG OR CXX_CLANG_CL)
       -Wno-missing-braces
       -Wno-covered-switch-default
       -Wno-unused-template
-      -Wno-c++20-attribute-extensions
       -Wno-assume)
   set(MIN_WARNING -Wall)
   if(CXX_CLANG_CL)
