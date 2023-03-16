@@ -234,6 +234,8 @@ namespace detail_json
         template<typename T>
         static void push_array(T&& arg, nlohmann::json& obj)
         {
+            using adapter_t = container_adapter<T>;
+
             obj = nlohmann::json::array();
 
             for (const auto& subval : arg)
@@ -531,47 +533,22 @@ namespace detail_json
         template<typename T>
         void as_array(const std::string_view key, T& val) const
         {
-            const auto& arr = subobject(key);
+            using adapter_t = container_adapter<T>;
 
-            // TODO: Need some sort of container traits to determine efficient insertion
-            //if constexpr (std::is_default_constructible_v<typename T::value_type>)
-            //{
-            //    val.resize(arr.size());
-            //    std::transform(
-            //        arr.cbegin(), arr.cend(), std::begin(val), parse_arg<typename T::value_type>);
-            //}
-            //else
-            //{
-            // TODO: Is there way to avoid extra copy (inserter perhaps)?
-            std::vector<typename T::value_type> buf;
-            buf.reserve(arr.size());
-            std::transform(arr.cbegin(), arr.cend(), std::back_inserter(buf),
-                parse_arg<typename T::value_type>);
-
-            val = T{ buf.begin(), buf.end() };
-            //}
-        }
-
-        template<typename T, size_t N>
-        void as_array(const std::string_view key, std::array<T, N>& val) const
-        {
-            const auto& arr = subobject(key);
-            std::transform(arr.cbegin(), arr.cend(), val.begin(), parse_arg<T>);
-        }
-
-        template<typename T>
-        void as_array(const std::string_view key, span<T>& val) const
-        {
-            const auto& arr = subobject(key);
-
-            if (arr.size() != val.size())
+            if constexpr (adapter_t::is_mutable)
             {
-                throw deserialization_error{ "JSON error: array out of bounds" };
-            }
+                const auto& arr = subobject(key);
 
-            if constexpr (!std::is_const_v<T>)
-            {
-                std::transform(arr.cbegin(), arr.cend(), val.begin(), parse_arg<T>);
+                if constexpr (!adapter_t::has_dynamic_extent)
+                {
+                    if (arr.size() != adapter_t::max_extent)
+                    {
+                        throw deserialization_error{ "JSON error: array out of bounds" };
+                    }
+                }
+
+                adapter_t::assign_from_range(
+                    val, arr.cbegin(), arr.cend(), parse_arg<typename adapter_t::value_type>);
             }
         }
 

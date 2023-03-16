@@ -422,6 +422,25 @@ public:                                                           \
     }
 } //namespace detail
 
+template<typename Container>
+struct container_adapter
+{
+    using container_type = Container;
+    using value_type = void;
+
+    static constexpr bool has_dynamic_extent = false;
+    static constexpr size_t max_extent = 0;
+    static constexpr bool is_mutable = false;
+
+    template<typename InputIt, typename ConversionOp>
+    static void assign_from_range(
+        container_type& container, InputIt first, InputIt last, ConversionOp convert_fn)
+    {
+        static_assert(std::is_void_v<container_type>,
+            "Please provide container_adapter for this container type");
+    }
+};
+
 #if defined(__cpp_lib_span)
 using std::as_bytes;
 using std::as_writable_bytes;

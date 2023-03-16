@@ -3,6 +3,13 @@
 
 #include "extenser.hpp"
 #include "json/extenser_json.hpp"
+#include "container_adapters/array.hpp"
+#include "container_adapters/deque.hpp"
+#include "container_adapters/forward_list.hpp"
+#include "container_adapters/list.hpp"
+#include "container_adapters/set.hpp"
+#include "container_adapters/span.hpp"
+#include "container_adapters/vector.hpp"
 
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>

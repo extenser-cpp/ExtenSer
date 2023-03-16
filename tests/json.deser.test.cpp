@@ -393,25 +393,20 @@ TEST_SUITE("json::deserializer")
             }
         }
 
-        GIVEN("a deserializer with an empty JSON array")
+        if constexpr (!std::is_same_v<T_Arr, std::array<int, 5>>)
         {
-            const auto test_obj = nlohmann::json::parse("[]");
-            const deserializer dser{ test_obj };
-
-            WHEN("the array is deserialized")
+            GIVEN("a deserializer with an empty JSON array")
             {
-                T_Arr test_val{};
+                const auto test_obj = nlohmann::json::parse("[]");
+                const deserializer dser{ test_obj };
 
-                REQUIRE_NOTHROW(dser.as_array("", test_val));
-
-                THEN("the deserialized array is empty")
+                WHEN("the array is deserialized")
                 {
-                    if constexpr (std::is_same_v<T_Arr, std::array<int, 5>>)
-                    {
-                        CHECK(std::all_of(std::begin(test_val), std::end(test_val),
-                            [](const int n) { return n == 0; }));
-                    }
-                    else
+                    T_Arr test_val{};
+
+                    REQUIRE_NOTHROW(dser.as_array("", test_val));
+
+                    THEN("the deserialized array is empty")
                     {
                         CHECK(std::empty(test_val));
                     }
