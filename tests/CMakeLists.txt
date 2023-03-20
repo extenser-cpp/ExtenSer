@@ -3,7 +3,7 @@ enable_testing()
 include(FetchContent)
 FetchContent_Declare(doctest
     GIT_REPOSITORY https://github.com/doctest/doctest.git
-    GIT_TAG 8fdfd113dcb4ad1a31705ff8ddb13a21a505bad8
+    GIT_TAG ae7a13539fb71f270b87eb2e874fbac80bc8dda2
     )
 FetchContent_MakeAvailable(doctest)
 

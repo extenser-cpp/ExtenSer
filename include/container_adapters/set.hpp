@@ -38,7 +38,7 @@ public:
     static void assign_from_range(std::set<Key, Compare, Allocator>& container, InputIt first,
         InputIt last, ConversionOp convert_fn)
     {
-        EXTENSER_PRECONDITION(container.empty());
+        container.clear();
         std::transform(first, last, std::inserter(container, container.begin()), convert_fn);
     }
 };
@@ -71,7 +71,7 @@ public:
     static void assign_from_range(std::multiset<Key, Compare, Allocator>& container, InputIt first,
         InputIt last, ConversionOp convert_fn)
     {
-        EXTENSER_PRECONDITION(container.empty());
+        container.clear();
         std::transform(first, last, std::inserter(container, container.begin()), convert_fn);
     }
 };

@@ -22,7 +22,7 @@ public:
     static void assign_from_range(
         std::deque<T, Allocator>& container, InputIt first, InputIt last, ConversionOp convert_fn)
     {
-        EXTENSER_PRECONDITION(container.empty());
+        container.clear();
         std::transform(first, last, std::back_inserter(container), convert_fn);
     }
 };

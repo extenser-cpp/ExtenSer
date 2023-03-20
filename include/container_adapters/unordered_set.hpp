@@ -39,7 +39,7 @@ public:
     static void assign_from_range(std::unordered_set<Key, Hash, KeyEqual, Allocator>& container,
         InputIt first, InputIt last, ConversionOp convert_fn)
     {
-        EXTENSER_PRECONDITION(container.empty());
+        container.clear();
         std::transform(first, last, std::inserter(container, container.begin()), convert_fn);
     }
 };
@@ -75,7 +75,7 @@ public:
         std::unordered_multiset<Key, Hash, KeyEqual, Allocator>& container, InputIt first,
         InputIt last, ConversionOp convert_fn)
     {
-        EXTENSER_PRECONDITION(container.empty());
+        container.clear();
         std::transform(first, last, std::inserter(container, container.begin()), convert_fn);
     }
 };

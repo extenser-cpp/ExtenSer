@@ -38,7 +38,7 @@ public:
     static void assign_from_range(
         std::vector<T, Allocator>& container, InputIt first, InputIt last, ConversionOp convert_fn)
     {
-        EXTENSER_PRECONDITION(container.empty());
+        container.clear();
         container.reserve(std::distance(first, last));
         std::transform(first, last, std::back_inserter(container), convert_fn);
     }
