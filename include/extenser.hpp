@@ -680,7 +680,7 @@ public:
     generic_serializer& operator=(generic_serializer&&) = delete;
 
     template<typename T>
-    EXTENSER_INLINE void as_bool(const std::string_view key, T& val)
+    EXTENSER_INLINE void as_bool(const std::string_view key, bool& val)
     {
         (static_cast<Derived*>(this))->as_bool(key, val);
     }
@@ -797,10 +797,8 @@ public:
         serialize(*this, std::forward<T>(val));
     }
 
-    template<typename T>
-    EXTENSER_INLINE void as_bool(const std::string_view key, T& val)
+    EXTENSER_INLINE void as_bool(const std::string_view key, bool& val)
     {
-        static_assert(is_bool_serializable<T>, "T must be convertible to bool");
         (static_cast<serializer_t*>(this))->as_bool(key, val);
     }
 

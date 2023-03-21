@@ -93,22 +93,20 @@ namespace detail_json
             return std::move(m_json);
         }
 
-        template<typename T>
-        void as_bool(const std::string_view key, const T& val) noexcept
+        void as_bool(const std::string_view key, const bool val) noexcept
         {
-            // TODO: as_bool should explicitly just take `bool`
-            push_simple_type(static_cast<bool>(val), subobject(key));
+            push_simple_type(val, subobject(key));
         }
 
         template<typename T>
-        void as_float(const std::string_view key, const T& val)
+        void as_float(const std::string_view key, const T val)
         {
             static_assert(!std::is_same_v<T, long double>, "long double is not supported");
             push_simple_type(static_cast<double>(val), subobject(key));
         }
 
         template<typename T>
-        void as_int(const std::string_view key, const T& val)
+        void as_int(const std::string_view key, const T val)
         {
             static_assert(sizeof(T) <= sizeof(int64_t), "maximum 64-bit integers supported");
             static_assert(
@@ -118,7 +116,7 @@ namespace detail_json
         }
 
         template<typename T>
-        void as_uint(const std::string_view key, const T& val)
+        void as_uint(const std::string_view key, const T val)
         {
             static_assert(sizeof(T) <= sizeof(int64_t), "maximum 64-bit integers supported");
             static_assert(std::is_integral_v<T> && std::is_unsigned_v<T>,
@@ -128,7 +126,7 @@ namespace detail_json
         }
 
         template<typename T>
-        void as_enum(const std::string_view key, const T& val)
+        void as_enum(const std::string_view key, const T val)
         {
             static_assert(std::is_enum_v<T>, "T must be an enum type");
             push_enum(val, subobject(key));
@@ -198,13 +196,13 @@ namespace detail_json
         }
 
         template<typename T>
-        static void push_simple_type(T&& arg, nlohmann::json& obj) noexcept
+        static void push_simple_type(const T arg, nlohmann::json& obj) noexcept
         {
-            obj = std::forward<T>(arg);
+            obj = arg;
         }
 
         template<typename T>
-        static void push_enum(T&& arg, nlohmann::json& obj)
+        static void push_enum(const T arg, nlohmann::json& obj)
         {
             using no_ref_t = detail::remove_cvref_t<T>;
 
@@ -236,7 +234,7 @@ namespace detail_json
         {
             obj = nlohmann::json::array();
 
-            for (const auto& subval : arg)
+            for (const auto& subval : std::forward<T>(arg))
             {
                 push_args(subval, obj);
             }
@@ -247,14 +245,14 @@ namespace detail_json
         {
             obj = nlohmann::json::object();
 
-            for (const auto& [k, v] : arg)
+            for (const auto& [k, v] : std::forward<T>(arg))
             {
                 nlohmann::json key_obj{};
                 push_arg(k, key_obj);
 
                 // TODO: Catch case where key_obj.is_string() and starts with a @
                 const auto key_str =
-                    key_obj.is_string() ? key_obj.get<std::string>() : "@" + key_obj.dump();
+                    key_obj.is_string() ? key_obj.get<std::string>() : ("@" + key_obj.dump());
 
                 auto& val_obj = obj[key_str];
                 push_arg(v, val_obj);
@@ -266,14 +264,14 @@ namespace detail_json
         {
             obj = nlohmann::json::object();
 
-            for (const auto& [k, v] : arg)
+            for (const auto& [k, v] : std::forward<T>(arg))
             {
                 nlohmann::json key_obj{};
                 push_arg(k, key_obj);
 
                 // TODO: Catch case where key_obj.is_string() and starts with a @
                 const auto key_str =
-                    key_obj.is_string() ? key_obj.get<std::string>() : "@" + key_obj.dump();
+                    key_obj.is_string() ? key_obj.get<std::string>() : ("@" + key_obj.dump());
 
                 if (obj.find(key_str) == end(obj))
                 {
