@@ -401,24 +401,15 @@ public:                                                           \
         pointer m_ptr{ nullptr };
     };
 
-    template<typename F, typename... Ts, std::size_t... Is>
-    constexpr void for_each_tuple(const std::tuple<Ts...>& tuple, F&& func,
-        [[maybe_unused]] const std::index_sequence<Is...> iseq)
-    {
-        static_assert(std::conjunction_v<std::is_invocable<F, Ts>...>,
-            "applied function must be able to take given args");
-
-        using expander = int[];
-        std::ignore = expander{ 0, ((void)std::forward<F>(func)(std::get<Is>(tuple)), 0)... };
-    }
-
     template<typename F, typename... Ts>
     constexpr void for_each_tuple(const std::tuple<Ts...>& tuple, F&& func)
     {
         static_assert(std::conjunction_v<std::is_invocable<F, Ts>...>,
             "applied function must be able to take given args");
 
-        for_each_tuple(tuple, std::forward<F>(func), std::make_index_sequence<sizeof...(Ts)>());
+        std::apply([func = std::forward<F>(func)](auto&&... args)
+            { (func(std::forward<decltype(args)>(args)), ...); },
+            tuple);
     }
 } //namespace detail
 
