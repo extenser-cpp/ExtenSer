@@ -19,6 +19,7 @@
 
 namespace extenser::detail
 {
+// TODO: Replace these type_traits w/ container traits
 #define EXTENSER_NOPAREN(...) __VA_ARGS__
 #define EXTENSER_CHECKER(NAME, EXPR1, EXPR2)                          \
     template<typename C>                                              \

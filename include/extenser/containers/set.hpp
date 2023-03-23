@@ -12,9 +12,7 @@
 
 #include "../extenser.hpp"
 
-#include <algorithm>
 #include <cstddef>
-#include <iterator>
 #include <set>
 
 namespace extenser

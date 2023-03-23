@@ -12,7 +12,6 @@
 
 #include "../extenser.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <unordered_map>
 

@@ -16,10 +16,8 @@
 
 #include <array>
 #include <cstddef>
-#include <iterator>
 #include <optional>
 #include <stdexcept>
-#include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
@@ -84,6 +82,16 @@ namespace containers
         static constexpr bool is_sequential = false;
     };
 
+    template<typename Container>
+    struct string_traits : public sequential_traits<Container>
+    {
+        using character_type = typename Container::value_type;
+        using typename sequential_traits<Container>::container_type;
+        using typename sequential_traits<Container>::size_type;
+        using typename sequential_traits<Container>::value_type;
+        using typename sequential_traits<Container>::adapter_type;
+    };
+
     // TODO: Can this be a template-template of `traits<>`?
     template<typename Traits>
     class adapter_base
@@ -129,13 +137,40 @@ namespace containers
         using adapter_type = typename Traits::adapter_type;
         using container_type = typename Traits::container_type;
         using size_type = typename Traits::size_type;
-        using value_type = typename Traits::value_type;
 
         template<typename Input_T, typename ConversionOp>
         EXTENSER_INLINE void insert_value(
             container_type& container, const Input_T& value, ConversionOp convert_fn)
         {
             (static_cast<adapter_type*>(this))->insert_value(container, value, convert_fn);
+        }
+    };
+
+    template<typename Traits>
+    class string_adapter : public sequential_adapter<Traits>
+    {
+        using adapter_type = typename Traits::adapter_type;
+        using container_type = typename Traits::container_type;
+        using size_type = typename Traits::size_type;
+
+        EXTENSER_INLINE inline auto to_string(const container_type& container) -> std::string
+        {
+            return (static_cast<adapter_type*>(this))->to_string(container);
+        }
+
+        EXTENSER_INLINE inline auto to_string(container_type&& container) -> std::string
+        {
+            return (static_cast<adapter_type*>(this))->to_string(std::move(container));
+        }
+
+        EXTENSER_INLINE inline auto from_string(const std::string& str) -> container_type
+        {
+            return (static_cast<adapter_type*>(this))->from_string(str);
+        }
+
+        EXTENSER_INLINE inline auto from_string(std::string&& str) -> container_type
+        {
+            return (static_cast<adapter_type*>(this))->from_string(std::move(str));
         }
     };
 } //namespace containers
@@ -526,13 +561,6 @@ void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
 {
     span arr_span{ val };
     ser.as_array("", arr_span);
-}
-
-template<typename Adapter, bool Deserialize, typename T,
-    std::enable_if_t<detail::is_map_v<T>, bool> = true>
-void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
-{
-    ser.as_map("", val);
 }
 
 // TODO: Change `containers` design so these can be moved to separate headers

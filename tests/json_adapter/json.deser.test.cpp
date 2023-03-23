@@ -325,7 +325,8 @@ TEST_SUITE("json::deserializer")
     }
 
     // TODO: Support more types (string_view should be nop, mutable containers should std::copy, vector is push_back'ed)
-    SCENARIO_TEMPLATE("a string can be deserialized from JSON", T_Str, std::string)
+    SCENARIO_TEMPLATE(
+        "a string can be deserialized from JSON", T_Str, std::string, std::vector<char>)
     {
         GIVEN("a deserializer with a JSON value respresenting a string")
         {
@@ -342,7 +343,7 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the string is properly assigned")
                 {
-                    CHECK_EQ(test_val, expected_val);
+                    CHECK(std::equal(test_val.begin(), test_val.end(), expected_val.begin()));
                 }
             }
         }
@@ -364,7 +365,7 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the string is properly assigned")
                 {
-                    CHECK_EQ(test_val, expected_val);
+                    CHECK(std::equal(test_val.begin(), test_val.end(), expected_val.begin()));
                 }
             }
         }

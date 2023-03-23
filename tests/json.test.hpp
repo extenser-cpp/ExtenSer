@@ -19,6 +19,8 @@
 #include "extenser/containers/map.hpp"
 #include "extenser/containers/set.hpp"
 #include "extenser/containers/span.hpp"
+#include "extenser/containers/string.hpp"
+#include "extenser/containers/string_view.hpp"
 #include "extenser/containers/unordered_map.hpp"
 #include "extenser/containers/unordered_set.hpp"
 #include "extenser/containers/vector.hpp"

@@ -487,21 +487,41 @@ namespace detail_json
         template<typename T>
         void as_string(const std::string_view key, T& val) const
         {
-            // TODO: Create a type check for other types with storage (ex. vector, array) OR mutable access (ex. span, NOT string_view)
-            static_assert(std::is_same_v<T, std::string>,
-                "deserialization output must have storage (only std::string supported for now)");
+            using traits_t = containers::traits<T>;
+            using adapter_t = containers::adapter<T>;
 
-            try
+            if constexpr (std::is_same_v<T, std::string>)
             {
-                val = subobject(key).get<std::string>();
+                try
+                {
+                    val = subobject(key).get<std::string>();
+                }
+                catch (const deserialization_error&)
+                {
+                    throw;
+                }
+                catch (const std::exception& ex)
+                {
+                    throw deserialization_error{ ex.what() };
+                }
             }
-            catch (const deserialization_error&)
+            else
             {
-                throw;
-            }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
+                if constexpr (traits_t::is_mutable)
+                {
+                    const auto str = subobject(key).get<std::string>();
+
+                    if constexpr (traits_t::has_fixed_size)
+                    {
+                        if (str.size() != adapter_t::size(val))
+                        {
+                            throw deserialization_error{ "JSON error: array out of bounds" };
+                        }
+                    }
+
+                    adapter_t::assign_from_range(val, str.begin(), str.end(),
+                        [](const char c) { return static_cast<typename traits_t::value_type>(c); });
+                }
             }
         }
 
