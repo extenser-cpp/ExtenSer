@@ -1,4 +1,13 @@
-#include "json.test.hpp"
+// ExtenSer - An extensible, generic serialization library for C++
+//
+// Copyright (c) 2023 by Jackson Harmer
+//
+// SPDX-License-Identifier: BSD-3-Clause
+// Distributed under The 3-Clause BSD License
+// See accompanying file LICENSE or a copy at
+// https://opensource.org/license/bsd-3-clause/
+
+#include "../json.test.hpp"
 
 #include <algorithm>
 #include <array>

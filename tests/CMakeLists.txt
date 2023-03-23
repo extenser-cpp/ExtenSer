@@ -1,3 +1,12 @@
+# ExtenSer - An extensible, generic serialization library for C++
+#
+# Copyright (c) 2023 by Jackson Harmer
+#
+# SPDX-License-Identifier: BSD-3-Clause
+# Distributed under The 3-Clause BSD License
+# See accompanying file LICENSE or a copy at
+# https://opensource.org/license/bsd-3-clause/
+
 enable_testing()
 
 include(FetchContent)
@@ -11,12 +20,12 @@ add_library(doctest_runner OBJECT test_runner.cpp)
 target_link_libraries_system(doctest_runner PUBLIC doctest::doctest)
 
 add_executable(extenser-test test_main.cpp)
-target_link_libraries(extenser-test PRIVATE doctest_runner extenser-bitsery extenser-json)
+target_link_libraries(extenser-test PRIVATE doctest_runner extenser-json)
 target_compile_features(extenser-test PRIVATE cxx_std_17)
 target_compile_options(extenser-test PRIVATE ${FULL_WARNING})
 add_test(tester extenser-test)
 
-add_executable(json-test json.deser.test.cpp json.ser.test.cpp json.test.hpp)
+add_executable(json-test json_adapter/json.deser.test.cpp json_adapter/json.ser.test.cpp json.test.hpp)
 target_link_libraries(json-test PRIVATE doctest_runner extenser-json)
 target_compile_features(json-test PRIVATE cxx_std_17)
 target_compile_options(json-test PRIVATE ${FULL_WARNING})
@@ -24,7 +33,7 @@ get_target_property(json-test-defs json-test COMPILE_DEFINITIONS)
 list(FILTER json_test_defs EXCLUDE REGEX [[^EXTENSER_USE_MAGIC_ENUM$]])
 set_property(TARGET json-test PROPERTY COMPILE_DEFINITIONS ${json_test_defs})
 
-add_executable(json-magic-test json.deser.test.cpp json.ser.test.cpp json.test.hpp)
+add_executable(json-magic-test json_adapter/json.deser.test.cpp json_adapter/json.ser.test.cpp json.test.hpp)
 target_link_libraries(json-magic-test PRIVATE doctest_runner extenser-json magic_enum::magic_enum)
 target_compile_definitions(json-magic-test PRIVATE EXTENSER_USE_MAGIC_ENUM)
 target_compile_features(json-magic-test PRIVATE cxx_std_17)

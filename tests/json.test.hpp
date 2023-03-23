@@ -1,16 +1,27 @@
+// ExtenSer - An extensible, generic serialization library for C++
+//
+// Copyright (c) 2023 by Jackson Harmer
+//
+// SPDX-License-Identifier: BSD-3-Clause
+// Distributed under The 3-Clause BSD License
+// See accompanying file LICENSE or a copy at
+// https://opensource.org/license/bsd-3-clause/
+
 #ifndef EXTENSER_JSON_TEST_HPP
 #define EXTENSER_JSON_TEST_HPP
 
-#include "extenser.hpp"
-#include "json/extenser_json.hpp"
-#include "container_adapters/array.hpp"
-#include "container_adapters/deque.hpp"
-#include "container_adapters/forward_list.hpp"
-#include "container_adapters/list.hpp"
-#include "container_adapters/set.hpp"
-#include "container_adapters/span.hpp"
-#include "container_adapters/unordered_set.hpp"
-#include "container_adapters/vector.hpp"
+#include "extenser/extenser.hpp"
+#include "extenser/json_adapter/extenser_json.hpp"
+#include "extenser/containers/array.hpp"
+#include "extenser/containers/deque.hpp"
+#include "extenser/containers/forward_list.hpp"
+#include "extenser/containers/list.hpp"
+#include "extenser/containers/map.hpp"
+#include "extenser/containers/set.hpp"
+#include "extenser/containers/span.hpp"
+#include "extenser/containers/unordered_map.hpp"
+#include "extenser/containers/unordered_set.hpp"
+#include "extenser/containers/vector.hpp"
 
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>
