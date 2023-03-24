@@ -14,7 +14,6 @@
 #include "detail/type_traits.hpp"
 #include "span.hpp"
 
-#include <array>
 #include <cstddef>
 #include <optional>
 #include <stdexcept>

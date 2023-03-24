@@ -10,8 +10,10 @@
 #ifndef EXTENSER_TYPE_TRAITS_HPP
 #define EXTENSER_TYPE_TRAITS_HPP
 
+#include <cstddef>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
