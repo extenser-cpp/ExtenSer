@@ -36,7 +36,7 @@ namespace containers
 
     template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator>
     class adapter<std::unordered_map<Key, T, Hash, KeyEqual, Allocator>> :
-        public associative_adapter<traits<std::unordered_map<Key, T, Hash, KeyEqual, Allocator>>>
+        public associative_adapter<std::unordered_map<Key, T, Hash, KeyEqual, Allocator>>
     {
     public:
         static auto size(const std::unordered_map<Key, T, Hash, KeyEqual, Allocator>& container)
@@ -71,8 +71,7 @@ namespace containers
 
     template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator>
     class adapter<std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>> :
-        public associative_adapter<
-            traits<std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>>>
+        public associative_adapter<std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>>
     {
     public:
         static auto size(

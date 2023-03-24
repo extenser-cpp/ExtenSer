@@ -36,8 +36,7 @@ namespace containers
     };
 
     template<typename T, typename Allocator>
-    class adapter<std::vector<T, Allocator>> :
-        public sequential_adapter<traits<std::vector<T, Allocator>>>
+    class adapter<std::vector<T, Allocator>> : public sequential_adapter<std::vector<T, Allocator>>
     {
     public:
         static auto size(const std::vector<T, Allocator>& container) -> size_t

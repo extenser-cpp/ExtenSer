@@ -35,7 +35,7 @@ namespace containers
 
     template<typename Key, typename Hash, typename KeyEqual, typename Allocator>
     class adapter<std::unordered_set<Key, Hash, KeyEqual, Allocator>> :
-        public associative_adapter<traits<std::unordered_set<Key, Hash, KeyEqual, Allocator>>>
+        public associative_adapter<std::unordered_set<Key, Hash, KeyEqual, Allocator>>
     {
     public:
         static auto size(const std::unordered_set<Key, Hash, KeyEqual, Allocator>& container)
@@ -68,7 +68,7 @@ namespace containers
 
     template<typename Key, typename Hash, typename KeyEqual, typename Allocator>
     class adapter<std::unordered_multiset<Key, Hash, KeyEqual, Allocator>> :
-        public associative_adapter<traits<std::unordered_multiset<Key, Hash, KeyEqual, Allocator>>>
+        public associative_adapter<std::unordered_multiset<Key, Hash, KeyEqual, Allocator>>
     {
     public:
         static auto size(const std::unordered_multiset<Key, Hash, KeyEqual, Allocator>& container)

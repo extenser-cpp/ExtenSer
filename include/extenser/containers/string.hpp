@@ -37,7 +37,7 @@ namespace containers
 
     template<typename CharT, typename Traits, typename Allocator>
     class adapter<std::basic_string<CharT, Traits, Allocator>> :
-        public string_adapter<traits<std::basic_string<CharT, Traits, Allocator>>>
+        public string_adapter<std::basic_string<CharT, Traits, Allocator>>
     {
     public:
         static_assert(std::is_same_v<CharT, char> || std::is_same_v<CharT, wchar_t>,

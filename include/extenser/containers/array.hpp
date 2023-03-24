@@ -36,7 +36,7 @@ namespace containers
     };
 
     template<typename T, size_t N>
-    class adapter<std::array<T, N>> : public sequential_adapter<traits<std::array<T, N>>>
+    class adapter<std::array<T, N>> : public sequential_adapter<std::array<T, N>>
     {
     public:
         static constexpr auto size(const std::array<T, N>& container) -> size_t

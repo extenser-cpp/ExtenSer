@@ -37,7 +37,7 @@ namespace containers
 
     template<typename Key, typename T, typename Compare, typename Allocator>
     class adapter<std::map<Key, T, Compare, Allocator>> :
-        public associative_adapter<traits<std::map<Key, T, Compare, Allocator>>>
+        public associative_adapter<std::map<Key, T, Compare, Allocator>>
     {
     public:
         static auto size(const std::map<Key, T, Compare, Allocator>& container) -> size_t
@@ -71,7 +71,7 @@ namespace containers
 
     template<typename Key, typename T, typename Compare, typename Allocator>
     class adapter<std::multimap<Key, T, Compare, Allocator>> :
-        public associative_adapter<traits<std::multimap<Key, T, Compare, Allocator>>>
+        public associative_adapter<std::multimap<Key, T, Compare, Allocator>>
     {
     public:
         static auto size(const std::multimap<Key, T, Compare, Allocator>& container) -> size_t

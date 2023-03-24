@@ -40,7 +40,7 @@ namespace containers
     };
 
     template<typename T, size_t N>
-    class adapter<span<T, N>> : public sequential_adapter<span_traits<T, N>>
+    class adapter<span<T, N>> : public sequential_adapter<span<T, N>>
     {
     public:
         static constexpr auto size(const span<T, N>& container) -> size_t
@@ -71,7 +71,7 @@ namespace containers
     };
 
     template<typename T>
-    class adapter<span<T>> : public sequential_adapter<traits<span<T>>>
+    class adapter<span<T>> : public sequential_adapter<span<T>>
     {
     public:
         static constexpr auto size(const span<T>& container) -> size_t { return container.size(); }

@@ -35,7 +35,7 @@ namespace containers
 
     template<typename Key, typename Compare, typename Allocator>
     class adapter<std::set<Key, Compare, Allocator>> :
-        public associative_adapter<traits<std::set<Key, Compare, Allocator>>>
+        public associative_adapter<std::set<Key, Compare, Allocator>>
     {
     public:
         static auto size(const std::set<Key, Compare, Allocator>& container) -> size_t
@@ -67,7 +67,7 @@ namespace containers
 
     template<typename Key, typename Compare, typename Allocator>
     class adapter<std::multiset<Key, Compare, Allocator>> :
-        public associative_adapter<traits<std::multiset<Key, Compare, Allocator>>>
+        public associative_adapter<std::multiset<Key, Compare, Allocator>>
     {
     public:
         static auto size(const std::multiset<Key, Compare, Allocator>& container) -> size_t

@@ -91,13 +91,14 @@ namespace containers
         using typename sequential_traits<Container>::adapter_type;
     };
 
-    template<typename Traits>
+    template<typename Container>
     class adapter_base
     {
     public:
-        using adapter_type = typename Traits::adapter_type;
-        using container_type = typename Traits::container_type;
-        using size_type = typename Traits::size_type;
+        using traits_type = traits<Container>;
+        using adapter_type = typename traits_type::adapter_type;
+        using container_type = typename traits_type::container_type;
+        using size_type = typename traits_type::size_type;
 
         EXTENSER_INLINE auto size(const container_type& container) const -> size_type
         {
@@ -105,16 +106,17 @@ namespace containers
         }
     };
 
-    template<typename Traits>
-    class sequential_adapter : public adapter_base<Traits>
+    template<typename Container>
+    class sequential_adapter : public adapter_base<Container>
     {
     public:
-        static_assert(
-            Traits::is_sequential, "Only sequential containers can derive from sequential_adapter");
+        using traits_type = traits<Container>;
+        using adapter_type = typename traits_type::adapter_type;
+        using container_type = typename traits_type::container_type;
+        using size_type = typename traits_type::size_type;
 
-        using adapter_type = typename Traits::adapter_type;
-        using container_type = typename Traits::container_type;
-        using size_type = typename Traits::size_type;
+        static_assert(traits_type::is_sequential,
+            "Only sequential containers can derive from sequential_adapter");
 
         template<typename InputIt, typename ConversionOp>
         EXTENSER_INLINE void assign_from_range(
@@ -125,16 +127,17 @@ namespace containers
         }
     };
 
-    template<typename Traits>
-    class associative_adapter : public adapter_base<Traits>
+    template<typename Container>
+    class associative_adapter : public adapter_base<Container>
     {
     public:
-        static_assert(!Traits::is_sequential,
-            "Sequential containers should not derive from associative_adapter");
+        using traits_type = traits<Container>;
+        using adapter_type = typename traits_type::adapter_type;
+        using container_type = typename traits_type::container_type;
+        using size_type = typename traits_type::size_type;
 
-        using adapter_type = typename Traits::adapter_type;
-        using container_type = typename Traits::container_type;
-        using size_type = typename Traits::size_type;
+        static_assert(!traits_type::is_sequential,
+            "Sequential containers should not derive from associative_adapter");
 
         template<typename Input_T, typename ConversionOp>
         EXTENSER_INLINE void insert_value(
@@ -144,12 +147,13 @@ namespace containers
         }
     };
 
-    template<typename Traits>
-    class string_adapter : public sequential_adapter<Traits>
+    template<typename Container>
+    class string_adapter : public sequential_adapter<Container>
     {
-        using adapter_type = typename Traits::adapter_type;
-        using container_type = typename Traits::container_type;
-        using size_type = typename Traits::size_type;
+        using traits_type = traits<Container>;
+        using adapter_type = typename traits_type::adapter_type;
+        using container_type = typename traits_type::container_type;
+        using size_type = typename traits_type::size_type;
 
         EXTENSER_INLINE auto to_string(const container_type& container) -> std::string
         {

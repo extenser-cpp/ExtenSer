@@ -23,7 +23,7 @@ namespace containers
 {
     template<typename T, typename Allocator>
     class adapter<std::forward_list<T, Allocator>> :
-        public sequential_adapter<traits<std::forward_list<T, Allocator>>>
+        public sequential_adapter<std::forward_list<T, Allocator>>
     {
     public:
         static auto size(const std::forward_list<T, Allocator>& container) -> size_t

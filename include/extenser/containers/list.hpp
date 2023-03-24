@@ -22,8 +22,7 @@ namespace extenser
 namespace containers
 {
     template<typename T, typename Allocator>
-    class adapter<std::list<T, Allocator>> :
-        public sequential_adapter<traits<std::list<T, Allocator>>>
+    class adapter<std::list<T, Allocator>> : public sequential_adapter<std::list<T, Allocator>>
     {
     public:
         static auto size(const std::list<T, Allocator>& container) -> size_t
