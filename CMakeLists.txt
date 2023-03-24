@@ -9,15 +9,6 @@
 
 cmake_minimum_required(VERSION 3.12)
 
-if (CMAKE_GENERATOR MATCHES "Ninja")
-    file(
-            WRITE "${CMAKE_BINARY_DIR}/GNUMakeRulesOverwrite.cmake"
-            "STRING(REPLACE \"-MD\" \"-MMD\" CMAKE_DEPFILE_FLAGS_C \"\${CMAKE_DEPFILE_FLAGS_C}\")\n"
-            "STRING(REPLACE \"-MD\" \"-MMD\" CMAKE_DEPFILE_FLAGS_CXX \"\${CMAKE_DEPFILE_FLAGS_CXX}\")\n"
-    )
-    set(CMAKE_USER_MAKE_RULES_OVERRIDE "${CMAKE_BINARY_DIR}/GNUMakeRulesOverwrite.cmake" CACHE INTERNAL "")
-endif ()
-
 project(
         "ExtenSer"
         VERSION 0.1.0
@@ -299,6 +290,7 @@ FetchContent_Declare(nlohmann_json
 FetchContent_MakeAvailable(nlohmann_json)
 
 add_library(extenser-json INTERFACE include/extenser/json_adapter/extenser_json.hpp)
+target_link_libraries(extenser-json INTERFACE extenser)
 target_link_libraries_system(extenser-json INTERFACE extenser nlohmann_json::nlohmann_json)
 
 if (USE_MAGIC_ENUM OR BUILD_TESTING)

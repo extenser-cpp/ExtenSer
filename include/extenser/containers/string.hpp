@@ -12,6 +12,7 @@
 
 #include "../extenser.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <string>
 
@@ -104,5 +105,12 @@ namespace containers
         }
     };
 } //namespace containers
+
+template<typename Adapter, bool Deserialize, typename CharT, typename Traits, typename Allocator>
+void serialize(
+    serializer_base<Adapter, Deserialize>& ser, std::basic_string<CharT, Traits, Allocator>& val)
+{
+    ser.as_string("", val);
+}
 } //namespace extenser
 #endif

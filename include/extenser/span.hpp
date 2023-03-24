@@ -10,6 +10,7 @@
 #ifndef EXTENSER_SPAN_HPP
 #define EXTENSER_SPAN_HPP
 
+#include "detail/macros.hpp"
 #include "detail/type_traits.hpp"
 
 #include <array>

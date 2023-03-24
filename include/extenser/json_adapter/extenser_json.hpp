@@ -59,14 +59,14 @@ namespace detail_json
     public:
         serializer() noexcept = default;
 
-        [[nodiscard]] auto object() const& noexcept(EXTENSER_ASSERT_NOTHROW)
+        [[nodiscard]] auto object() const& noexcept(::EXTENSER_ASSERT_NOTHROW)
             -> const nlohmann::json&
         {
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
             return m_json;
         }
 
-        [[nodiscard]] auto object() && noexcept(EXTENSER_ASSERT_NOTHROW) -> nlohmann::json&&
+        [[nodiscard]] auto object() && noexcept(::EXTENSER_ASSERT_NOTHROW) -> nlohmann::json&&
         {
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
             return std::move(m_json);
@@ -644,6 +644,7 @@ namespace detail_json
         void as_variant(const std::string_view key, std::variant<Args...>& val) const
         {
             static constexpr size_t arg_sz = sizeof...(Args);
+            static_assert(arg_sz <= max_variant_size, "Variant limit reached");
 
             const auto& obj = subobject(key);
             const auto v_idx = obj.at("v_idx").get<size_t>();

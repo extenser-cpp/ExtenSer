@@ -58,7 +58,7 @@ namespace containers
     };
 
     template<typename Container>
-    struct sequential_traits : public traits<Container>
+    struct sequential_traits : traits<Container>
     {
         using typename traits<Container>::container_type;
         using typename traits<Container>::size_type;
@@ -69,7 +69,7 @@ namespace containers
     };
 
     template<typename Container>
-    struct associative_traits : public traits<Container>
+    struct associative_traits : traits<Container>
     {
         using typename traits<Container>::container_type;
         using typename traits<Container>::size_type;
@@ -82,7 +82,7 @@ namespace containers
     };
 
     template<typename Container>
-    struct string_traits : public sequential_traits<Container>
+    struct string_traits : sequential_traits<Container>
     {
         using character_type = typename Container::value_type;
         using typename sequential_traits<Container>::container_type;
@@ -91,7 +91,6 @@ namespace containers
         using typename sequential_traits<Container>::adapter_type;
     };
 
-    // TODO: Can this be a template-template of `traits<>`?
     template<typename Traits>
     class adapter_base
     {
@@ -152,22 +151,22 @@ namespace containers
         using container_type = typename Traits::container_type;
         using size_type = typename Traits::size_type;
 
-        EXTENSER_INLINE inline auto to_string(const container_type& container) -> std::string
+        EXTENSER_INLINE auto to_string(const container_type& container) -> std::string
         {
             return (static_cast<adapter_type*>(this))->to_string(container);
         }
 
-        EXTENSER_INLINE inline auto to_string(container_type&& container) -> std::string
+        EXTENSER_INLINE auto to_string(container_type&& container) -> std::string
         {
             return (static_cast<adapter_type*>(this))->to_string(std::move(container));
         }
 
-        EXTENSER_INLINE inline auto from_string(const std::string& str) -> container_type
+        EXTENSER_INLINE auto from_string(const std::string& str) -> container_type
         {
             return (static_cast<adapter_type*>(this))->from_string(str);
         }
 
-        EXTENSER_INLINE inline auto from_string(std::string&& str) -> container_type
+        EXTENSER_INLINE auto from_string(std::string&& str) -> container_type
         {
             return (static_cast<adapter_type*>(this))->from_string(std::move(str));
         }
@@ -542,27 +541,49 @@ void serialize(serializer_base<Adapter, true>& ser, T& val)
     ser.as_float("", val);
 }
 
-template<typename Adapter>
-void serialize(serializer_base<Adapter, false>& ser, const std::string_view val)
+template<typename Adapter, bool Deserialize, typename T,
+    std::enable_if_t<std::is_pointer_v<T>, bool> = true>
+void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
 {
-    ser.as_string("", val);
-}
+    using underlying_t = std::remove_cv_t<std::remove_pointer_t<T>>;
 
-template<typename Adapter, typename T, std::enable_if_t<detail::is_stringlike_v<T>, bool> = true>
-void serialize(serializer_base<Adapter, true>& ser, T& val)
-{
-    ser.as_string("", val);
+    static_assert(std::is_same_v<underlying_t, char> || std::is_same_v<underlying_t, wchar_t>,
+        "Non-string pointers are not supported, please wrap in a span or use another container");
+
+    if constexpr (std::is_same_v<underlying_t, wchar_t>)
+    {
+        std::wstring_view str_view{ val };
+        ser.as_string("", str_view);
+    }
+    else
+    {
+        std::string_view str_view{ val };
+        ser.as_string("", str_view);
+    }
 }
 
 template<typename Adapter, bool Deserialize, typename T,
     std::enable_if_t<std::is_array_v<T>, bool> = true>
 void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
 {
-    span arr_span{ val };
-    ser.as_array("", arr_span);
+    if constexpr (std::is_same_v<detail::remove_cvref_t<std::remove_all_extents_t<T>>, char>)
+    {
+        std::string_view str_view{ val };
+        ser.as_string("", str_view);
+    }
+    else if constexpr (std::is_same_v<detail::remove_cvref_t<std::remove_all_extents_t<T>>,
+                           wchar_t>)
+    {
+        std::wstring_view str_view{ val };
+        ser.as_string("", str_view);
+    }
+    else
+    {
+        span arr_span{ val };
+        ser.as_array("", arr_span);
+    }
 }
 
-// TODO: Change `containers` design so these can be moved to separate headers
 template<typename Adapter, bool Deserialize, typename T1, typename T2>
 void serialize(serializer_base<Adapter, Deserialize>& ser, std::pair<T1, T2>& val)
 {

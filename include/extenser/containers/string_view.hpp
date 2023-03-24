@@ -47,11 +47,27 @@ namespace containers
         static auto size(const container_type& container) -> size_t { return container.size(); }
 
         template<typename InputIt, typename ConversionOp>
-        static void assign_from_range(
-            container_type& container, InputIt first, InputIt last, ConversionOp convert_fn)
+        static void assign_from_range([[maybe_unused]] container_type& container,
+            [[maybe_unused]] InputIt first, [[maybe_unused]] InputIt last,
+            [[maybe_unused]] ConversionOp convert_fn)
         {
+            // nop
         }
     };
 } //namespace containers
+
+template<typename Adapter, typename CharT, typename Traits>
+void serialize(
+    serializer_base<Adapter, false>& ser, const std::basic_string_view<CharT, Traits> val)
+{
+    ser.as_string("", val);
+}
+
+template<typename Adapter, typename CharT, typename Traits>
+void serialize([[maybe_unused]] serializer_base<Adapter, true>& ser,
+    [[maybe_unused]] std::basic_string_view<CharT, Traits>& val)
+{
+    // nop
+}
 } //namespace extenser
 #endif
