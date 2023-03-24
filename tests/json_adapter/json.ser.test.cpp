@@ -455,6 +455,29 @@ TEST_SUITE("json::serializer")
         }
     }
 
+    SCENARIO_TEMPLATE("a wide string can be serialized to JSON", T_Str, const wchar_t*,
+        const wchar_t[23], std::wstring_view, std::wstring)
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a string is serialized")
+            {
+                const T_Str test_val = L"Mary had a little lamb";
+
+                REQUIRE_NOTHROW(ser.as_string("", test_val));
+
+                THEN("the JSON object holds a string")
+                {
+                    REQUIRE(obj.is_array());
+                    CHECK_EQ(obj.get<std::wstring>(), test_val);
+                }
+            }
+        }
+    }
+
     SCENARIO_TEMPLATE("an array-like container can be serialized to JSON", T_Arr,
         std::array<int, 5>, std::string_view, std::vector<bool>, std::deque<std::vector<double>>,
         std::list<Person>, std::forward_list<std::string>, std::set<int>,

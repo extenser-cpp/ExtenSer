@@ -114,7 +114,7 @@ namespace detail_json
         template<typename T>
         void as_string(const std::string_view key, const T& val)
         {
-            static_assert(detail::is_stringlike_v<T>, "T must be convertible to std::string_view");
+            //static_assert(detail::is_stringlike_v<T>, "T must be convertible to std::string_view");
             push_string(val, subobject(key));
         }
 
@@ -202,11 +202,8 @@ namespace detail_json
 #endif
         }
 
-        template<typename T>
-        static void push_string(T&& arg, nlohmann::json& obj)
-        {
-            obj = std::string_view{ std::forward<T>(arg) };
-        }
+        static void push_string(const std::string_view arg, nlohmann::json& obj) { obj = arg; }
+        static void push_string(const std::wstring_view arg, nlohmann::json& obj) { obj = arg; }
 
         template<typename T>
         static void push_array(T&& arg, nlohmann::json& obj)
@@ -487,7 +484,7 @@ namespace detail_json
         template<typename T>
         void as_string(const std::string_view key, T& val) const
         {
-            using traits_t = containers::traits<T>;
+            using traits_t = containers::string_traits<T>;
             using adapter_t = containers::adapter<T>;
 
             if constexpr (std::is_same_v<T, std::string>)
@@ -509,18 +506,38 @@ namespace detail_json
             {
                 if constexpr (traits_t::is_mutable)
                 {
-                    const auto str = subobject(key).get<std::string>();
+                    const auto& sub_obj = subobject(key);
 
-                    if constexpr (traits_t::has_fixed_size)
+                    if constexpr (std::is_same_v<typename traits_t::character_type, wchar_t>)
                     {
-                        if (str.size() != adapter_t::size(val))
+                        if constexpr (traits_t::has_fixed_size)
                         {
-                            throw deserialization_error{ "JSON error: array out of bounds" };
+                            if (sub_obj.size() != adapter_t::size(val))
+                            {
+                                throw deserialization_error{ "JSON error: array out of bounds" };
+                            }
                         }
-                    }
 
-                    adapter_t::assign_from_range(val, str.begin(), str.end(),
-                        [](const char c) { return static_cast<typename traits_t::value_type>(c); });
+                        adapter_t::assign_from_range(val, sub_obj.begin(), sub_obj.end(),
+                            [](const nlohmann::json& sub_val)
+                            { return sub_val.get<typename traits_t::value_type>(); });
+                    }
+                    else
+                    {
+                        const auto str = sub_obj.get<std::string>();
+
+                        if constexpr (traits_t::has_fixed_size)
+                        {
+                            if (str.size() != adapter_t::size(val))
+                            {
+                                throw deserialization_error{ "JSON error: array out of bounds" };
+                            }
+                        }
+
+                        adapter_t::assign_from_range(val, str.begin(), str.end(),
+                            [](const char c)
+                            { return static_cast<typename traits_t::value_type>(c); });
+                    }
                 }
             }
         }
@@ -564,7 +581,7 @@ namespace detail_json
         {
             EXTENSER_PRECONDITION(std::size(val) == 0);
 
-            using traits_t = containers::traits<T>;
+            using traits_t = containers::associative_traits<T>;
             using adapter_t = containers::adapter<T>;
 
             const auto& obj = subobject(key);
@@ -581,7 +598,7 @@ namespace detail_json
         {
             EXTENSER_PRECONDITION(std::size(val) == 0);
 
-            using traits_t = containers::traits<T>;
+            using traits_t = containers::associative_traits<T>;
             using adapter_t = containers::adapter<T>;
 
             const auto& obj = subobject(key);

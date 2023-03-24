@@ -324,14 +324,13 @@ TEST_SUITE("json::deserializer")
         }
     }
 
-    // TODO: Support more types (string_view should be nop, mutable containers should std::copy, vector is push_back'ed)
-    SCENARIO_TEMPLATE(
-        "a string can be deserialized from JSON", T_Str, std::string, std::vector<char>)
+    SCENARIO_TEMPLATE("a string (or string-like container) can be deserialized from JSON", T_Str,
+        std::array<char, 22>, std::string, std::vector<char>, span<char>)
     {
-        GIVEN("a deserializer with a JSON value respresenting a string")
-        {
-            static constexpr std::string_view expected_val = "Mary had a little lamb";
+        static constexpr std::string_view expected_val = "Mary had a little lamb";
 
+        GIVEN("a deserializer with a JSON value representing a string")
+        {
             const nlohmann::json test_obj = expected_val;
             const deserializer dser{ test_obj };
 
@@ -339,20 +338,25 @@ TEST_SUITE("json::deserializer")
             {
                 T_Str test_val{};
 
+                if constexpr (std::is_same_v<T_Str, span<char>>)
+                {
+                    static std::string tmp_val = "??????????????????????";
+                    const span<char> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
                 REQUIRE_NOTHROW(dser.as_string("", test_val));
 
                 THEN("the string is properly assigned")
                 {
-                    CHECK(std::equal(test_val.begin(), test_val.end(), expected_val.begin()));
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
                 }
             }
         }
 
         GIVEN("a deserializer with a JSON object containing a string")
         {
-            static constexpr std::string_view expected_val =
-                "Hello from a really quite lengthy string";
-
             nlohmann::json test_obj;
             test_obj["test_val"] = expected_val;
             const deserializer dser{ test_obj };
@@ -361,11 +365,113 @@ TEST_SUITE("json::deserializer")
             {
                 T_Str test_val{};
 
+                if constexpr (std::is_same_v<T_Str, span<char>>)
+                {
+                    static std::string tmp_val = "??????????????????????";
+                    const span<char> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
                 REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
 
                 THEN("the string is properly assigned")
                 {
-                    CHECK(std::equal(test_val.begin(), test_val.end(), expected_val.begin()));
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+    }
+
+    SCENARIO_TEMPLATE("a wide string (or string-like container) can be deserialized from JSON",
+        T_Str, std::array<wchar_t, 22>, std::wstring, std::vector<wchar_t>, span<wchar_t>)
+    {
+        static constexpr std::wstring_view expected_val = L"Mary had a little lamb";
+
+        GIVEN("a deserializer with a JSON value representing a wide string")
+        {
+            const nlohmann::json test_obj = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the wide string is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<wchar_t>>)
+                {
+                    static std::wstring tmp_val = L"??????????????????????";
+                    const span<wchar_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a wide string")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<wchar_t>>)
+                {
+                    static std::wstring tmp_val = L"??????????????????????";
+                    const span<wchar_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
+
+                THEN("the wide string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+    }
+
+    SCENARIO_TEMPLATE(
+        "a string_view (or other immutable container) is NOT changed by deserialization", T_Str,
+        std::string_view, std::wstring_view, span<const char>)
+    {
+        GIVEN("a deserializer with a JSON value representing a string")
+        {
+            static constexpr auto expected_val = []
+            {
+                if constexpr (std::is_same_v<typename T_Str::value_type, wchar_t>)
+                {
+                    return std::wstring_view{ L"This string won't be seen" };
+                }
+                else
+                {
+                    return std::string_view{ "This string won't be seen" };
+                }
+            }();
+
+            const nlohmann::json test_obj = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("deserialize is called on the string_view")
+            {
+                T_Str test_val{};
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the string_view is unchanged")
+                {
+                    CHECK(test_val.empty());
                 }
             }
         }
