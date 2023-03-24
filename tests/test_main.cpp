@@ -1,10 +1,18 @@
-#include "extenser.hpp"
+// ExtenSer - An extensible, generic serialization library for C++
+//
+// Copyright (c) 2023 by Jackson Harmer
+//
+// SPDX-License-Identifier: BSD-3-Clause
+// Distributed under The 3-Clause BSD License
+// See accompanying file LICENSE or a copy at
+// https://opensource.org/license/bsd-3-clause/
 
-#include "bitsery/extenser_bitsery.hpp"
-#include "json/extenser_json.hpp"
-#include "container_adapters/array.hpp"
-#include "container_adapters/span.hpp"
-#include "container_adapters/vector.hpp"
+#include "extenser/extenser.hpp"
+
+#include "extenser/json_adapter/extenser_json.hpp"
+#include "extenser/containers/array.hpp"
+#include "extenser/containers/span.hpp"
+#include "extenser/containers/vector.hpp"
 
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>
@@ -16,9 +24,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-const size_t extenser::bitsery_adapter::config::max_container_size = 1'000;
-const size_t extenser::bitsery_adapter::config::max_string_size = 1'000;
 
 namespace extenser::tests
 {
@@ -180,22 +185,6 @@ TEST_CASE("Simple JSON serialize/deserialize")
 
     Person out_person{};
     deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(out_person);
-
-    REQUIRE_EQ(out_person.age, 42);
-    REQUIRE_EQ(out_person.name, "Jake");
-}
-
-TEST_CASE("Simple bitsery serialize/deserialize")
-{
-    const Person in_person{ 42, "Jake" };
-    serializer<bitsery_adapter> ser{};
-    ser.serialize_object(in_person);
-
-    auto obj = std::move(ser).object();
-
-    Person out_person{};
-    deserializer<bitsery_adapter> dser{ obj };
     dser.deserialize_object(out_person);
 
     REQUIRE_EQ(out_person.age, 42);

@@ -1,37 +1,16 @@
-//BSD 3-Clause License
+// ExtenSer - An extensible, generic serialization library for C++
 //
-//Copyright (c) 2023, Jackson Harmer
-//All rights reserved.
+// Copyright (c) 2023 by Jackson Harmer
 //
-//Redistribution and use in source and binary forms, with or without
-//modification, are permitted provided that the following conditions are met:
-//
-//1. Redistributions of source code must retain the above copyright notice, this
-//   list of conditions and the following disclaimer.
-//
-//2. Redistributions in binary form must reproduce the above copyright notice,
-//   this list of conditions and the following disclaimer in the documentation
-//   and/or other materials provided with the distribution.
-//
-//3. Neither the name of the copyright holder nor the names of its
-//   contributors may be used to endorse or promote products derived from
-//   this software without specific prior written permission.
-//
-//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-//AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-//IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-//DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-//FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-//DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-//SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-//CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-//OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-//OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// SPDX-License-Identifier: BSD-3-Clause
+// Distributed under The 3-Clause BSD License
+// See accompanying file LICENSE or a copy at
+// https://opensource.org/license/bsd-3-clause/
 
 #ifndef EXTENSER_JSON_HPP
 #define EXTENSER_JSON_HPP
 
-#include "extenser.hpp"
+#include <extenser/extenser.hpp>
 
 #if defined(EXTENSER_USE_MAGIC_ENUM)
 #  if defined(__GNUC__) && !defined(__clang__)
@@ -46,8 +25,8 @@
 
 #include <nlohmann/json.hpp>
 
-#include <array>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -508,29 +487,49 @@ namespace detail_json
         template<typename T>
         void as_string(const std::string_view key, T& val) const
         {
-            // TODO: Create a type check for other types with storage (ex. vector, array) OR mutable access (ex. span, NOT string_view)
-            static_assert(std::is_same_v<T, std::string>,
-                "deserialization output must have storage (only std::string supported for now)");
+            using traits_t = containers::traits<T>;
+            using adapter_t = containers::adapter<T>;
 
-            try
+            if constexpr (std::is_same_v<T, std::string>)
             {
-                val = subobject(key).get<std::string>();
+                try
+                {
+                    val = subobject(key).get<std::string>();
+                }
+                catch (const deserialization_error&)
+                {
+                    throw;
+                }
+                catch (const std::exception& ex)
+                {
+                    throw deserialization_error{ ex.what() };
+                }
             }
-            catch (const deserialization_error&)
+            else
             {
-                throw;
-            }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
+                if constexpr (traits_t::is_mutable)
+                {
+                    const auto str = subobject(key).get<std::string>();
+
+                    if constexpr (traits_t::has_fixed_size)
+                    {
+                        if (str.size() != adapter_t::size(val))
+                        {
+                            throw deserialization_error{ "JSON error: array out of bounds" };
+                        }
+                    }
+
+                    adapter_t::assign_from_range(val, str.begin(), str.end(),
+                        [](const char c) { return static_cast<typename traits_t::value_type>(c); });
+                }
             }
         }
 
         template<typename T>
         void as_array(const std::string_view key, T& val) const
         {
-            using traits_t = container_traits<T>;
-            using adapter_t = container_adapter<T>;
+            using traits_t = containers::traits<T>;
+            using adapter_t = containers::adapter<T>;
 
             if constexpr (traits_t::is_mutable)
             {
@@ -544,8 +543,19 @@ namespace detail_json
                     }
                 }
 
-                adapter_t::assign_from_range(
-                    val, arr.cbegin(), arr.cend(), parse_arg<typename traits_t::value_type>);
+                if constexpr (traits_t::is_sequential)
+                {
+                    adapter_t::assign_from_range(
+                        val, arr.cbegin(), arr.cend(), parse_arg<typename traits_t::value_type>);
+                }
+                else
+                {
+                    for (const auto& j_obj : arr)
+                    {
+                        adapter_t::insert_value(
+                            val, j_obj, parse_arg<typename traits_t::value_type>);
+                    }
+                }
             }
         }
 
@@ -554,16 +564,15 @@ namespace detail_json
         {
             EXTENSER_PRECONDITION(std::size(val) == 0);
 
+            using traits_t = containers::traits<T>;
+            using adapter_t = containers::adapter<T>;
+
             const auto& obj = subobject(key);
 
             for (const auto& [k, v] : obj.items())
             {
-                const auto key_obj = (k.front() == '@')
-                    ? nlohmann::json::parse(std::next(k.begin()), k.end()).front()
-                    : nlohmann::json::parse('"' + k + '"');
-
-                val.insert({ parse_arg<typename T::key_type>(key_obj),
-                    parse_arg<typename T::mapped_type>(v) });
+                adapter_t::insert_value(val, std::make_pair(k, v),
+                    parse_kv_pair<typename traits_t::key_type, typename traits_t::mapped_type>);
             }
         }
 
@@ -572,18 +581,17 @@ namespace detail_json
         {
             EXTENSER_PRECONDITION(std::size(val) == 0);
 
+            using traits_t = containers::traits<T>;
+            using adapter_t = containers::adapter<T>;
+
             const auto& obj = subobject(key);
 
             for (const auto& [k, v] : obj.items())
             {
-                const auto key_obj = (k.front() == '@')
-                    ? nlohmann::json::parse(std::next(k.begin()), k.end()).front()
-                    : nlohmann::json::parse('"' + k + '"');
-
                 for (const auto& subval : v)
                 {
-                    val.insert({ (parse_arg<typename T::key_type>(key_obj)),
-                        parse_arg<typename T::mapped_type>(subval) });
+                    adapter_t::insert_value(val, std::make_pair(k, subval),
+                        parse_kv_pair<typename traits_t::key_type, typename traits_t::mapped_type>);
                 }
             }
         }
@@ -794,6 +802,19 @@ namespace detail_json
                 return arg.is_object();
             }
         }
+
+        template<typename Key, typename Value>
+        [[nodiscard]] static auto parse_kv_pair(
+            const std::pair<std::string, nlohmann::json>& kv_pair) -> std::pair<Key, Value>
+        {
+            const auto& [k, v] = kv_pair;
+
+            const auto key_obj = (k.front() == '@')
+                ? nlohmann::json::parse(std::next(k.begin()), k.end()).front()
+                : nlohmann::json::parse('"' + k + '"');
+
+            return { parse_arg<Key>(key_obj), parse_arg<Value>(v) };
+        };
 
         template<typename T>
         [[nodiscard]] static auto parse_arg(const nlohmann::json& arg)

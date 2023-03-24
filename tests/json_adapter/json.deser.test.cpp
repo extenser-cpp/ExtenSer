@@ -1,4 +1,13 @@
-#include "json.test.hpp"
+// ExtenSer - An extensible, generic serialization library for C++
+//
+// Copyright (c) 2023 by Jackson Harmer
+//
+// SPDX-License-Identifier: BSD-3-Clause
+// Distributed under The 3-Clause BSD License
+// See accompanying file LICENSE or a copy at
+// https://opensource.org/license/bsd-3-clause/
+
+#include "../json.test.hpp"
 
 #include <algorithm>
 #include <array>
@@ -316,7 +325,8 @@ TEST_SUITE("json::deserializer")
     }
 
     // TODO: Support more types (string_view should be nop, mutable containers should std::copy, vector is push_back'ed)
-    SCENARIO_TEMPLATE("a string can be deserialized from JSON", T_Str, std::string)
+    SCENARIO_TEMPLATE(
+        "a string can be deserialized from JSON", T_Str, std::string, std::vector<char>)
     {
         GIVEN("a deserializer with a JSON value respresenting a string")
         {
@@ -333,7 +343,7 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the string is properly assigned")
                 {
-                    CHECK_EQ(test_val, expected_val);
+                    CHECK(std::equal(test_val.begin(), test_val.end(), expected_val.begin()));
                 }
             }
         }
@@ -355,7 +365,7 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the string is properly assigned")
                 {
-                    CHECK_EQ(test_val, expected_val);
+                    CHECK(std::equal(test_val.begin(), test_val.end(), expected_val.begin()));
                 }
             }
         }
@@ -388,9 +398,9 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the array is properly assigned")
                 {
-                    REQUIRE_EQ(container_adapter<T_Arr>::size(test_val), std::size(expected_val));
+                    REQUIRE_EQ(containers::adapter<T_Arr>::size(test_val), std::size(expected_val));
 
-                    if constexpr (container_traits<T_Arr>::is_sequential)
+                    if constexpr (containers::traits<T_Arr>::is_sequential)
                     {
                         CHECK(std::equal(
                             std::begin(test_val), std::end(test_val), std::begin(expected_val)));
@@ -446,7 +456,7 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the array is properly assigned")
                 {
-                    if constexpr (container_traits<T_Arr>::is_sequential)
+                    if constexpr (containers::traits<T_Arr>::is_sequential)
                     {
                         CHECK(std::equal(
                             std::begin(test_val), std::end(test_val), std::begin(expected_val)));
