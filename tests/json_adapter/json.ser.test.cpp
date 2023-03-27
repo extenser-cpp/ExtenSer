@@ -546,7 +546,7 @@ TEST_SUITE("json::serializer")
                     { "Henrietta",
                         Person{ 16, "Henrietta Payne", {}, Pet{ "Ron", Pet::Species::Fish }, {} } },
                     { "Jerome", Person{ 12, "Jerome Banks", {}, {}, {} } },
-                    { "Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
+                    { "@Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
                     { "Ricardo",
                         Person{
                             19, "Ricardo Montoya", {}, Pet{ "Sinbad", Pet::Species::Cat }, {} } }
@@ -565,11 +565,13 @@ TEST_SUITE("json::serializer")
 
                         for (const auto& [k, v] : test_val)
                         {
-                            REQUIRE(obj.contains(k));
-                            REQUIRE(obj[k].is_object());
-                            REQUIRE(obj[k].contains("age"));
-                            REQUIRE(obj[k]["age"].is_number_integer());
-                            CHECK_EQ(obj[k]["age"], v.age);
+                            const std::string key = k.front() != '@' ? k : "@" + k;
+
+                            REQUIRE(obj.contains(key));
+                            REQUIRE(obj[key].is_object());
+                            REQUIRE(obj[key].contains("age"));
+                            REQUIRE(obj[key]["age"].is_number_integer());
+                            CHECK_EQ(obj[key]["age"], v.age);
                         }
                     }
                 }

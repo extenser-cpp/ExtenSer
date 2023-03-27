@@ -165,7 +165,7 @@ public:
 
     template<typename It, typename End,
         typename = std::enable_if_t<detail::constructible_from_iterator_v<element_type, It>
-            && !std::is_convertible_v<End, size_type>>>
+            and !std::is_convertible_v<End, size_type>>>
     constexpr span(It first, End last)
         : m_head_ptr(&*first), m_sz(static_cast<size_type>(std::distance(first, last)))
     {

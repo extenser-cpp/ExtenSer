@@ -35,7 +35,7 @@ namespace containers
 
         static constexpr bool has_fixed_size = true;
         static constexpr bool is_contiguous = true;
-        static constexpr bool is_mutable = !std::is_const_v<T>;
+        static constexpr bool is_mutable = not std::is_const_v<T>;
         static constexpr bool is_sequential = true;
     };
 
@@ -52,6 +52,9 @@ namespace containers
         static void assign_from_range(
             span<T, N>& container, InputIt first, InputIt last, ConversionOp convert_fn)
         {
+            EXTENSER_PRECONDITION(std::distance(first, last) >= 0
+                and static_cast<size_t>(std::distance(first, last)) == container.size());
+
             std::transform(first, last, container.begin(), convert_fn);
         }
     };
@@ -66,7 +69,7 @@ namespace containers
 
         static constexpr bool has_fixed_size = true;
         static constexpr bool is_contiguous = true;
-        static constexpr bool is_mutable = !std::is_const_v<T>;
+        static constexpr bool is_mutable = not std::is_const_v<T>;
         static constexpr bool is_sequential = true;
     };
 
@@ -80,7 +83,9 @@ namespace containers
         static void assign_from_range(
             span<T>& container, InputIt first, InputIt last, ConversionOp convert_fn)
         {
-            EXTENSER_PRECONDITION(std::distance(first, last) == container.size());
+            EXTENSER_PRECONDITION(std::distance(first, last) >= 0
+                and static_cast<size_t>(std::distance(first, last)) == container.size());
+
             std::transform(first, last, container.begin(), convert_fn);
         }
     };

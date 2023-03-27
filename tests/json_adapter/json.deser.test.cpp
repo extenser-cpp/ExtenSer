@@ -520,7 +520,7 @@ TEST_SUITE("json::deserializer")
             }
         }
 
-        if constexpr (!std::is_same_v<T_Arr, std::array<int, 5>>)
+        if constexpr (not std::is_same_v<T_Arr, std::array<int, 5>>)
         {
             GIVEN("a deserializer with an empty JSON array")
             {
@@ -610,7 +610,7 @@ TEST_SUITE("json::deserializer")
                 { "Henrietta",
                     Person{ 16, "Henrietta Payne", {}, Pet{ "Ron", Pet::Species::Fish }, {} } },
                 { "Jerome", Person{ 12, "Jerome Banks", {}, {}, {} } },
-                { "Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
+                { "@Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
                 { "Ricardo",
                     Person{ 19, "Ricardo Montoya", {}, Pet{ "Sinbad", Pet::Species::Cat }, {} } }
             };
@@ -619,14 +619,14 @@ TEST_SUITE("json::deserializer")
             const auto test_obj = nlohmann::json::parse(R"({
 "Henrietta": {"age": 16, "name": "Henrietta Payne", "friends": [], "pet": {"name": "Ron", "species": "Fish"}, "fruit_count": {}},
 "Jerome": {"age": 12, "name": "Jerome Banks", "friends": [], "pet": null, "fruit_count": {}},
-"Rachel": {"age": 22, "name": "Rachel Franks", "friends": [], "pet": null, "fruit_count": {}},
+"@@Rachel": {"age": 22, "name": "Rachel Franks", "friends": [], "pet": null, "fruit_count": {}},
 "Ricardo": {"age": 19, "name": "Ricardo Montoya", "friends": [], "pet": {"name": "Sinbad", "species": "Cat"}, "fruit_count": {}}
 })");
 #else
             const auto test_obj = nlohmann::json::parse(R"({
 "Henrietta": {"age": 16, "name": "Henrietta Payne", "friends": [], "pet": {"name": "Ron", "species": 3}, "fruit_count": {}},
 "Jerome": {"age": 12, "name": "Jerome Banks", "friends": [], "pet": null, "fruit_count": {}},
-"Rachel": {"age": 22, "name": "Rachel Franks", "friends": [], "pet": null, "fruit_count": {}},
+"@@Rachel": {"age": 22, "name": "Rachel Franks", "friends": [], "pet": null, "fruit_count": {}},
 "Ricardo": {"age": 19, "name": "Ricardo Montoya", "friends": [], "pet": {"name": "Sinbad", "species": 1}, "fruit_count": {}}
 })");
 #endif
