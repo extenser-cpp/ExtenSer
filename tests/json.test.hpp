@@ -86,12 +86,12 @@ struct Pet
 
 inline bool operator==(const Pet& lhs, const Pet& rhs) noexcept
 {
-    return lhs.name == rhs.name and lhs.species == rhs.species;
+    return lhs.name == rhs.name && lhs.species == rhs.species;
 }
 
 inline bool operator!=(const Pet& lhs, const Pet& rhs) noexcept
 {
-    return not(lhs == rhs);
+    return !(lhs == rhs);
 }
 
 template<typename S>
@@ -112,8 +112,8 @@ struct Person
 
 inline bool operator==(const Person& lhs, const Person& rhs) noexcept
 {
-    if (lhs.age != rhs.age or lhs.name != rhs.name or lhs.friends.size() != rhs.friends.size()
-        or lhs.fruit_count != rhs.fruit_count)
+    if (lhs.age != rhs.age || lhs.name != rhs.name || lhs.friends.size() != rhs.friends.size()
+        || lhs.fruit_count != rhs.fruit_count)
     {
         return false;
     }
@@ -128,7 +128,7 @@ inline bool operator==(const Person& lhs, const Person& rhs) noexcept
 
 inline bool operator!=(const Person& lhs, const Person& rhs) noexcept
 {
-    return not(lhs == rhs);
+    return !(lhs == rhs);
 }
 
 template<typename S>

@@ -136,7 +136,7 @@ namespace containers
         using container_type = typename traits_type::container_type;
         using size_type = typename traits_type::size_type;
 
-        static_assert(not traits_type::is_sequential,
+        static_assert(!traits_type::is_sequential,
             "Sequential containers should not derive from associative_adapter");
 
         template<typename Input_T, typename ConversionOp>
@@ -185,10 +185,10 @@ template<typename T>
 inline constexpr bool is_float_serializable = std::is_floating_point_v<T>;
 
 template<typename T>
-inline constexpr bool is_int_serializable = std::is_integral_v<T> and std::is_signed_v<T>;
+inline constexpr bool is_int_serializable = std::is_integral_v<T> && std::is_signed_v<T>;
 
 template<typename T>
-inline constexpr bool is_uint_serializable = std::is_integral_v<T> and std::is_unsigned_v<T>;
+inline constexpr bool is_uint_serializable = std::is_integral_v<T> && std::is_unsigned_v<T>;
 
 template<typename T>
 inline constexpr bool is_enum_serializable = std::is_enum_v<T>;
@@ -197,7 +197,7 @@ template<typename T>
 inline constexpr bool is_string_serializable = detail::is_stringlike_v<T>;
 
 template<typename T>
-inline constexpr bool is_array_serializable = detail::is_container_v<T> or std::is_array_v<T>;
+inline constexpr bool is_array_serializable = detail::is_container_v<T> || std::is_array_v<T>;
 
 template<typename T>
 inline constexpr bool is_map_serializable = detail::is_map_v<T>;
@@ -206,7 +206,7 @@ template<typename T>
 inline constexpr bool is_multimap_serializable = detail::is_multimap_v<T>;
 
 template<typename T>
-inline constexpr bool is_tuple_serializable = detail::is_tuple_v<T> or detail::is_pair_v<T>;
+inline constexpr bool is_tuple_serializable = detail::is_tuple_v<T> || detail::is_pair_v<T>;
 
 template<typename T>
 inline constexpr bool is_optional_serializable = detail::is_optional_v<T>;
@@ -215,8 +215,8 @@ template<typename T>
 inline constexpr bool is_variant_serializable = detail::is_variant_v<T>;
 
 template<typename T>
-inline constexpr bool is_null_serializable = std::is_null_pointer_v<T> or std::is_void_v<T>
-    or std::is_same_v<T, std::monostate> or std::is_same_v<T, std::nullopt_t>;
+inline constexpr bool is_null_serializable = std::is_null_pointer_v<T> || std::is_void_v<T>
+    || std::is_same_v<T, std::monostate> || std::is_same_v<T, std::nullopt_t>;
 
 // TODO: check if there is a `serialize` function via ADL or static member
 template<typename T>
@@ -349,8 +349,8 @@ public:
     template<typename T>
     void serialize_object(const T& val)
     {
-        static_assert(not Deserialize, "Cannot call serialize_object() on a deserializer");
-        static_assert(not std::is_pointer_v<T>,
+        static_assert(!Deserialize, "Cannot call serialize_object() on a deserializer");
+        static_assert(!std::is_pointer_v<T>,
             "Cannot serialize a pointer directly, wrap it in a span or view");
 
         // Necessary for bi-directional serialization
@@ -361,7 +361,7 @@ public:
     void deserialize_object(T&& val)
     {
         static_assert(Deserialize, "Cannot call deserialize_object() on a serializer");
-        static_assert(not std::is_pointer_v<T>,
+        static_assert(!std::is_pointer_v<T>,
             "Cannot serialize a pointer directly, wrap it in a span or view");
         serialize(*this, std::forward<T>(val));
     }
@@ -418,7 +418,7 @@ public:
     EXTENSER_INLINE void as_map(const std::string_view key, T& val)
     {
         static_assert(
-            is_map_serializable<T> or is_multimap_serializable<T>, "T must be a map type");
+            is_map_serializable<T> || is_multimap_serializable<T>, "T must be a map type");
 
         if constexpr (is_multimap_serializable<T>)
         {
@@ -490,36 +490,32 @@ void serialize(serializer_base<Adapter, true>& ser, bool& val)
 }
 
 template<typename Adapter, typename T,
-    std::enable_if_t<
-        (std::is_integral_v<T> and std::is_signed_v<T> and (not std::is_same_v<T, bool>)), bool> =
-        true>
+    std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && (!std::is_same_v<T, bool>)),
+        bool> = true>
 void serialize(serializer_base<Adapter, false>& ser, const T val)
 {
     ser.as_int("", val);
 }
 
 template<typename Adapter, typename T,
-    std::enable_if_t<
-        (std::is_integral_v<T> and std::is_signed_v<T> and (not std::is_same_v<T, bool>)), bool> =
-        true>
+    std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && (!std::is_same_v<T, bool>)),
+        bool> = true>
 void serialize(serializer_base<Adapter, true>& ser, T& val)
 {
     ser.as_int("", val);
 }
 
 template<typename Adapter, typename T,
-    std::enable_if_t<
-        (std::is_integral_v<T> and std::is_unsigned_v<T> and (not std::is_same_v<T, bool>)), bool> =
-        true>
+    std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && (!std::is_same_v<T, bool>)),
+        bool> = true>
 void serialize(serializer_base<Adapter, false>& ser, const T val)
 {
     ser.as_uint("", val);
 }
 
 template<typename Adapter, typename T,
-    std::enable_if_t<
-        (std::is_integral_v<T> and std::is_unsigned_v<T> and (not std::is_same_v<T, bool>)), bool> =
-        true>
+    std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && (!std::is_same_v<T, bool>)),
+        bool> = true>
 void serialize(serializer_base<Adapter, true>& ser, T& val)
 {
     ser.as_uint("", val);
@@ -555,7 +551,7 @@ void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
 {
     using underlying_t = std::remove_cv_t<std::remove_pointer_t<T>>;
 
-    static_assert(std::is_same_v<underlying_t, char> or std::is_same_v<underlying_t, wchar_t>,
+    static_assert(std::is_same_v<underlying_t, char> || std::is_same_v<underlying_t, wchar_t>,
         "Non-string pointers are not supported, please wrap in a span or use another container");
 
     if constexpr (std::is_same_v<underlying_t, wchar_t>)

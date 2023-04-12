@@ -122,9 +122,9 @@ using type_identity_t = typename type_identity<T>::type;
 template<typename T>
 struct decay_str
 {
-    static_assert(not std::is_pointer_v<remove_cvref_t<T>>,
+    static_assert(!std::is_pointer_v<remove_cvref_t<T>>,
         "Pointer parameters are not allowed, please wrap in a span or view");
-    static_assert(not std::is_array_v<remove_cvref_t<T>>,
+    static_assert(!std::is_array_v<remove_cvref_t<T>>,
         "C-style array parameters are not allowed, please wrap in a span or view");
 
     using type = T;

@@ -39,7 +39,7 @@ namespace containers
         public string_adapter<std::basic_string_view<CharT, Traits>>
     {
     public:
-        static_assert(std::is_same_v<CharT, char> or std::is_same_v<CharT, wchar_t>,
+        static_assert(std::is_same_v<CharT, char> || std::is_same_v<CharT, wchar_t>,
             "Unsupported character type detected");
 
         using container_type = std::basic_string_view<CharT, Traits>;

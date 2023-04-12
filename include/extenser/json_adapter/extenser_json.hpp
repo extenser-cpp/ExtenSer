@@ -62,13 +62,13 @@ namespace detail_json
         [[nodiscard]] auto object() const& noexcept(::EXTENSER_ASSERT_NOTHROW)
             -> const nlohmann::json&
         {
-            EXTENSER_POSTCONDITION(m_json.is_null() or not m_json.empty());
+            EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
             return m_json;
         }
 
         [[nodiscard]] auto object() && noexcept(::EXTENSER_ASSERT_NOTHROW) -> nlohmann::json&&
         {
-            EXTENSER_POSTCONDITION(m_json.is_null() or not m_json.empty());
+            EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
             return std::move(m_json);
         }
 
@@ -80,7 +80,7 @@ namespace detail_json
         template<typename T>
         void as_float(const std::string_view key, const T val)
         {
-            static_assert(not std::is_same_v<T, long double>, "long double is not supported");
+            static_assert(!std::is_same_v<T, long double>, "long double is not supported");
             push_simple_type(static_cast<double>(val), subobject(key));
         }
 
@@ -88,8 +88,8 @@ namespace detail_json
         void as_int(const std::string_view key, const T val)
         {
             static_assert(sizeof(T) <= sizeof(int64_t), "maximum 64-bit integers supported");
-            static_assert(std::is_integral_v<T> and std::is_signed_v<T>,
-                "only signed integers are supported");
+            static_assert(
+                std::is_integral_v<T> && std::is_signed_v<T>, "only signed integers are supported");
 
             push_simple_type(val, subobject(key));
         }
@@ -98,7 +98,7 @@ namespace detail_json
         void as_uint(const std::string_view key, const T val)
         {
             static_assert(sizeof(T) <= sizeof(int64_t), "maximum 64-bit integers supported");
-            static_assert(std::is_integral_v<T> and std::is_unsigned_v<T>,
+            static_assert(std::is_integral_v<T> && std::is_unsigned_v<T>,
                 "only unsigned integers are supported");
 
             push_simple_type(val, subobject(key));
@@ -186,7 +186,7 @@ namespace detail_json
             using no_ref_t = detail::remove_cvref_t<T>;
 
 #if defined(EXTENSER_USE_MAGIC_ENUM)
-            if (not magic_enum::enum_contains<no_ref_t>(arg))
+            if (!magic_enum::enum_contains<no_ref_t>(arg))
             {
                 throw serialization_error{
                     std::string{ "Invalid enum value: " }
@@ -302,7 +302,7 @@ namespace detail_json
             nlohmann::json key_obj{};
             push_arg(std::forward<T>(key_arg), key_obj);
 
-            if (not key_obj.is_string())
+            if (!key_obj.is_string())
             {
                 return "@" + key_obj.dump();
             }
@@ -470,7 +470,7 @@ namespace detail_json
 #if defined(EXTENSER_USE_MAGIC_ENUM)
                 auto result = magic_enum::enum_cast<T>(subobject(key).get<std::string>());
 
-                if (not result.has_value())
+                if (!result.has_value())
                 {
                     throw deserialization_error{ std::string{ "Invalid enum value: \"" }
                                                      .append(subobject(key).get<std::string>())
@@ -767,7 +767,7 @@ namespace detail_json
     private:
         [[nodiscard]] auto subobject(const std::string_view key) const -> const nlohmann::json&
         {
-            EXTENSER_PRECONDITION(key.empty() or m_json.is_object());
+            EXTENSER_PRECONDITION(key.empty() || m_json.is_object());
 
             try
             {
@@ -788,7 +788,7 @@ namespace detail_json
         {
             if constexpr (detail::is_optional_v<T>)
             {
-                return arg.is_null() or validate_arg<typename T::value_type>(arg);
+                return arg.is_null() || validate_arg<typename T::value_type>(arg);
             }
             else if constexpr (std::is_same_v<T, bool>)
             {
@@ -814,16 +814,16 @@ namespace detail_json
             {
                 return arg.is_string();
             }
-            else if constexpr (detail::is_map_v<T> or detail::is_pair_v<T>)
+            else if constexpr (detail::is_map_v<T> || detail::is_pair_v<T>)
             {
                 return arg.is_object();
             }
-            else if constexpr (detail::is_container_v<T> or detail::is_tuple_v<T>)
+            else if constexpr (detail::is_container_v<T> || detail::is_tuple_v<T>)
             {
                 return arg.is_array();
             }
             else if constexpr (std::is_same_v<T, std::nullptr_t>
-                or std::is_same_v<T, std::monostate> or std::is_same_v<T, std::nullopt_t>)
+                || std::is_same_v<T, std::monostate> || std::is_same_v<T, std::nullopt_t>)
             {
                 return arg.is_null();
             }
@@ -837,7 +837,7 @@ namespace detail_json
         {
             if (key_str.front() == '@')
             {
-                if (key_str.size() <= 1 or key_str[1] != '@')
+                if (key_str.size() <= 1 || key_str[1] != '@')
                 {
                     return nlohmann::json::parse(std::next(key_str.begin()), key_str.end()).front();
                 }
@@ -865,7 +865,7 @@ namespace detail_json
         {
             using no_ref_t = detail::remove_cvref_t<detail::decay_str_t<T>>;
 
-            if (not validate_arg<no_ref_t>(arg))
+            if (!validate_arg<no_ref_t>(arg))
             {
 #ifdef EXTENSER_NO_RTTI
                 throw deserialization_error{
