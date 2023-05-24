@@ -499,7 +499,7 @@ using deserializer = typename Adapter::deserializer_t;
 template<typename Adapter>
 void serialize(serializer_base<Adapter, false>& ser, const bool val)
 {
-    ser.as_bool("", val);
+    static_cast<typename Adapter::serializer_t&>(ser).as_bool("", val);
 }
 
 template<typename Adapter>
@@ -513,7 +513,7 @@ template<typename Adapter, typename T,
         bool> = true>
 void serialize(serializer_base<Adapter, false>& ser, const T val)
 {
-    ser.as_int("", val);
+    static_cast<typename Adapter::serializer_t&>(ser).as_int("", val);
 }
 
 template<typename Adapter, typename T,
@@ -529,7 +529,7 @@ template<typename Adapter, typename T,
         bool> = true>
 void serialize(serializer_base<Adapter, false>& ser, const T val)
 {
-    ser.as_uint("", val);
+    static_cast<typename Adapter::serializer_t&>(ser).as_uint("", val);
 }
 
 template<typename Adapter, typename T,
@@ -543,7 +543,7 @@ void serialize(serializer_base<Adapter, true>& ser, T& val)
 template<typename Adapter, typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
 void serialize(serializer_base<Adapter, false>& ser, const T val)
 {
-    ser.as_enum("", val);
+    static_cast<typename Adapter::serializer_t&>(ser).as_enum("", val);
 }
 
 template<typename Adapter, typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
@@ -555,7 +555,7 @@ void serialize(serializer_base<Adapter, true>& ser, T& val)
 template<typename Adapter, typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
 void serialize(serializer_base<Adapter, false>& ser, const T val)
 {
-    ser.as_float("", val);
+    static_cast<typename Adapter::serializer_t&>(ser).as_float("", val);
 }
 
 template<typename Adapter, typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
