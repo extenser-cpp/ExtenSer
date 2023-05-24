@@ -10,10 +10,12 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        build_type: [Debug, Release, ASAN, TSAN]
-        exclude:
-          - os: windows-latest
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        build_type: [Debug, Release]
+        include:
+          - os: ubuntu-latest
+            build_type: ASAN
+          - os: ubuntu-latest
             build_type: TSAN
     runs-on: ${{ matrix.os }}
 
