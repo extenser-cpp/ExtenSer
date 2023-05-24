@@ -51,7 +51,7 @@ namespace extenser::tests
 {
 TEST_CASE("C-Array")
 {
-#if defined(__clang__)
+#if defined(__clang__) && __clang_major__ >= 16
 #  pragma clang diagnostic push
 #  pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
 #endif
@@ -76,7 +76,7 @@ TEST_CASE("C-Array")
     REQUIRE_EQ(arr[0], 0);
     REQUIRE_EQ(arr[199], 199);
 
-#if defined(__clang__)
+#if defined(__clang__) && __clang_major__ >= 16
 #  pragma clang diagnostic pop
 #endif
 }
