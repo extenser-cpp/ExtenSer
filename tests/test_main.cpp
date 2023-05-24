@@ -11,7 +11,9 @@
 
 #include "extenser/json_adapter/extenser_json.hpp"
 #include "extenser/containers/array.hpp"
+#include "extenser/containers/queue.hpp"
 #include "extenser/containers/span.hpp"
+#include "extenser/containers/stack.hpp"
 #include "extenser/containers/vector.hpp"
 
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
@@ -21,6 +23,8 @@
 #include <array>
 #include <memory>
 #include <numeric>
+#include <queue>
+#include <stack>
 #include <string>
 #include <utility>
 #include <vector>
@@ -130,6 +134,79 @@ TEST_CASE("Span")
     REQUIRE_EQ(dyn_arr[0], 0);
     REQUIRE_EQ(dyn_arr[49], 52);
     REQUIRE_EQ(dyn_arr[99], 0);
+}
+
+TEST_CASE("P. Queue")
+{
+    std::priority_queue<int> queue;
+
+    queue.push(1);
+    queue.push(9);
+    queue.push(-1);
+
+    serializer<json_adapter> ser{};
+    ser.serialize_object(queue);
+
+    auto obj = std::move(ser).object();
+
+    REQUIRE(obj.is_array());
+    REQUIRE_EQ(obj.size(), 3);
+
+    deserializer<json_adapter> dser{ obj };
+    dser.deserialize_object(queue);
+
+    REQUIRE_EQ(queue.top(), 9);
+}
+
+TEST_CASE("Queue")
+{
+    std::queue<int> queue;
+
+    queue.push(1);
+    queue.push(9);
+    queue.push(-1);
+
+    serializer<json_adapter> ser{};
+    ser.serialize_object(queue);
+
+    auto obj = std::move(ser).object();
+
+    REQUIRE(obj.is_array());
+    REQUIRE_EQ(obj.size(), 3);
+
+    obj.insert(obj.begin(), 3);
+    REQUIRE_EQ(obj.size(), 4);
+
+    deserializer<json_adapter> dser{ obj };
+    dser.deserialize_object(queue);
+
+    REQUIRE_EQ(queue.size(), 4);
+    REQUIRE_EQ(queue.front(), 3);
+}
+
+TEST_CASE("Stack")
+{
+    std::stack<int, std::vector<int>> stk;
+    stk.push(5);
+    stk.push(4);
+    stk.push(-1);
+
+    serializer<json_adapter> ser{};
+    ser.serialize_object(stk);
+
+    auto obj = std::move(ser).object();
+
+    REQUIRE(obj.is_array());
+    REQUIRE_EQ(obj.size(), 3);
+
+    obj.push_back(3);
+    REQUIRE_EQ(obj.size(), 4);
+
+    deserializer<json_adapter> dser{ obj };
+    dser.deserialize_object(stk);
+
+    REQUIRE_EQ(stk.size(), 4);
+    REQUIRE_EQ(stk.top(), 3);
 }
 
 TEST_CASE("Vector")
