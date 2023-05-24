@@ -432,8 +432,8 @@ TEST_SUITE("json::serializer")
         }
     }
 
-    SCENARIO_TEMPLATE("a string can be serialized to JSON", T_Str, const char*, const char[23],
-        std::string_view, std::string)
+    SCENARIO_TEMPLATE(
+        "a string can be serialized to JSON", T_Str, const char*, const char[23], std::string)
     {
         GIVEN("a default-init serializer")
         {
@@ -455,8 +455,7 @@ TEST_SUITE("json::serializer")
         }
     }
 
-    SCENARIO_TEMPLATE("a wide string can be serialized to JSON", T_Str, const wchar_t*,
-        const wchar_t[23], std::wstring_view, std::wstring)
+    SCENARIO("a string_view can be serialized to JSON")
     {
         GIVEN("a default-init serializer")
         {
@@ -465,11 +464,56 @@ TEST_SUITE("json::serializer")
 
             WHEN("a string is serialized")
             {
-                const T_Str test_val = L"Mary had a little lamb";
+                const std::string_view test_val = "Mary had a little lamb";
 
                 REQUIRE_NOTHROW(ser.as_string("", test_val));
 
                 THEN("the JSON object holds a string")
+                {
+                    REQUIRE(obj.is_string());
+                    CHECK_EQ(obj.get<std::string>(), test_val);
+                }
+            }
+        }
+    }
+
+    SCENARIO_TEMPLATE("a wide string can be serialized to JSON", T_Str, const wchar_t*,
+        const wchar_t[23], std::wstring)
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a wstring is serialized")
+            {
+                const T_Str test_val = L"Mary had a little lamb";
+
+                REQUIRE_NOTHROW(ser.as_string("", test_val));
+
+                THEN("the JSON object holds an array of wchar_t")
+                {
+                    REQUIRE(obj.is_array());
+                    CHECK_EQ(obj.get<std::wstring>(), test_val);
+                }
+            }
+        }
+    }
+
+    SCENARIO("a wstring_view can be serialized to JSON")
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a wstring is serialized")
+            {
+                const std::wstring_view test_val = L"Mary had a little lamb";
+
+                REQUIRE_NOTHROW(ser.as_string("", test_val));
+
+                THEN("the JSON object holds an array of wchar_t")
                 {
                     REQUIRE(obj.is_array());
                     CHECK_EQ(obj.get<std::wstring>(), test_val);
