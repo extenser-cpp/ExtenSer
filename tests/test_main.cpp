@@ -25,23 +25,33 @@
 #include <utility>
 #include <vector>
 
-namespace extenser::tests
+namespace
 {
-struct Person
+struct SimplePerson
 {
     int age{};
     std::string name{};
+
+    template<typename S>
+    void serialize(extenser::generic_serializer<S>& ser)
+    {
+        ser.as_int("age", age);
+        ser.as_string("name", name);
+    }
 };
 
-template<typename S>
-void serialize(generic_serializer<S>& ser, Person& person)
-{
-    ser.as_int("age", person.age);
-    ser.as_string("name", person.name);
-}
+static_assert(extenser::is_object_serializable<SimplePerson>, "Person is not serializable");
+} //namespace
 
+namespace extenser::tests
+{
 TEST_CASE("C-Array")
 {
+#if defined(__clang__)
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
+
     int arr[200];
     std::iota(std::begin(arr), std::end(arr), 0);
 
@@ -61,6 +71,10 @@ TEST_CASE("C-Array")
 
     REQUIRE_EQ(arr[0], 0);
     REQUIRE_EQ(arr[199], 199);
+
+#if defined(__clang__)
+#  pragma clang diagnostic pop
+#endif
 }
 
 TEST_CASE("C++ Array")
@@ -172,7 +186,7 @@ TEST_CASE("View")
 
 TEST_CASE("Simple JSON serialize/deserialize")
 {
-    const Person in_person{ 42, "Jake" };
+    const SimplePerson in_person{ 42, "Jake" };
     serializer<json_adapter> ser{};
     ser.serialize_object(in_person);
 
@@ -183,7 +197,7 @@ TEST_CASE("Simple JSON serialize/deserialize")
     REQUIRE(obj.contains("name"));
     REQUIRE_EQ(obj["name"], "Jake");
 
-    Person out_person{};
+    SimplePerson out_person{};
     deserializer<json_adapter> dser{ obj };
     dser.deserialize_object(out_person);
 

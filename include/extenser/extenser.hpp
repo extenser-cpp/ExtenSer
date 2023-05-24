@@ -218,9 +218,9 @@ template<typename T>
 inline constexpr bool is_null_serializable = std::is_null_pointer_v<T> || std::is_void_v<T>
     || std::is_same_v<T, std::monostate> || std::is_same_v<T, std::nullopt_t>;
 
-// TODO: check if there is a `serialize` function via ADL or static member
 template<typename T>
-inline constexpr bool is_object_serializable = true;
+inline constexpr bool is_object_serializable =
+    std::disjunction_v<detail::has_serialize_adl<T>, detail::has_serialize_mem<T>>;
 
 class extenser_exception : public std::runtime_error
 {
@@ -349,21 +349,40 @@ public:
     template<typename T>
     void serialize_object(const T& val)
     {
+        using no_ref_t = detail::remove_cvref_t<T>;
+
         static_assert(!Deserialize, "Cannot call serialize_object() on a deserializer");
-        static_assert(!std::is_pointer_v<T>,
+        static_assert(!std::is_pointer_v<no_ref_t>,
             "Cannot serialize a pointer directly, wrap it in a span or view");
 
         // Necessary for bi-directional serialization
-        serialize(*this, const_cast<T&>(val)); // NOLINT(cppcoreguidelines-pro-type-const-cast)
+        if constexpr (detail::has_serialize_mem_v<no_ref_t>)
+        {
+            const_cast<T&>(val).serialize(*this); // NOLINT(cppcoreguidelines-pro-type-const-cast)
+        }
+        else
+        {
+            serialize(*this, const_cast<T&>(val)); // NOLINT(cppcoreguidelines-pro-type-const-cast)
+        }
     }
 
     template<typename T>
     void deserialize_object(T&& val)
     {
+        using no_ref_t = detail::remove_cvref_t<T>;
+
         static_assert(Deserialize, "Cannot call deserialize_object() on a serializer");
-        static_assert(!std::is_pointer_v<T>,
+        static_assert(!std::is_pointer_v<no_ref_t>,
             "Cannot serialize a pointer directly, wrap it in a span or view");
-        serialize(*this, std::forward<T>(val));
+
+        if constexpr (detail::has_serialize_mem_v<no_ref_t>)
+        {
+            std::forward<T>(val).serialize(*this);
+        }
+        else
+        {
+            serialize(*this, std::forward<T>(val));
+        }
     }
 
     EXTENSER_INLINE void as_bool(const std::string_view key, bool& val)

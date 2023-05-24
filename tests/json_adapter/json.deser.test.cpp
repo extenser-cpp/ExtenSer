@@ -44,6 +44,16 @@ TEST_SUITE("json::deserializer")
                 THEN("the deserializer is constructed without exception")
                 {
                     REQUIRE(dser.has_value());
+
+                    AND_WHEN("an attempt to deserialize occurs")
+                    {
+                        int test_val{};
+
+                        THEN("a deserialization_error is thrown")
+                        {
+                            CHECK_THROWS_AS(dser->as_int("", test_val), deserialization_error);
+                        }
+                    }
                 }
             }
         }
@@ -84,6 +94,23 @@ TEST_SUITE("json::deserializer")
                 THEN("the bool is properly assigned")
                 {
                     CHECK(test_val);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object NOT containing a boolean")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = 0;
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                bool test_val{ false };
+
+                THEN("a deserialization_error is thrown")
+                {
+                    CHECK_THROWS_AS(dser.as_bool("test_val", test_val), deserialization_error);
                 }
             }
         }

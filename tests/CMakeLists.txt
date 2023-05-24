@@ -43,6 +43,9 @@ target_compile_options(json-magic-test PRIVATE ${FULL_WARNING})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
   include(CodeCoverage)
+  
+  set(GCOVR_ADDITIONAL_ARGS --merge-mode-functions=separate)
+  set(COVERAGE_EXCLUDES "${PROJECT_BINARY_DIR}/*" "${PROJECT_SOURCE_DIR}/tests/*")
 
   setup_target_for_coverage_gcovr_html(NAME json_gcovr EXECUTABLE json-test DEPENDENCIES json-test)
   setup_target_for_coverage_lcov(NAME json_lcov EXECUTABLE json-test DEPENDENCIES json-test)
