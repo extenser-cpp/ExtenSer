@@ -26,9 +26,9 @@ namespace containers
         public sequential_adapter<std::forward_list<T, Allocator>>
     {
     public:
-        static auto size(const std::forward_list<T, Allocator>& container) -> size_t
+        static auto size(const std::forward_list<T, Allocator>& container) -> std::size_t
         {
-            return static_cast<size_t>(std::distance(container.begin(), container.end()));
+            return static_cast<std::size_t>(std::distance(container.begin(), container.end()));
         }
 
         template<typename InputIt, typename ConversionOp>

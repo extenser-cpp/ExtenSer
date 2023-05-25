@@ -25,7 +25,7 @@ namespace containers
     class adapter<std::list<T, Allocator>> : public sequential_adapter<std::list<T, Allocator>>
     {
     public:
-        static auto size(const std::list<T, Allocator>& container) -> size_t
+        static auto size(const std::list<T, Allocator>& container) -> std::size_t
         {
             return container.size();
         }

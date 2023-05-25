@@ -87,7 +87,7 @@ namespace detail_json
         template<typename T>
         void as_int(const std::string_view key, const T val)
         {
-            static_assert(sizeof(T) <= sizeof(int64_t), "maximum 64-bit integers supported");
+            static_assert(sizeof(T) <= sizeof(std::int64_t), "maximum 64-bit integers supported");
             static_assert(
                 std::is_integral_v<T> && std::is_signed_v<T>, "only signed integers are supported");
 
@@ -97,7 +97,7 @@ namespace detail_json
         template<typename T>
         void as_uint(const std::string_view key, const T val)
         {
-            static_assert(sizeof(T) <= sizeof(int64_t), "maximum 64-bit integers supported");
+            static_assert(sizeof(T) <= sizeof(std::int64_t), "maximum 64-bit integers supported");
             static_assert(std::is_integral_v<T> && std::is_unsigned_v<T>,
                 "only unsigned integers are supported");
 
@@ -645,7 +645,7 @@ namespace detail_json
                 throw deserialization_error{ "JSON error: invalid number of args" };
             }
 
-            [[maybe_unused]] size_t arg_counter = 0;
+            [[maybe_unused]] std::size_t arg_counter = 0;
             val = { parse_args<Args>(subobject(key), arg_counter)... };
         }
 
@@ -660,11 +660,11 @@ namespace detail_json
         template<typename... Args>
         void as_variant(const std::string_view key, std::variant<Args...>& val) const
         {
-            static constexpr size_t arg_sz = sizeof...(Args);
+            static constexpr std::size_t arg_sz = sizeof...(Args);
             static_assert(arg_sz <= max_variant_size, "Variant limit reached");
 
             const auto& obj = subobject(key);
-            const auto v_idx = obj.at("v_idx").get<size_t>();
+            const auto v_idx = obj.at("v_idx").get<std::size_t>();
 
             if (v_idx >= arg_sz)
             {
@@ -904,8 +904,8 @@ namespace detail_json
             return out_val;
         }
 
-        [[nodiscard]] static auto get_next_arg(const nlohmann::json& arg, size_t& index) noexcept
-            -> const nlohmann::json&
+        [[nodiscard]] static auto get_next_arg(
+            const nlohmann::json& arg, std::size_t& index) noexcept -> const nlohmann::json&
         {
             if (arg.is_array())
             {
@@ -919,7 +919,7 @@ namespace detail_json
         }
 
         template<typename T>
-        [[nodiscard]] static auto parse_args(const nlohmann::json& arg_arr, size_t& index)
+        [[nodiscard]] static auto parse_args(const nlohmann::json& arg_arr, std::size_t& index)
             -> detail::remove_cvref_t<detail::decay_str_t<T>>
         {
             if (index >= arg_arr.size())

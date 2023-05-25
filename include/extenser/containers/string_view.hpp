@@ -44,7 +44,10 @@ namespace containers
 
         using container_type = std::basic_string_view<CharT, Traits>;
 
-        static auto size(const container_type& container) -> size_t { return container.size(); }
+        static auto size(const container_type& container) -> std::size_t
+        {
+            return container.size();
+        }
 
         template<typename InputIt, typename ConversionOp>
         static void assign_from_range([[maybe_unused]] container_type& container,

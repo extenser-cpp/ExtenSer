@@ -40,7 +40,7 @@ namespace containers
         public associative_adapter<std::map<Key, T, Compare, Allocator>>
     {
     public:
-        static auto size(const std::map<Key, T, Compare, Allocator>& container) -> size_t
+        static auto size(const std::map<Key, T, Compare, Allocator>& container) -> std::size_t
         {
             return container.size();
         }
@@ -74,7 +74,7 @@ namespace containers
         public associative_adapter<std::multimap<Key, T, Compare, Allocator>>
     {
     public:
-        static auto size(const std::multimap<Key, T, Compare, Allocator>& container) -> size_t
+        static auto size(const std::multimap<Key, T, Compare, Allocator>& container) -> std::size_t
         {
             return container.size();
         }

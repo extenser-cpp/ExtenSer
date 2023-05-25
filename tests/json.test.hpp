@@ -52,7 +52,7 @@ enum class Fruit
     Strawberry,
 };
 
-enum class TestCode : uint8_t
+enum class TestCode : std::uint8_t
 {
     Code1 = 0x01U,
     CodeA = 0x0AU,
@@ -141,22 +141,22 @@ void serialize(generic_serializer<S>& ser, Person& person)
     ser.as_map("fruit_count", person.fruit_count);
 }
 
-inline auto create_3d_vec(size_t x_sz, size_t y_sz, size_t z_sz)
+inline auto create_3d_vec(std::size_t x_sz, std::size_t y_sz, std::size_t z_sz)
 {
     std::vector<std::vector<std::vector<double>>> x;
     x.reserve(x_sz);
 
-    for (size_t i = 0; i < x_sz; ++i)
+    for (std::size_t i = 0; i < x_sz; ++i)
     {
         std::vector<std::vector<double>> y;
         y.reserve(y_sz);
 
-        for (size_t j = 0; j < y_sz; ++j)
+        for (std::size_t j = 0; j < y_sz; ++j)
         {
             std::vector<double> z;
             z.reserve(z_sz);
 
-            for (size_t k = 0; k < z_sz; ++k)
+            for (std::size_t k = 0; k < z_sz; ++k)
             {
                 z.push_back(static_cast<double>(k * j * i) * 0.333);
             }

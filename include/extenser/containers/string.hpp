@@ -50,14 +50,17 @@ namespace containers
 
         using container_type = std::basic_string<CharT, Traits, Allocator>;
 
-        static auto size(const container_type& container) -> size_t { return container.size(); }
+        static auto size(const container_type& container) -> std::size_t
+        {
+            return container.size();
+        }
 
         template<typename InputIt, typename ConversionOp>
         static void assign_from_range(
             container_type& container, InputIt first, InputIt last, ConversionOp convert_fn)
         {
             container.clear();
-            container.reserve(std::distance(first, last));
+            container.reserve(static_cast<std::size_t>(std::distance(first, last)));
             std::transform(first, last, std::back_inserter(container), convert_fn);
         }
 

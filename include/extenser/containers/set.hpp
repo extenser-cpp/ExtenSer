@@ -38,7 +38,7 @@ namespace containers
         public associative_adapter<std::set<Key, Compare, Allocator>>
     {
     public:
-        static auto size(const std::set<Key, Compare, Allocator>& container) -> size_t
+        static auto size(const std::set<Key, Compare, Allocator>& container) -> std::size_t
         {
             return container.size();
         }
@@ -70,7 +70,7 @@ namespace containers
         public associative_adapter<std::multiset<Key, Compare, Allocator>>
     {
     public:
-        static auto size(const std::multiset<Key, Compare, Allocator>& container) -> size_t
+        static auto size(const std::multiset<Key, Compare, Allocator>& container) -> std::size_t
         {
             return container.size();
         }

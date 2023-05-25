@@ -218,8 +218,8 @@ TEST_SUITE("json::serializer")
         }
     }
 
-    SCENARIO_TEMPLATE(
-        "a signed integer can be serialized to JSON", T_Int, int8_t, int16_t, int32_t, int64_t)
+    SCENARIO_TEMPLATE("a signed integer can be serialized to JSON", T_Int, std::int8_t,
+        std::int16_t, std::int32_t, std::int64_t)
     {
         GIVEN("a default-init serializer")
         {
@@ -263,8 +263,8 @@ TEST_SUITE("json::serializer")
         }
     }
 
-    SCENARIO_TEMPLATE("an unsigned integer can be serialized to JSON", T_Int, uint8_t, uint16_t,
-        uint32_t, uint64_t)
+    SCENARIO_TEMPLATE("an unsigned integer can be serialized to JSON", T_Int, std::uint8_t,
+        std::uint16_t, std::uint32_t, std::uint64_t)
     {
         GIVEN("a default-init serializer")
         {
@@ -1076,7 +1076,7 @@ TEST_SUITE("json::serializer")
                     {
                         REQUIRE(obj.contains("v_idx"));
                         REQUIRE(obj["v_idx"].is_number_unsigned());
-                        CHECK_EQ(obj["v_idx"].get<size_t>(), test_val.index());
+                        CHECK_EQ(obj["v_idx"].get<std::size_t>(), test_val.index());
 
                         REQUIRE(obj.contains("v_val"));
                         REQUIRE(obj["v_val"].is_null());
@@ -1099,7 +1099,7 @@ TEST_SUITE("json::serializer")
                     {
                         REQUIRE(obj.contains("v_idx"));
                         REQUIRE(obj["v_idx"].is_number_unsigned());
-                        CHECK_EQ(obj["v_idx"].get<size_t>(), test_val.index());
+                        CHECK_EQ(obj["v_idx"].get<std::size_t>(), test_val.index());
 
                         REQUIRE(obj.contains("v_val"));
                         REQUIRE(obj["v_val"].is_number_integer());
@@ -1123,7 +1123,7 @@ TEST_SUITE("json::serializer")
                     {
                         REQUIRE(obj.contains("v_idx"));
                         REQUIRE(obj["v_idx"].is_number_unsigned());
-                        CHECK_EQ(obj["v_idx"].get<size_t>(), test_val.index());
+                        CHECK_EQ(obj["v_idx"].get<std::size_t>(), test_val.index());
 
                         REQUIRE(obj.contains("v_val"));
                         REQUIRE(obj["v_val"].is_number_float());
@@ -1147,7 +1147,7 @@ TEST_SUITE("json::serializer")
                     {
                         REQUIRE(obj.contains("v_idx"));
                         REQUIRE(obj["v_idx"].is_number_unsigned());
-                        CHECK_EQ(obj["v_idx"].get<size_t>(), test_val.index());
+                        CHECK_EQ(obj["v_idx"].get<std::size_t>(), test_val.index());
 
                         REQUIRE(obj.contains("v_val"));
                         REQUIRE(obj["v_val"].is_string());
@@ -1171,7 +1171,7 @@ TEST_SUITE("json::serializer")
                     {
                         REQUIRE(obj.contains("v_idx"));
                         REQUIRE(obj["v_idx"].is_number_unsigned());
-                        CHECK_EQ(obj["v_idx"].get<size_t>(), test_val.index());
+                        CHECK_EQ(obj["v_idx"].get<std::size_t>(), test_val.index());
 
                         REQUIRE(obj.contains("v_val"));
                         const auto& sub_val = obj["v_val"];

@@ -181,8 +181,8 @@ TEST_SUITE("json::deserializer")
         }
     }
 
-    SCENARIO_TEMPLATE(
-        "a signed integer can be deserialized from JSON", T_Int, int8_t, int16_t, int32_t, int64_t)
+    SCENARIO_TEMPLATE("a signed integer can be deserialized from JSON", T_Int, std::int8_t,
+        std::int16_t, std::int32_t, std::int64_t)
     {
         GIVEN("a deserializer with a JSON value containing a signed integer")
         {
@@ -226,8 +226,8 @@ TEST_SUITE("json::deserializer")
         }
     }
 
-    SCENARIO_TEMPLATE("an unsigned integer can be deserialized from JSON", T_Int, uint8_t, uint16_t,
-        uint32_t, uint64_t)
+    SCENARIO_TEMPLATE("an unsigned integer can be deserialized from JSON", T_Int, std::uint8_t,
+        std::uint16_t, std::uint32_t, std::uint64_t)
     {
         GIVEN("a deserializer with a JSON value containing an unsigned integer")
         {

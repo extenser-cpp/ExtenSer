@@ -39,7 +39,7 @@ namespace containers
     class adapter<std::vector<T, Allocator>> : public sequential_adapter<std::vector<T, Allocator>>
     {
     public:
-        static auto size(const std::vector<T, Allocator>& container) -> size_t
+        static auto size(const std::vector<T, Allocator>& container) -> std::size_t
         {
             return container.size();
         }
@@ -49,7 +49,7 @@ namespace containers
             InputIt last, ConversionOp convert_fn)
         {
             container.clear();
-            container.reserve(std::distance(first, last));
+            container.reserve(static_cast<std::size_t>(std::distance(first, last)));
             std::transform(first, last, std::back_inserter(container), convert_fn);
         }
     };

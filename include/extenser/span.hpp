@@ -31,6 +31,11 @@ using std::span;
 #else
 namespace detail
 {
+#  if defined(__clang__) && __clang_major__ >= 16
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#  endif
+
     template<typename T>
     class span_iterator
     {
@@ -135,7 +140,16 @@ namespace detail
     private:
         pointer m_ptr{ nullptr };
     };
+
+#  if defined(__clang__) && __clang_major__ >= 16
+#    pragma clang diagnostic pop
+#  endif
 } //namespace detail
+
+#  if defined(__clang__) && __clang_major__ >= 16
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#  endif
 
 // backport of C++20's span
 template<typename T>
@@ -201,26 +215,26 @@ public:
     constexpr auto operator=(span&&) -> span& = delete;
 
     constexpr auto begin() const noexcept -> iterator { return { m_head_ptr }; }
-    constexpr auto end() const noexcept -> iterator { return begin() + m_sz; }
+    constexpr auto end() const noexcept -> iterator { return { m_head_ptr + m_sz }; }
     constexpr auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{ end() }; }
     constexpr auto rend() const noexcept -> reverse_iterator { return reverse_iterator{ begin() }; }
 
     constexpr auto front() const -> reference
     {
         EXTENSER_PRECONDITION(m_sz != 0);
-        return m_head_ptr[0];
+        return *m_head_ptr;
     }
 
     constexpr auto back() const -> reference
     {
         EXTENSER_PRECONDITION(m_sz != 0);
-        return m_head_ptr[m_sz];
+        return *(m_head_ptr + m_sz);
     }
 
     constexpr auto operator[](size_type idx) const -> reference
     {
         EXTENSER_PRECONDITION(idx < m_sz);
-        return *(begin() + idx);
+        return *(m_head_ptr + idx);
     }
 
     constexpr auto data() const noexcept -> pointer { return m_head_ptr; }
@@ -257,6 +271,10 @@ private:
     pointer m_head_ptr{ nullptr };
     size_type m_sz{ 0 };
 };
+
+#  if defined(__clang__) && __clang_major__ >= 16
+#    pragma clang diagnostic pop
+#  endif
 
 template<typename T>
 auto as_bytes(span<T> span) noexcept -> extenser::span<const std::byte>
