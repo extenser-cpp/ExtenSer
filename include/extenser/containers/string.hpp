@@ -40,7 +40,12 @@ namespace containers
         public string_adapter<std::basic_string<CharT, Traits, Allocator>>
     {
     public:
-        static_assert(std::is_same_v<CharT, char> || std::is_same_v<CharT, wchar_t>,
+        static_assert(std::is_same_v<CharT, char> || std::is_same_v<CharT, wchar_t>
+                || std::is_same_v<CharT, char16_t> || std::is_same_v<CharT, char32_t>
+#if defined(__cpp_char8_t)
+                || std::is_same_v<CharT, char8_t>
+#endif
+            ,
             "Unsupported character type detected");
 
         using container_type = std::basic_string<CharT, Traits, Allocator>;

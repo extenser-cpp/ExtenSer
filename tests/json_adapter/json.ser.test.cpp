@@ -455,28 +455,6 @@ TEST_SUITE("json::serializer")
         }
     }
 
-    SCENARIO("a string_view can be serialized to JSON")
-    {
-        GIVEN("a default-init serializer")
-        {
-            serializer ser{};
-            const auto& obj = ser.object();
-
-            WHEN("a string is serialized")
-            {
-                const std::string_view test_val = "Mary had a little lamb";
-
-                REQUIRE_NOTHROW(ser.as_string("", test_val));
-
-                THEN("the JSON object holds a string")
-                {
-                    REQUIRE(obj.is_string());
-                    CHECK_EQ(obj.get<std::string>(), test_val);
-                }
-            }
-        }
-    }
-
     SCENARIO_TEMPLATE("a wide string can be serialized to JSON", T_Str, const wchar_t*,
         const wchar_t[23], std::wstring)
     {
@@ -495,6 +473,99 @@ TEST_SUITE("json::serializer")
                 {
                     REQUIRE(obj.is_array());
                     CHECK_EQ(obj.get<std::wstring>(), test_val);
+                }
+            }
+        }
+    }
+
+    SCENARIO_TEMPLATE("a UTF-16 string can be serialized to JSON", T_Str, const char16_t*,
+        const char16_t[23], std::u16string)
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a UTF-16 string is serialized")
+            {
+                const T_Str test_val = u"Mary had a little lamb";
+
+                REQUIRE_NOTHROW(ser.as_string("", test_val));
+
+                THEN("the JSON object holds an array of char16_t")
+                {
+                    REQUIRE(obj.is_array());
+                    CHECK_EQ(obj.get<std::u16string>(), test_val);
+                }
+            }
+        }
+    }
+
+    SCENARIO_TEMPLATE("a UTF-32 string can be serialized to JSON", T_Str, const char32_t*,
+        const char32_t[23], std::u32string)
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a UTF-32 string is serialized")
+            {
+                const T_Str test_val = U"Mary had a little lamb";
+
+                REQUIRE_NOTHROW(ser.as_string("", test_val));
+
+                THEN("the JSON object holds an array of char32_t")
+                {
+                    REQUIRE(obj.is_array());
+                    CHECK_EQ(obj.get<std::u32string>(), test_val);
+                }
+            }
+        }
+    }
+
+#if defined(__cpp_char8_t)
+    SCENARIO_TEMPLATE("a UTF-8 string can be serialized to JSON", T_Str, const char8_t*,
+        const char8_t[23], std::u8string)
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a UTF-8 string is serialized")
+            {
+                const T_Str test_val = u8"Mary had a little lamb";
+
+                REQUIRE_NOTHROW(ser.as_string("", test_val));
+
+                THEN("the JSON object holds an array of char8_t")
+                {
+                    REQUIRE(obj.is_array());
+                    CHECK_EQ(obj.get<std::u8string>(), test_val);
+                }
+            }
+        }
+    }
+#endif
+
+    SCENARIO("a string_view can be serialized to JSON")
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a string is serialized")
+            {
+                const std::string_view test_val = "Mary had a little lamb";
+
+                REQUIRE_NOTHROW(ser.as_string("", test_val));
+
+                THEN("the JSON object holds a string")
+                {
+                    REQUIRE(obj.is_string());
+                    CHECK_EQ(obj.get<std::string>(), test_val);
                 }
             }
         }
@@ -521,6 +592,74 @@ TEST_SUITE("json::serializer")
             }
         }
     }
+
+    SCENARIO("a u16string_view can be serialized to JSON")
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a u16string is serialized")
+            {
+                const std::u16string_view test_val = u"Mary had a little lamb";
+
+                REQUIRE_NOTHROW(ser.as_string("", test_val));
+
+                THEN("the JSON object holds an array of wchar_t")
+                {
+                    REQUIRE(obj.is_array());
+                    CHECK_EQ(obj.get<std::u16string>(), test_val);
+                }
+            }
+        }
+    }
+
+    SCENARIO("a u32string_view can be serialized to JSON")
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a u32string is serialized")
+            {
+                const std::u32string_view test_val = U"Mary had a little lamb";
+
+                REQUIRE_NOTHROW(ser.as_string("", test_val));
+
+                THEN("the JSON object holds an array of char32_t")
+                {
+                    REQUIRE(obj.is_array());
+                    CHECK_EQ(obj.get<std::u32string>(), test_val);
+                }
+            }
+        }
+    }
+
+#if defined(__cpp_char8_t)
+    SCENARIO("a u8string_view can be serialized to JSON")
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a u8string is serialized")
+            {
+                const std::u8string_view test_val = u8"Mary had a little lamb";
+
+                REQUIRE_NOTHROW(ser.as_string("", test_val));
+
+                THEN("the JSON object holds an array of char8_t")
+                {
+                    REQUIRE(obj.is_array());
+                    CHECK_EQ(obj.get<std::u8string>(), test_val);
+                }
+            }
+        }
+    }
+#endif
 
     SCENARIO_TEMPLATE("an array-like container can be serialized to JSON", T_Arr,
         std::array<int, 5>, std::string_view, std::vector<bool>, std::deque<std::vector<double>>,

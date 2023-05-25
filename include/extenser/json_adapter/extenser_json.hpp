@@ -204,6 +204,11 @@ namespace detail_json
 
         static void push_string(const std::string_view arg, nlohmann::json& obj) { obj = arg; }
         static void push_string(const std::wstring_view arg, nlohmann::json& obj) { obj = arg; }
+        static void push_string(const std::u16string_view arg, nlohmann::json& obj) { obj = arg; }
+        static void push_string(const std::u32string_view arg, nlohmann::json& obj) { obj = arg; }
+#if defined(__cpp_char8_t)
+        static void push_string(const std::u8string_view arg, nlohmann::json& obj) { obj = arg; }
+#endif
 
         template<typename T>
         static void push_array(T&& arg, nlohmann::json& obj)
@@ -520,21 +525,7 @@ namespace detail_json
                 {
                     const auto& sub_obj = subobject(key);
 
-                    if constexpr (std::is_same_v<typename traits_t::character_type, wchar_t>)
-                    {
-                        if constexpr (traits_t::has_fixed_size)
-                        {
-                            if (sub_obj.size() != adapter_t::size(val))
-                            {
-                                throw deserialization_error{ "JSON error: array out of bounds" };
-                            }
-                        }
-
-                        adapter_t::assign_from_range(val, sub_obj.begin(), sub_obj.end(),
-                            [](const nlohmann::json& sub_val)
-                            { return sub_val.get<typename traits_t::value_type>(); });
-                    }
-                    else
+                    if constexpr (std::is_same_v<typename traits_t::character_type, char>)
                     {
                         const auto str = sub_obj.get<std::string>();
 
@@ -549,6 +540,20 @@ namespace detail_json
                         adapter_t::assign_from_range(val, str.begin(), str.end(),
                             [](const char c)
                             { return static_cast<typename traits_t::value_type>(c); });
+                    }
+                    else
+                    {
+                        if constexpr (traits_t::has_fixed_size)
+                        {
+                            if (sub_obj.size() != adapter_t::size(val))
+                            {
+                                throw deserialization_error{ "JSON error: array out of bounds" };
+                            }
+                        }
+
+                        adapter_t::assign_from_range(val, sub_obj.begin(), sub_obj.end(),
+                            [](const nlohmann::json& sub_val)
+                            { return sub_val.get<typename traits_t::value_type>(); });
                     }
                 }
             }
@@ -867,7 +872,7 @@ namespace detail_json
 
             if (!validate_arg<no_ref_t>(arg))
             {
-#ifdef EXTENSER_NO_RTTI
+#if defined(EXTENSER_NO_RTTI)
                 throw deserialization_error{
                     std::string{ "JSON error: expected type: {NO-RTTI}, got type: " }.append(
                         arg.type_name())

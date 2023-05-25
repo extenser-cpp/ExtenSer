@@ -18,7 +18,7 @@
 #include <iterator>
 #include <type_traits>
 
-#if defined(__cpp_lib_span)
+#if __cplusplus >= 202002L
 #  include <span>
 #endif
 

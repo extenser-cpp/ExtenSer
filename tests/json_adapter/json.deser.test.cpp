@@ -469,9 +469,196 @@ TEST_SUITE("json::deserializer")
         }
     }
 
+    SCENARIO_TEMPLATE("a UTF-16 string (or string-like container) can be deserialized from JSON",
+        T_Str, std::array<char16_t, 22>, std::u16string, std::vector<char16_t>, span<char16_t>)
+    {
+        static constexpr std::u16string_view expected_val = u"Mary had a little lamb";
+
+        GIVEN("a deserializer with a JSON value representing a UTF-16 string")
+        {
+            const nlohmann::json test_obj = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the UTF-16 string is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char16_t>>)
+                {
+                    static std::u16string tmp_val = u"??????????????????????";
+                    const span<char16_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the UTF-16 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a UTF-16 string")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char16_t>>)
+                {
+                    static std::u16string tmp_val = u"??????????????????????";
+                    const span<char16_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
+
+                THEN("the UTF-16 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+    }
+
+    SCENARIO_TEMPLATE("a UTF-32 string (or string-like container) can be deserialized from JSON",
+        T_Str, std::array<char32_t, 22>, std::u32string, std::vector<char32_t>, span<char32_t>)
+    {
+        static constexpr std::u32string_view expected_val = U"Mary had a little lamb";
+
+        GIVEN("a deserializer with a JSON value representing a UTF-32 string")
+        {
+            const nlohmann::json test_obj = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the UTF-32 string is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char32_t>>)
+                {
+                    static std::u32string tmp_val = U"??????????????????????";
+                    const span<char32_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the UTF-32 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a UTF-32 string")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char32_t>>)
+                {
+                    static std::u32string tmp_val = U"??????????????????????";
+                    const span<char32_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
+
+                THEN("the UTF-32 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+    }
+
+#if defined(__cpp_char8_t)
+    SCENARIO_TEMPLATE("a UTF-8 string (or string-like container) can be deserialized from JSON",
+        T_Str, std::array<char8_t, 22>, std::u8string, std::vector<char8_t>, span<char8_t>)
+    {
+        static constexpr std::u8string_view expected_val = u8"Mary had a little lamb";
+
+        GIVEN("a deserializer with a JSON value representing a UTF-8 string")
+        {
+            const nlohmann::json test_obj = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the UTF-8 string is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char8_t>>)
+                {
+                    static std::u8string tmp_val = u8"??????????????????????";
+                    const span<char8_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the UTF-8 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a UTF-8 string")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char8_t>>)
+                {
+                    static std::u8string tmp_val = u8"??????????????????????";
+                    const span<char8_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
+
+                THEN("the UTF-8 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+    }
+#endif
+
+#if defined(__cpp_char8_t)
     SCENARIO_TEMPLATE(
         "a string_view (or other immutable container) is NOT changed by deserialization", T_Str,
-        std::string_view, std::wstring_view, span<const char>)
+        std::string_view, std::wstring_view, std::u16string_view, std::u32string_view,
+        std::u8string_view, span<const char>)
+#else
+    SCENARIO_TEMPLATE(
+        "a string_view (or other immutable container) is NOT changed by deserialization", T_Str,
+        std::string_view, std::wstring_view, std::u16string_view, std::u32string_view,
+        span<const char>)
+#endif
     {
         GIVEN("a deserializer with a JSON value representing a string")
         {
@@ -481,6 +668,20 @@ TEST_SUITE("json::deserializer")
                 {
                     return std::wstring_view{ L"This string won't be seen" };
                 }
+                else if constexpr (std::is_same_v<typename T_Str::value_type, char16_t>)
+                {
+                    return std::u16string_view{ u"This string won't be seen" };
+                }
+                else if constexpr (std::is_same_v<typename T_Str::value_type, char32_t>)
+                {
+                    return std::u32string_view{ U"This string won't be seen" };
+                }
+#if defined(__cpp_char8_t)
+                else if constexpr (std::is_same_v<typename T_Str::value_type, char8_t>)
+                {
+                    return std::u8string_view{ u8"This string won't be seen" };
+                }
+#endif
                 else
                 {
                     return std::string_view{ "This string won't be seen" };
