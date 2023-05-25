@@ -40,7 +40,7 @@ namespace containers
     {
     public:
         static auto size(const std::unordered_map<Key, T, Hash, KeyEqual, Allocator>& container)
-            -> size_t
+            -> std::size_t
         {
             return container.size();
         }
@@ -75,7 +75,8 @@ namespace containers
     {
     public:
         static auto size(
-            const std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& container) -> size_t
+            const std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& container)
+            -> std::size_t
         {
             return container.size();
         }

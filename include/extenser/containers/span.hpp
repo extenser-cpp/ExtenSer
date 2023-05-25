@@ -25,7 +25,7 @@ namespace extenser
 namespace containers
 {
 #if defined(__cpp_lib_span)
-    template<typename T, size_t N>
+    template<typename T, std::size_t N>
     struct traits<span<T, N>>
     {
         using container_type = span<T, N>;
@@ -39,11 +39,11 @@ namespace containers
         static constexpr bool is_sequential = true;
     };
 
-    template<typename T, size_t N>
+    template<typename T, std::size_t N>
     class adapter<span<T, N>> : public sequential_adapter<span<T, N>>
     {
     public:
-        static constexpr auto size(const span<T, N>& container) -> size_t
+        static constexpr auto size(const span<T, N>& container) -> std::size_t
         {
             return container.size();
         }
@@ -53,7 +53,7 @@ namespace containers
             span<T, N>& container, InputIt first, InputIt last, ConversionOp convert_fn)
         {
             EXTENSER_PRECONDITION(std::distance(first, last) >= 0
-                && static_cast<size_t>(std::distance(first, last)) == container.size());
+                && static_cast<std::size_t>(std::distance(first, last)) == container.size());
 
             std::transform(first, last, container.begin(), convert_fn);
         }
@@ -77,14 +77,17 @@ namespace containers
     class adapter<span<T>> : public sequential_adapter<span<T>>
     {
     public:
-        static constexpr auto size(const span<T>& container) -> size_t { return container.size(); }
+        static constexpr auto size(const span<T>& container) -> std::size_t
+        {
+            return container.size();
+        }
 
         template<typename InputIt, typename ConversionOp>
         static void assign_from_range(
             span<T>& container, InputIt first, InputIt last, ConversionOp convert_fn)
         {
             EXTENSER_PRECONDITION(std::distance(first, last) >= 0
-                && static_cast<size_t>(std::distance(first, last)) == container.size());
+                && static_cast<std::size_t>(std::distance(first, last)) == container.size());
 
             std::transform(first, last, container.begin(), convert_fn);
         }
@@ -93,7 +96,7 @@ namespace containers
 } //namespace containers
 
 #if defined(__cpp_lib_span)
-template<typename Adapter, bool Deserialize, typename T, size_t N>
+template<typename Adapter, bool Deserialize, typename T, std::size_t N>
 void serialize(serializer_base<Adapter, Deserialize>& ser, span<T, N>& val)
 {
     ser.as_array("", val);

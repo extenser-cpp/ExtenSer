@@ -39,7 +39,7 @@ namespace containers
     {
     public:
         static auto size(const std::unordered_set<Key, Hash, KeyEqual, Allocator>& container)
-            -> size_t
+            -> std::size_t
         {
             return container.size();
         }
@@ -72,7 +72,7 @@ namespace containers
     {
     public:
         static auto size(const std::unordered_multiset<Key, Hash, KeyEqual, Allocator>& container)
-            -> size_t
+            -> std::size_t
         {
             return container.size();
         }

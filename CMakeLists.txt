@@ -290,7 +290,7 @@ FetchContent_MakeAvailable(nlohmann_json)
 
 add_library(extenser-json INTERFACE include/extenser/json_adapter/extenser_json.hpp)
 target_link_libraries(extenser-json INTERFACE extenser)
-target_link_libraries_system(extenser-json INTERFACE extenser nlohmann_json::nlohmann_json)
+target_link_libraries_system(extenser-json INTERFACE nlohmann_json::nlohmann_json)
 
 if (USE_MAGIC_ENUM OR BUILD_TESTING)
     FetchContent_Declare(magic_enum

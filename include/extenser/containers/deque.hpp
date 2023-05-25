@@ -25,7 +25,7 @@ namespace containers
     class adapter<std::deque<T, Allocator>> : public sequential_adapter<std::deque<T, Allocator>>
     {
     public:
-        static auto size(const std::deque<T, Allocator>& container) -> size_t
+        static auto size(const std::deque<T, Allocator>& container) -> std::size_t
         {
             return container.size();
         }
