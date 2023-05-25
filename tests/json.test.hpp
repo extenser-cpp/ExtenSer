@@ -1,8 +1,29 @@
+// ExtenSer - An extensible, generic serialization library for C++
+//
+// Copyright (c) 2023 by Jackson Harmer
+//
+// SPDX-License-Identifier: BSD-3-Clause
+// Distributed under The 3-Clause BSD License
+// See accompanying file LICENSE or a copy at
+// https://opensource.org/license/bsd-3-clause/
+
 #ifndef EXTENSER_JSON_TEST_HPP
 #define EXTENSER_JSON_TEST_HPP
 
-#include "extenser.hpp"
-#include "json/extenser_json.hpp"
+#include "extenser/extenser.hpp"
+#include "extenser/json_adapter/extenser_json.hpp"
+#include "extenser/containers/array.hpp"
+#include "extenser/containers/deque.hpp"
+#include "extenser/containers/forward_list.hpp"
+#include "extenser/containers/list.hpp"
+#include "extenser/containers/map.hpp"
+#include "extenser/containers/set.hpp"
+#include "extenser/containers/span.hpp"
+#include "extenser/containers/string.hpp"
+#include "extenser/containers/string_view.hpp"
+#include "extenser/containers/unordered_map.hpp"
+#include "extenser/containers/unordered_set.hpp"
+#include "extenser/containers/vector.hpp"
 
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>
@@ -74,7 +95,7 @@ inline bool operator!=(const Pet& lhs, const Pet& rhs) noexcept
 }
 
 template<typename S>
-void serialize(extenser::generic_serializer<S>& ser, Pet& pet)
+void serialize(generic_serializer<S>& ser, Pet& pet)
 {
     ser.as_string("name", pet.name);
     ser.as_enum("species", pet.species);
@@ -111,7 +132,7 @@ inline bool operator!=(const Person& lhs, const Person& rhs) noexcept
 }
 
 template<typename S>
-void serialize(extenser::generic_serializer<S>& ser, Person& person)
+void serialize(generic_serializer<S>& ser, Person& person)
 {
     ser.as_int("age", person.age);
     ser.as_string("name", person.name);

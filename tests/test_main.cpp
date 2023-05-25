@@ -1,7 +1,20 @@
-#include "extenser.hpp"
+// ExtenSer - An extensible, generic serialization library for C++
+//
+// Copyright (c) 2023 by Jackson Harmer
+//
+// SPDX-License-Identifier: BSD-3-Clause
+// Distributed under The 3-Clause BSD License
+// See accompanying file LICENSE or a copy at
+// https://opensource.org/license/bsd-3-clause/
 
-#include "bitsery/extenser_bitsery.hpp"
-#include "json/extenser_json.hpp"
+#include "extenser/extenser.hpp"
+
+#include "extenser/json_adapter/extenser_json.hpp"
+#include "extenser/containers/array.hpp"
+#include "extenser/containers/queue.hpp"
+#include "extenser/containers/span.hpp"
+#include "extenser/containers/stack.hpp"
+#include "extenser/containers/vector.hpp"
 
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>
@@ -10,30 +23,39 @@
 #include <array>
 #include <memory>
 #include <numeric>
+#include <queue>
+#include <stack>
 #include <string>
 #include <utility>
 #include <vector>
 
-const size_t extenser::bitsery_adapter::config::max_container_size = 1'000;
-const size_t extenser::bitsery_adapter::config::max_string_size = 1'000;
-
-namespace extenser::tests
+namespace
 {
-struct Person
+struct SimplePerson
 {
     int age{};
     std::string name{};
+
+    template<typename S>
+    void serialize(extenser::generic_serializer<S>& ser)
+    {
+        ser.as_int("age", age);
+        ser.as_string("name", name);
+    }
 };
 
-template<typename S>
-void serialize(generic_serializer<S>& ser, Person& person)
-{
-    ser.as_int("age", person.age);
-    ser.as_string("name", person.name);
-}
+static_assert(extenser::is_object_serializable<SimplePerson>, "Person is not serializable");
+} //namespace
 
+namespace extenser::tests
+{
 TEST_CASE("C-Array")
 {
+#if defined(__clang__) && __clang_major__ >= 16
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
+
     int arr[200];
     std::iota(std::begin(arr), std::end(arr), 0);
 
@@ -53,6 +75,10 @@ TEST_CASE("C-Array")
 
     REQUIRE_EQ(arr[0], 0);
     REQUIRE_EQ(arr[199], 199);
+
+#if defined(__clang__) && __clang_major__ >= 16
+#  pragma clang diagnostic pop
+#endif
 }
 
 TEST_CASE("C++ Array")
@@ -110,6 +136,79 @@ TEST_CASE("Span")
     REQUIRE_EQ(dyn_arr[99], 0);
 }
 
+TEST_CASE("P. Queue")
+{
+    std::priority_queue<int> queue;
+
+    queue.push(1);
+    queue.push(9);
+    queue.push(-1);
+
+    serializer<json_adapter> ser{};
+    ser.serialize_object(queue);
+
+    auto obj = std::move(ser).object();
+
+    REQUIRE(obj.is_array());
+    REQUIRE_EQ(obj.size(), 3);
+
+    deserializer<json_adapter> dser{ obj };
+    dser.deserialize_object(queue);
+
+    REQUIRE_EQ(queue.top(), 9);
+}
+
+TEST_CASE("Queue")
+{
+    std::queue<int> queue;
+
+    queue.push(1);
+    queue.push(9);
+    queue.push(-1);
+
+    serializer<json_adapter> ser{};
+    ser.serialize_object(queue);
+
+    auto obj = std::move(ser).object();
+
+    REQUIRE(obj.is_array());
+    REQUIRE_EQ(obj.size(), 3);
+
+    obj.insert(obj.begin(), 3);
+    REQUIRE_EQ(obj.size(), 4);
+
+    deserializer<json_adapter> dser{ obj };
+    dser.deserialize_object(queue);
+
+    REQUIRE_EQ(queue.size(), 4);
+    REQUIRE_EQ(queue.front(), 3);
+}
+
+TEST_CASE("Stack")
+{
+    std::stack<int, std::vector<int>> stk;
+    stk.push(5);
+    stk.push(4);
+    stk.push(-1);
+
+    serializer<json_adapter> ser{};
+    ser.serialize_object(stk);
+
+    auto obj = std::move(ser).object();
+
+    REQUIRE(obj.is_array());
+    REQUIRE_EQ(obj.size(), 3);
+
+    obj.push_back(3);
+    REQUIRE_EQ(obj.size(), 4);
+
+    deserializer<json_adapter> dser{ obj };
+    dser.deserialize_object(stk);
+
+    REQUIRE_EQ(stk.size(), 4);
+    REQUIRE_EQ(stk.top(), 3);
+}
+
 TEST_CASE("Vector")
 {
     std::vector<int> nvec{ 1, 2, 3, 4, 5 };
@@ -164,7 +263,7 @@ TEST_CASE("View")
 
 TEST_CASE("Simple JSON serialize/deserialize")
 {
-    const Person in_person{ 42, "Jake" };
+    const SimplePerson in_person{ 42, "Jake" };
     serializer<json_adapter> ser{};
     ser.serialize_object(in_person);
 
@@ -175,24 +274,8 @@ TEST_CASE("Simple JSON serialize/deserialize")
     REQUIRE(obj.contains("name"));
     REQUIRE_EQ(obj["name"], "Jake");
 
-    Person out_person{};
+    SimplePerson out_person{};
     deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(out_person);
-
-    REQUIRE_EQ(out_person.age, 42);
-    REQUIRE_EQ(out_person.name, "Jake");
-}
-
-TEST_CASE("Simple bitsery serialize/deserialize")
-{
-    const Person in_person{ 42, "Jake" };
-    serializer<bitsery_adapter> ser{};
-    ser.serialize_object(in_person);
-
-    auto obj = std::move(ser).object();
-
-    Person out_person{};
-    deserializer<bitsery_adapter> dser{ obj };
     dser.deserialize_object(out_person);
 
     REQUIRE_EQ(out_person.age, 42);

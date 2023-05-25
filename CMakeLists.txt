@@ -1,42 +1,13 @@
-# BSD 3-Clause License
+# ExtenSer - An extensible, generic serialization library for C++
 #
-# Copyright (c) 2020-2023, Jackson Harmer All rights reserved.
+# Copyright (c) 2023 by Jackson Harmer
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice, this
-#   list of conditions and the following disclaimer.
-#
-# 1. Redistributions in binary form must reproduce the above copyright notice,
-#   this list of conditions and the following disclaimer in the documentation
-#   and/or other materials provided with the distribution.
-#
-# 1. Neither the name of the copyright holder nor the names of its contributors
-#   may be used to endorse or promote products derived from this software
-#   without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# SPDX-License-Identifier: BSD-3-Clause
+# Distributed under The 3-Clause BSD License
+# See accompanying file LICENSE or a copy at
+# https://opensource.org/license/bsd-3-clause/
 
 cmake_minimum_required(VERSION 3.12)
-
-if (CMAKE_GENERATOR MATCHES "Ninja")
-    file(
-            WRITE "${CMAKE_BINARY_DIR}/GNUMakeRulesOverwrite.cmake"
-            "STRING(REPLACE \"-MD\" \"-MMD\" CMAKE_DEPFILE_FLAGS_C \"\${CMAKE_DEPFILE_FLAGS_C}\")\n"
-            "STRING(REPLACE \"-MD\" \"-MMD\" CMAKE_DEPFILE_FLAGS_CXX \"\${CMAKE_DEPFILE_FLAGS_CXX}\")\n"
-    )
-    set(CMAKE_USER_MAKE_RULES_OVERRIDE "${CMAKE_BINARY_DIR}/GNUMakeRulesOverwrite.cmake" CACHE INTERNAL "")
-endif ()
 
 project(
         "ExtenSer"
@@ -46,17 +17,11 @@ project(
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(BUILD_TESTING "Build the test tree" ON)
-option(CODE_COVERAGE "Build code w/ coverage enabled" OFF)
+option(BUILD_TESTING "Build the test tree" OFF)
 option(USE_MAGIC_ENUM "Build w/ magic_enum static reflection support for enum serialization" OFF)
 option(WERROR "Treat all warnings as errors" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-
-if (CODE_COVERAGE)
-  include(CodeCoverage)
-  append_coverage_compiler_flags()
-endif ()
 
 # ==== Compiler/Machine Info ====
 
@@ -100,6 +65,92 @@ elseif(APPLE)
   else()
     message(FATAL_ERROR "Invalid compiler: ${CMAKE_CXX_COMPILER_ID}, supported compilers for macOS are: [GNU, Clang, Intel]")
   endif()
+endif()
+
+# ==== Build Types ====
+
+include(CheckCXXCompilerFlag)
+
+get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+set(ALLOWED_BUILD_TYPES Debug Release MinSizeRel RelWithDebInfo)
+
+if(CXX_MSVC OR CXX_CLANG_CL)
+  check_cxx_compiler_flag("/fsanitize=address" SUPPORTS_ASAN)
+  check_cxx_compiler_flag("/fsanitize=thread" SUPPORTS_TSAN)
+  if(CXX_CLANG_CL)
+    list(APPEND ALLOWED_BUILD_TYPES Coverage)
+  endif()
+else()
+  list(APPEND ALLOWED_BUILD_TYPES Coverage)
+  set(TMP_REQ_LIB ${CMAKE_REQUIRED_LIBRARIES})
+  set(CMAKE_REQUIRED_LIBRARIES "-fsanitize=address;asan")
+  check_cxx_compiler_flag("-fsanitize=address" SUPPORTS_ASAN)
+  set(CMAKE_REQUIRED_LIBRARIES "-fsanitize=thread;tsan")
+  check_cxx_compiler_flag("-fsanitize=thread" SUPPORTS_TSAN)
+  set(CMAKE_REQUIRED_LIBRARIES ${TMP_REQ_LIB})
+endif()
+
+if(SUPPORTS_ASAN)
+  list(APPEND ALLOWED_BUILD_TYPES "ASAN")
+endif()
+
+if(SUPPORTS_TSAN)
+  list(APPEND ALLOWED_BUILD_TYPES "TSAN")
+endif()
+
+if(IS_MULTI_CONFIG)
+  foreach(BTYPE IN LISTS ALLOWED_BUILD_TYPES)
+    if (NOT ${BTYPE} IN_LIST CMAKE_CONFIGURATION_TYPES)
+      list(APPEND CMAKE_CONFIGURATION_TYPES ${BTYPE})
+    endif()
+  endforeach()
+else()
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${ALLOWED_BUILD_TYPES}")
+  if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+  elseif(NOT CMAKE_BUILD_TYPE IN_LIST ALLOWED_BUILD_TYPES)
+    message(FATAL_ERROR "Unknown BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+  endif()
+endif()
+
+if (CXX_CLANG OR CXX_GCC OR CXX_INTEL)
+  set(GCC_COVERAGE_FLAGS "--coverage")
+  set(GCC_ASAN_FLAGS "-fsanitize=address,leak,undefined -fno-omit-frame-pointer")
+  set(GCC_TSAN_FLAGS "-fsanitize=thread,undefined")
+
+  set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} ${GCC_COVERAGE_FLAGS}" CACHE STRING "")
+  set(CMAKE_EXE_LINKER_FLAGS_COVERAGE "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${GCC_COVERAGE_FLAGS}" CACHE STRING "")
+  set(CMAKE_SHARED_LINKER_FLAGS_COVERAGE "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} ${GCC_COVERAGE_FLAGS}" CACHE STRING "")
+  set(CMAKE_STATIC_LINKER_FLAGS_COVERAGE "${CMAKE_STATIC_LINKER_FLAGS_DEBUG}" CACHE STRING "")
+  set(CMAKE_MODULE_LINKER_FLAGS_COVERAGE "${CMAKE_MODULE_LINKER_FLAGS_DEBUG} ${GCC_COVERAGE_FLAGS}" CACHE STRING "")
+
+  set(CMAKE_CXX_FLAGS_ASAN "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${GCC_ASAN_FLAGS}" CACHE STRING "")
+  set(CMAKE_EXE_LINKER_FLAGS_ASAN "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} ${GCC_ASAN_FLAGS}" CACHE STRING "")
+  set(CMAKE_SHARED_LINKER_FLAGS_ASAN "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} ${GCC_ASAN_FLAGS}" CACHE STRING "")
+  set(CMAKE_STATIC_LINKER_FLAGS_ASAN "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO}" CACHE STRING "")
+  set(CMAKE_MODULE_LINKER_FLAGS_ASAN "${CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO} ${GCC_ASAN_FLAGS}" CACHE STRING "")
+
+  set(CMAKE_CXX_FLAGS_TSAN "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${GCC_TSAN_FLAGS}" CACHE STRING "")
+  set(CMAKE_EXE_LINKER_FLAGS_TSAN "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} ${GCC_TSAN_FLAGS}" CACHE STRING "")
+  set(CMAKE_SHARED_LINKER_FLAGS_TSAN "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} ${GCC_TSAN_FLAGS}" CACHE STRING "")
+  set(CMAKE_STATIC_LINKER_FLAGS_TSAN "${CMAKE_STATIC_LINKER_FLAGS}" CACHE STRING "")
+  set(CMAKE_MODULE_LINKER_FLAGS_TSAN "${CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO} ${GCC_TSAN_FLAGS}" CACHE STRING "")
+elseif(CXX_MSVC OR CXX_CLANG_CL)
+  if(CXX_CLANG_CL)
+    set(CLANG_COVERAGE_FLAGS "-fprofile-instr-generate -fcoverage-mapping")
+
+    set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} ${CLANG_COVERAGE_FLAGS}" CACHE STRING "")
+    set(CMAKE_EXE_LINKER_FLAGS_COVERAGE "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${CLANG_COVERAGE_FLAGS}" CACHE STRING "")
+    set(CMAKE_SHARED_LINKER_FLAGS_COVERAGE "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} ${CLANG_COVERAGE_FLAGS}" CACHE STRING "")
+    set(CMAKE_STATIC_LINKER_FLAGS_COVERAGE "${CMAKE_STATIC_LINKER_FLAGS_DEBUG}" CACHE STRING "")
+    set(CMAKE_MODULE_LINKER_FLAGS_COVERAGE "${CMAKE_MODULE_LINKER_FLAGS_DEBUG} ${CLANG_COVERAGE_FLAGS}" CACHE STRING "")
+  endif()
+
+  set(CMAKE_CXX_FLAGS_ASAN "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /fsanitize=address /Oy-" CACHE STRING "")
+  set(CMAKE_EXE_LINKER_FLAGS_ASAN ${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} CACHE STRING "")
+  set(CMAKE_SHARED_LINKER_FLAGS_ASAN ${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} CACHE STRING "")
+  set(CMAKE_STATIC_LINKER_FLAGS_ASAN ${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO} CACHE STRING "")
+  set(CMAKE_MODULE_LINKER_FLAGS_ASAN ${CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO} CACHE STRING "")
 endif()
 
 # ==== Compiler/Linker Flags ====
@@ -198,7 +249,6 @@ elseif(CXX_CLANG OR CXX_CLANG_CL)
       -Wno-missing-braces
       -Wno-covered-switch-default
       -Wno-unused-template
-      -Wno-c++20-attribute-extensions
       -Wno-assume)
   set(MIN_WARNING -Wall)
   if(CXX_CLANG_CL)
@@ -217,7 +267,7 @@ endif()
 
 # ==== Target(s) ====
 
-add_library(extenser INTERFACE include/extenser.hpp)
+add_library(extenser INTERFACE include/extenser/extenser.hpp)
 add_library(ExtenSer::extenser ALIAS extenser)
 
 if (CXX_MSVC AND (MSVC_VERSION GREATER_EQUAL 1914))
@@ -238,7 +288,8 @@ FetchContent_Declare(nlohmann_json
         )
 FetchContent_MakeAvailable(nlohmann_json)
 
-add_library(extenser-json INTERFACE adapters/json/extenser_json.hpp)
+add_library(extenser-json INTERFACE include/extenser/json_adapter/extenser_json.hpp)
+target_link_libraries(extenser-json INTERFACE extenser)
 target_link_libraries_system(extenser-json INTERFACE extenser nlohmann_json::nlohmann_json)
 
 if (USE_MAGIC_ENUM OR BUILD_TESTING)
@@ -253,20 +304,6 @@ if (USE_MAGIC_ENUM OR BUILD_TESTING)
         target_compile_definitions(extenser-json INTERFACE EXTENSER_USE_MAGIC_ENUM)
     endif ()
 endif ()
-
-target_include_directories(extenser-json INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/adapters>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
-
-FetchContent_Declare(bitsery
-        GIT_REPOSITORY https://github.com/fraillt/bitsery.git
-        GIT_TAG d1a47e06e2104b195a19c73b61f1d5c1dceaa228
-        )
-FetchContent_MakeAvailable(bitsery)
-
-add_library(extenser-bitsery INTERFACE adapters/bitsery/extenser_bitsery.hpp)
-target_link_libraries_system(extenser-bitsery INTERFACE extenser Bitsery::bitsery)
-target_include_directories(extenser-bitsery INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/adapters>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 # ==== Target Installation ====
 

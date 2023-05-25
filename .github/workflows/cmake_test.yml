@@ -1,0 +1,79 @@
+name: CMake
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build_gcc:
+    strategy:
+      matrix:
+        gcc_version: [9, 10, 11, 12]
+        build_type: [Debug, Release]
+        include:
+          - gcc_version: 12
+            build_type: ASAN
+          - gcc_version: 12
+            build_type: TSAN
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=gcc-${{ matrix.gcc_version }} -DCMAKE_CXX_COMPILER=g++-${{ matrix.gcc_version }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build/tests
+      run: ctest -C ${{ matrix.build_type }} --output-on-failure
+  
+  build_llvm:
+    strategy:
+      matrix:
+        llvm_version: [12, 13, 14]
+        build_type: [Debug, Release]
+        include:
+          - llvm_version: 14
+            build_type: ASAN
+          - llvm_version: 14
+            build_type: TSAN
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=clang-${{ matrix.llvm_version }} -DCMAKE_CXX_COMPILER=clang++-${{ matrix.llvm_version }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build/tests
+      run: ctest -C ${{ matrix.build_type }} --output-on-failure
+    
+  build_other:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+        build_type: [Debug, Release]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build/tests
+      run: ctest -C ${{ matrix.build_type }} --output-on-failure
+

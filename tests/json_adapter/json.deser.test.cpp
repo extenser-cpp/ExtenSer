@@ -1,4 +1,13 @@
-#include "json.test.hpp"
+// ExtenSer - An extensible, generic serialization library for C++
+//
+// Copyright (c) 2023 by Jackson Harmer
+//
+// SPDX-License-Identifier: BSD-3-Clause
+// Distributed under The 3-Clause BSD License
+// See accompanying file LICENSE or a copy at
+// https://opensource.org/license/bsd-3-clause/
+
+#include "../json.test.hpp"
 
 #include <algorithm>
 #include <array>
@@ -35,6 +44,16 @@ TEST_SUITE("json::deserializer")
                 THEN("the deserializer is constructed without exception")
                 {
                     REQUIRE(dser.has_value());
+
+                    AND_WHEN("an attempt to deserialize occurs")
+                    {
+                        int test_val{};
+
+                        THEN("a deserialization_error is thrown")
+                        {
+                            CHECK_THROWS_AS(dser->as_int("", test_val), deserialization_error);
+                        }
+                    }
                 }
             }
         }
@@ -75,6 +94,23 @@ TEST_SUITE("json::deserializer")
                 THEN("the bool is properly assigned")
                 {
                     CHECK(test_val);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object NOT containing a boolean")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = 0;
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                bool test_val{ false };
+
+                THEN("a deserialization_error is thrown")
+                {
+                    CHECK_THROWS_AS(dser.as_bool("test_val", test_val), deserialization_error);
                 }
             }
         }
@@ -315,13 +351,13 @@ TEST_SUITE("json::deserializer")
         }
     }
 
-    // TODO: Support more types (string_view should be nop, mutable containers should std::copy, vector is push_back'ed)
-    SCENARIO_TEMPLATE("a string can be deserialized from JSON", T_Str, std::string)
+    SCENARIO_TEMPLATE("a string (or string-like container) can be deserialized from JSON", T_Str,
+        std::array<char, 22>, std::string, std::vector<char>, span<char>)
     {
-        GIVEN("a deserializer with a JSON value respresenting a string")
-        {
-            static constexpr std::string_view expected_val = "Mary had a little lamb";
+        static constexpr std::string_view expected_val = "Mary had a little lamb";
 
+        GIVEN("a deserializer with a JSON value representing a string")
+        {
             const nlohmann::json test_obj = expected_val;
             const deserializer dser{ test_obj };
 
@@ -329,20 +365,25 @@ TEST_SUITE("json::deserializer")
             {
                 T_Str test_val{};
 
+                if constexpr (std::is_same_v<T_Str, span<char>>)
+                {
+                    static std::string tmp_val = "??????????????????????";
+                    const span<char> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
                 REQUIRE_NOTHROW(dser.as_string("", test_val));
 
                 THEN("the string is properly assigned")
                 {
-                    CHECK_EQ(test_val, expected_val);
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
                 }
             }
         }
 
         GIVEN("a deserializer with a JSON object containing a string")
         {
-            static constexpr std::string_view expected_val =
-                "Hello from a really quite lengthy string";
-
             nlohmann::json test_obj;
             test_obj["test_val"] = expected_val;
             const deserializer dser{ test_obj };
@@ -351,23 +392,329 @@ TEST_SUITE("json::deserializer")
             {
                 T_Str test_val{};
 
+                if constexpr (std::is_same_v<T_Str, span<char>>)
+                {
+                    static std::string tmp_val = "??????????????????????";
+                    const span<char> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
                 REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
 
                 THEN("the string is properly assigned")
                 {
-                    CHECK_EQ(test_val, expected_val);
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+    }
+
+    SCENARIO_TEMPLATE("a wide string (or string-like container) can be deserialized from JSON",
+        T_Str, std::array<wchar_t, 22>, std::wstring, std::vector<wchar_t>, span<wchar_t>)
+    {
+        static constexpr std::wstring_view expected_val = L"Mary had a little lamb";
+
+        GIVEN("a deserializer with a JSON value representing a wide string")
+        {
+            const nlohmann::json test_obj = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the wide string is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<wchar_t>>)
+                {
+                    static std::wstring tmp_val = L"??????????????????????";
+                    const span<wchar_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a wide string")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<wchar_t>>)
+                {
+                    static std::wstring tmp_val = L"??????????????????????";
+                    const span<wchar_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
+
+                THEN("the wide string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+    }
+
+    SCENARIO_TEMPLATE("a UTF-16 string (or string-like container) can be deserialized from JSON",
+        T_Str, std::array<char16_t, 22>, std::u16string, std::vector<char16_t>, span<char16_t>)
+    {
+        static constexpr std::u16string_view expected_val = u"Mary had a little lamb";
+
+        GIVEN("a deserializer with a JSON value representing a UTF-16 string")
+        {
+            const nlohmann::json test_obj = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the UTF-16 string is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char16_t>>)
+                {
+                    static std::u16string tmp_val = u"??????????????????????";
+                    const span<char16_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the UTF-16 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a UTF-16 string")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char16_t>>)
+                {
+                    static std::u16string tmp_val = u"??????????????????????";
+                    const span<char16_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
+
+                THEN("the UTF-16 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+    }
+
+    SCENARIO_TEMPLATE("a UTF-32 string (or string-like container) can be deserialized from JSON",
+        T_Str, std::array<char32_t, 22>, std::u32string, std::vector<char32_t>, span<char32_t>)
+    {
+        static constexpr std::u32string_view expected_val = U"Mary had a little lamb";
+
+        GIVEN("a deserializer with a JSON value representing a UTF-32 string")
+        {
+            const nlohmann::json test_obj = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the UTF-32 string is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char32_t>>)
+                {
+                    static std::u32string tmp_val = U"??????????????????????";
+                    const span<char32_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the UTF-32 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a UTF-32 string")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char32_t>>)
+                {
+                    static std::u32string tmp_val = U"??????????????????????";
+                    const span<char32_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
+
+                THEN("the UTF-32 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+    }
+
+#if defined(__cpp_char8_t)
+    SCENARIO_TEMPLATE("a UTF-8 string (or string-like container) can be deserialized from JSON",
+        T_Str, std::array<char8_t, 22>, std::u8string, std::vector<char8_t>, span<char8_t>)
+    {
+        static constexpr std::u8string_view expected_val = u8"Mary had a little lamb";
+
+        GIVEN("a deserializer with a JSON value representing a UTF-8 string")
+        {
+            const nlohmann::json test_obj = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the UTF-8 string is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char8_t>>)
+                {
+                    static std::u8string tmp_val = u8"??????????????????????";
+                    const span<char8_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the UTF-8 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a UTF-8 string")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("the object is deserialized")
+            {
+                T_Str test_val{};
+
+                if constexpr (std::is_same_v<T_Str, span<char8_t>>)
+                {
+                    static std::u8string tmp_val = u8"??????????????????????";
+                    const span<char8_t> tmp_span{ tmp_val.begin(), tmp_val.end() };
+                    test_val = tmp_span;
+                }
+
+                REQUIRE_NOTHROW(dser.as_string("test_val", test_val));
+
+                THEN("the UTF-8 string is properly assigned")
+                {
+                    CHECK(
+                        std::equal(expected_val.begin(), expected_val.end(), std::begin(test_val)));
+                }
+            }
+        }
+    }
+#endif
+
+#if defined(__cpp_char8_t)
+    SCENARIO_TEMPLATE(
+        "a string_view (or other immutable container) is NOT changed by deserialization", T_Str,
+        std::string_view, std::wstring_view, std::u16string_view, std::u32string_view,
+        std::u8string_view, span<const char>)
+#else
+    SCENARIO_TEMPLATE(
+        "a string_view (or other immutable container) is NOT changed by deserialization", T_Str,
+        std::string_view, std::wstring_view, std::u16string_view, std::u32string_view,
+        span<const char>)
+#endif
+    {
+        GIVEN("a deserializer with a JSON value representing a string")
+        {
+            static constexpr auto expected_val = []
+            {
+                if constexpr (std::is_same_v<typename T_Str::value_type, wchar_t>)
+                {
+                    return std::wstring_view{ L"This string won't be seen" };
+                }
+                else if constexpr (std::is_same_v<typename T_Str::value_type, char16_t>)
+                {
+                    return std::u16string_view{ u"This string won't be seen" };
+                }
+                else if constexpr (std::is_same_v<typename T_Str::value_type, char32_t>)
+                {
+                    return std::u32string_view{ U"This string won't be seen" };
+                }
+#if defined(__cpp_char8_t)
+                else if constexpr (std::is_same_v<typename T_Str::value_type, char8_t>)
+                {
+                    return std::u8string_view{ u8"This string won't be seen" };
+                }
+#endif
+                else
+                {
+                    return std::string_view{ "This string won't be seen" };
+                }
+            }();
+
+            const nlohmann::json test_obj = expected_val;
+            const deserializer dser{ test_obj };
+
+            WHEN("deserialize is called on the string_view")
+            {
+                T_Str test_val{};
+
+                REQUIRE_NOTHROW(dser.as_string("", test_val));
+
+                THEN("the string_view is unchanged")
+                {
+                    CHECK(test_val.empty());
                 }
             }
         }
     }
 
     SCENARIO_TEMPLATE("an array-like container can be deserialized from JSON", T_Arr,
-        std::vector<int>, std::list<int>, std::deque<int>, std::forward_list<int>, std::set<int>,
-        std::multiset<int>, std::array<int, 5>, span<int>)
+        std::vector<int>, std::list<int>, std::deque<int>, std::forward_list<int>,
+        std::array<int, 5>, span<int>, std::set<int>, std::multiset<int>, std::unordered_set<int>,
+        std::unordered_multiset<int>)
     {
         GIVEN("a deserializer with a JSON array")
         {
-            const auto test_obj = nlohmann::json::parse("[1, 2, 3, 4, 5]");
+            static constexpr std::array expected_val{ 1, 5, 3, 4, 2 };
+
+            const auto test_obj = nlohmann::json::parse("[1, 5, 3, 4, 2]");
             const deserializer dser{ test_obj };
 
             WHEN("the array is deserialized")
@@ -385,33 +732,36 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the array is properly assigned")
                 {
-                    for (int i = 0; i < 5; ++i)
+                    REQUIRE_EQ(containers::adapter<T_Arr>::size(test_val), std::size(expected_val));
+
+                    if constexpr (containers::traits<T_Arr>::is_sequential)
                     {
-                        CHECK_EQ(*std::next(std::begin(test_val), i), i + 1);
+                        CHECK(std::equal(
+                            std::begin(test_val), std::end(test_val), std::begin(expected_val)));
+                    }
+                    else
+                    {
+                        CHECK(std::is_permutation(
+                            std::begin(test_val), std::end(test_val), std::begin(expected_val)));
                     }
                 }
             }
         }
 
-        GIVEN("a deserializer with an empty JSON array")
+        if constexpr (not std::is_same_v<T_Arr, std::array<int, 5>>)
         {
-            const auto test_obj = nlohmann::json::parse("[]");
-            const deserializer dser{ test_obj };
-
-            WHEN("the array is deserialized")
+            GIVEN("a deserializer with an empty JSON array")
             {
-                T_Arr test_val{};
+                const auto test_obj = nlohmann::json::parse("[]");
+                const deserializer dser{ test_obj };
 
-                REQUIRE_NOTHROW(dser.as_array("", test_val));
-
-                THEN("the deserialized array is empty")
+                WHEN("the array is deserialized")
                 {
-                    if constexpr (std::is_same_v<T_Arr, std::array<int, 5>>)
-                    {
-                        CHECK(std::all_of(std::begin(test_val), std::end(test_val),
-                            [](const int n) { return n == 0; }));
-                    }
-                    else
+                    T_Arr test_val{};
+
+                    REQUIRE_NOTHROW(dser.as_array("", test_val));
+
+                    THEN("the deserialized array is empty")
                     {
                         CHECK(std::empty(test_val));
                     }
@@ -421,7 +771,8 @@ TEST_SUITE("json::deserializer")
 
         GIVEN("a deserializer with a JSON object containing an array")
         {
-            const auto test_obj = nlohmann::json::parse(R"({"test_val": [0, 1, 2, 3, 4]})");
+            static constexpr std::array expected_val{ 0, 4, 2, 3, 2 };
+            const auto test_obj = nlohmann::json::parse(R"({"test_val": [0, 4, 2, 3, 2]})");
             const deserializer dser{ test_obj };
 
             WHEN("the object is deserialized")
@@ -439,9 +790,15 @@ TEST_SUITE("json::deserializer")
 
                 THEN("the array is properly assigned")
                 {
-                    for (int i = 0; i < 5; ++i)
+                    if constexpr (containers::traits<T_Arr>::is_sequential)
                     {
-                        CHECK_EQ(*std::next(std::begin(test_val), i), i);
+                        CHECK(std::equal(
+                            std::begin(test_val), std::end(test_val), std::begin(expected_val)));
+                    }
+                    else
+                    {
+                        CHECK(std::is_permutation(
+                            std::begin(test_val), std::end(test_val), std::begin(expected_val)));
                     }
                 }
             }
@@ -481,7 +838,7 @@ TEST_SUITE("json::deserializer")
                 { "Henrietta",
                     Person{ 16, "Henrietta Payne", {}, Pet{ "Ron", Pet::Species::Fish }, {} } },
                 { "Jerome", Person{ 12, "Jerome Banks", {}, {}, {} } },
-                { "Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
+                { "@Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
                 { "Ricardo",
                     Person{ 19, "Ricardo Montoya", {}, Pet{ "Sinbad", Pet::Species::Cat }, {} } }
             };
@@ -490,14 +847,14 @@ TEST_SUITE("json::deserializer")
             const auto test_obj = nlohmann::json::parse(R"({
 "Henrietta": {"age": 16, "name": "Henrietta Payne", "friends": [], "pet": {"name": "Ron", "species": "Fish"}, "fruit_count": {}},
 "Jerome": {"age": 12, "name": "Jerome Banks", "friends": [], "pet": null, "fruit_count": {}},
-"Rachel": {"age": 22, "name": "Rachel Franks", "friends": [], "pet": null, "fruit_count": {}},
+"@@Rachel": {"age": 22, "name": "Rachel Franks", "friends": [], "pet": null, "fruit_count": {}},
 "Ricardo": {"age": 19, "name": "Ricardo Montoya", "friends": [], "pet": {"name": "Sinbad", "species": "Cat"}, "fruit_count": {}}
 })");
 #else
             const auto test_obj = nlohmann::json::parse(R"({
 "Henrietta": {"age": 16, "name": "Henrietta Payne", "friends": [], "pet": {"name": "Ron", "species": 3}, "fruit_count": {}},
 "Jerome": {"age": 12, "name": "Jerome Banks", "friends": [], "pet": null, "fruit_count": {}},
-"Rachel": {"age": 22, "name": "Rachel Franks", "friends": [], "pet": null, "fruit_count": {}},
+"@@Rachel": {"age": 22, "name": "Rachel Franks", "friends": [], "pet": null, "fruit_count": {}},
 "Ricardo": {"age": 19, "name": "Ricardo Montoya", "friends": [], "pet": {"name": "Sinbad", "species": 1}, "fruit_count": {}}
 })");
 #endif
