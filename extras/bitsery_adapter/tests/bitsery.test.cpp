@@ -9,6 +9,8 @@
 
 #define EXTENSER_ASSERT_THROW
 
+#define EXTENSER_BITSERY_EXACT_SZ
+
 #include "extenser_bitsery.hpp"
 #include "test_helpers.hpp"
 
@@ -445,24 +447,65 @@ TEST_CASE_TEMPLATE("an array-like container can be serialized to bitsery", T_Arr
     std::list<Person>, std::forward_list<std::string>, std::set<int>,
     std::unordered_multiset<std::string>, span<Person>)
 {
-    // TODO: Get test working
+    serializer ser{};
 
-    // serializer ser{};
+    const auto expected_val = create_test_val<T_Arr>();
 
-    // const auto expected_val = create_test_val<T_Arr>();
+    REQUIRE_NOTHROW(ser.as_array("", expected_val));
 
-    // REQUIRE_NOTHROW(ser.as_array("", expected_val));
+    deserializer dser{ ser.object() };
 
-    // deserializer dser{ ser.object() };
-
-    // T_Arr test_val{};
-    // dser.as_array("", test_val);
-    // CHECK(std::equal(std::begin(test_val), std::end(test_val), std::begin(expected_val)));
+    T_Arr test_val{};
+    dser.as_array("", test_val);
+    CHECK(std::equal(std::begin(test_val), std::end(test_val), std::begin(expected_val)));
 }
 
-TEST_CASE("a map-like container can be serialized to bitsery") {}
+TEST_CASE("a map-like container can be serialized to bitsery")
+{
+    serializer ser{};
 
-TEST_CASE("a multimap-like container can be serialized to bitsery") {}
+    SUBCASE("std::map")
+    {
+        const std::map<int, std::string> expected_val{ { 33, "Benjamin Burton" },
+            { 99, "John Johnson" }, { 444, "Reed Carmichael" } };
+
+        REQUIRE_NOTHROW(ser.as_map("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        std::map<int, std::string> test_val{};
+        dser.as_map("", test_val);
+
+        CHECK_EQ(test_val, expected_val);
+    }
+
+    SUBCASE("std::unordered_map") {}
+}
+
+TEST_CASE("a multimap-like container can be serialized to bitsery")
+{
+    serializer ser{};
+
+    SUBCASE("std::multimap")
+    {
+        const std::multimap<char, std::string> expected_val{ { 'a', "Apple" }, { 'a', "Aardvark" },
+            { 'b', "Brush" }, { 'c', "Cleaver" }, { 'd', "Danger" }, { 'd', "Donut" } };
+
+        REQUIRE_NOTHROW(ser.as_multimap("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        std::multimap<char, std::string> test_val{};
+        dser.as_multimap("", test_val);
+
+        for (const auto& [k, v] : expected_val)
+        {
+            CHECK_EQ(test_val.count(k), expected_val.count(k));
+        }
+    }
+
+    SUBCASE("std::unordered_multimap") {}
+}
 
 TEST_CASE("a tuple can be serialized to bitsery") {}
 
