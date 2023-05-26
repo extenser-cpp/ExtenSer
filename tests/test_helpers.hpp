@@ -7,11 +7,10 @@
 // See accompanying file LICENSE or a copy at
 // https://opensource.org/license/bsd-3-clause/
 
-#ifndef EXTENSER_JSON_TEST_HPP
-#define EXTENSER_JSON_TEST_HPP
+#ifndef EXTENSER_TEST_HELPERS_HPP
+#define EXTENSER_TEST_HELPERS_HPP
 
 #include "extenser/extenser.hpp"
-#include "extenser/json_adapter/extenser_json.hpp"
 #include "extenser/containers/array.hpp"
 #include "extenser/containers/deque.hpp"
 #include "extenser/containers/forward_list.hpp"
@@ -25,18 +24,7 @@
 #include "extenser/containers/unordered_set.hpp"
 #include "extenser/containers/vector.hpp"
 
-#define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
-#include <doctest/doctest.h>
-
-#include <deque>
-#include <forward_list>
-#include <list>
 #include <optional>
-#include <set>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
 
 namespace extenser::tests
 {
@@ -247,4 +235,4 @@ inline auto create_test_val<span<Person>>() -> span<Person>
     return { person_list.begin(), person_list.end() };
 }
 } //namespace extenser::tests
-#endif //EXTENSER_JSON_TEST_HPP
+#endif //EXTENSER_TEST_HELPERS_HPP

@@ -19,6 +19,7 @@ FetchContent_Declare(doctest
 FetchContent_MakeAvailable(doctest)
 
 add_library(doctest_runner OBJECT test_runner.cpp)
+target_include_directories(doctest_runner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries_system(doctest_runner PUBLIC doctest::doctest)
 
 add_executable(extenser-test test_main.cpp)
@@ -27,7 +28,7 @@ target_compile_features(extenser-test PRIVATE cxx_std_17)
 target_compile_options(extenser-test PRIVATE ${FULL_WARNING})
 doctest_discover_tests(extenser-test ADD_LABELS 1)
 
-add_executable(json-test json_adapter/json.deser.test.cpp json_adapter/json.ser.test.cpp json.test.hpp)
+add_executable(json-test json_adapter/json.deser.test.cpp json_adapter/json.ser.test.cpp test_helpers.hpp)
 target_link_libraries(json-test PRIVATE doctest_runner extenser-json)
 target_compile_features(json-test PRIVATE cxx_std_17)
 target_compile_options(json-test PRIVATE ${FULL_WARNING})
@@ -35,7 +36,7 @@ get_target_property(json-test-defs json-test COMPILE_DEFINITIONS)
 list(FILTER json_test_defs EXCLUDE REGEX [[^EXTENSER_USE_MAGIC_ENUM$]])
 set_property(TARGET json-test PROPERTY COMPILE_DEFINITIONS ${json_test_defs})
 
-add_executable(json-magic-test json_adapter/json.deser.test.cpp json_adapter/json.ser.test.cpp json.test.hpp)
+add_executable(json-magic-test json_adapter/json.deser.test.cpp json_adapter/json.ser.test.cpp test_helpers.hpp)
 target_link_libraries(json-magic-test PRIVATE doctest_runner extenser-json)
 target_link_libraries_system(json-magic-test PRIVATE magic_enum::magic_enum)
 target_compile_definitions(json-magic-test PRIVATE EXTENSER_USE_MAGIC_ENUM)

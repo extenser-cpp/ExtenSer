@@ -15,6 +15,7 @@
 #include "span.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <string_view>
