@@ -184,6 +184,12 @@ inline auto create_test_val<std::vector<bool>>() -> std::vector<bool>
 }
 
 template<>
+inline auto create_test_val<std::vector<int>>() -> std::vector<int>
+{
+    return { 1, 2, 3, 4, 5 };
+}
+
+template<>
 inline auto create_test_val<std::deque<std::vector<double>>>() -> std::deque<std::vector<double>>
 {
     return { { 1, 1, 1, 1, 1 }, { 1, 2, 3, 4, 5 }, { 4, 6, 8, 9, 19 }, { -1, -3, 12, 13, 10 },

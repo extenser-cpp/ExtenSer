@@ -21,7 +21,10 @@
 #include <bitsery/ext/std_variant.h>
 #include <bitsery/traits/array.h>
 #include <bitsery/traits/core/traits.h>
+#include <bitsery/traits/array.h>
+#include <bitsery/traits/deque.h>
 #include <bitsery/traits/forward_list.h>
+#include <bitsery/traits/list.h>
 #include <bitsery/traits/string.h>
 #include <bitsery/traits/vector.h>
 
@@ -202,34 +205,56 @@ namespace detail_bitsery
         template<typename T>
         void as_array([[maybe_unused]] const std::string_view key, const T& val)
         {
+            static_assert(!std::is_same_v<T, std::vector<bool>>, "Vector of bool not supported");
+
+            using S = bitsery::Serializer<output_adapter>;
+            using traits_t = containers::traits<T>;
+
+            if constexpr (traits_t::is_sequential)
+            {
+                if constexpr (traits_t::has_fixed_size)
+                {
+                    if constexpr (std::is_arithmetic_v<typename traits_t::value_type>)
+                    {
+                        m_ser.container<sizeof(typename traits_t::value_type)>(val);
+                    }
+                    else
+                    {
+                        m_ser.container(val,
+                            [this](S& ser, typename traits_t::value_type& value)
+                            { serial_adapter::parse_obj(ser, *this, value); });
+                    }
+                }
+                else
+                {
+                    if constexpr (std::is_arithmetic_v<typename traits_t::value_type>)
+                    {
+                        m_ser.container<sizeof(typename traits_t::value_type)>(
+                            val, config::max_container_size);
+                    }
+                    else
+                    {
+                        m_ser.container(val, config::max_container_size,
+                            [this](S& ser, typename traits_t::value_type& value)
+                            { serial_adapter::parse_obj(ser, *this, value); });
+                    }
+
+                    //m_ser.container(val, config::max_container_size,
+                    //    [this](typename traits_t::value_type& value)
+                    //    {
+                    //        serial_adapter::parse_obj(m_ser, *this, value);
+                    //    });
+                }
+            }
+            else
+            {
+                m_ser.ext(val, bitsery::ext::StdSet{ config::max_container_size },
+                    [this](S& ser, typename traits_t::value_type& key)
+                    { serial_adapter::parse_obj(ser, *this, key); });
+            }
+
             // TODO: Revise to use container traits and pass tests
-
-            std::ignore = val;
-
-            // using val_t = typename T::value_type;
-
-            // if constexpr (std::is_arithmetic_v<val_t>)
-            // {
-            //     m_ser.container<sizeof(val_t)>(val, config::max_container_size);
-            // }
-            // else
-            // {
-            //     m_ser.container(val, config::max_container_size);
-            // }
         }
-
-        // template<typename T, std::size_t N>
-        // void as_array([[maybe_unused]] const std::string_view key, const std::array<T, N>& val)
-        // {
-        //     if constexpr (std::is_arithmetic_v<T>)
-        //     {
-        //         m_ser.container<sizeof(T)>(val);
-        //     }
-        //     else
-        //     {
-        //         m_ser.container(val);
-        //     }
-        // }
 
         template<typename T>
         void as_map([[maybe_unused]] const std::string_view key, const T& val)
@@ -384,9 +409,50 @@ namespace detail_bitsery
         template<typename T>
         void as_array([[maybe_unused]] const std::string_view key, T& val)
         {
-            // TODO: Revise to use container traits and pass tests
+            static_assert(!std::is_same_v<T, std::vector<bool>>, "Vector of bool not supported");
 
-            std::ignore = val;
+            using traits_t = containers::traits<T>;
+            using S = bitsery::Deserializer<input_adapter>;
+
+            if constexpr (traits_t::is_mutable)
+            {
+                if constexpr (traits_t::is_sequential)
+                {
+                    if constexpr (traits_t::has_fixed_size)
+                    {
+                        if constexpr (std::is_arithmetic_v<typename traits_t::value_type>)
+                        {
+                            m_ser.container<sizeof(typename traits_t::value_type)>(val);
+                        }
+                        else
+                        {
+                            m_ser.container(val,
+                                [this](S& ser, typename traits_t::value_type& value)
+                                { serial_adapter::parse_obj(ser, *this, value); });
+                        }
+                    }
+                    else
+                    {
+                        if constexpr (std::is_arithmetic_v<typename traits_t::value_type>)
+                        {
+                            m_ser.container<sizeof(typename traits_t::value_type)>(
+                                val, config::max_container_size);
+                        }
+                        else
+                        {
+                            m_ser.container(val, config::max_container_size,
+                                [this](S& ser, typename traits_t::value_type& value)
+                                { serial_adapter::parse_obj(ser, *this, value); });
+                        }
+                    }
+                }
+                else
+                {
+                    m_ser.ext(val, bitsery::ext::StdSet{ config::max_container_size },
+                        [this](S& ser, typename traits_t::value_type& key)
+                        { serial_adapter::parse_obj(ser, *this, key); });
+                }
+            }
 
             // if constexpr (std::is_arithmetic_v<typename T::value_type>)
             // {

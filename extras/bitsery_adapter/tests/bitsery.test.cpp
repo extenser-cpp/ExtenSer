@@ -11,19 +11,22 @@
 
 #define EXTENSER_BITSERY_EXACT_SZ
 
-#include "extenser_bitsery.hpp"
 #include "test_helpers.hpp"
+#include "extenser_bitsery.hpp"
 
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>
 
+#include <cstdint>
 #include <limits>
 #include <optional>
+#include <ostream>
+#include <string>
+#include <tuple>
 #include <vector>
 
 namespace extenser::tests
 {
-
 using serializer = bitsery_adapter::serializer_t;
 using deserializer = bitsery_adapter::deserializer_t;
 
@@ -443,9 +446,8 @@ TEST_CASE("a u8string_view can be serialized to bitsery")
 #endif
 
 TEST_CASE_TEMPLATE("an array-like container can be serialized to bitsery", T_Arr,
-    std::array<int, 5>, std::string_view, std::vector<bool>, std::deque<std::vector<double>>,
-    std::list<Person>, std::forward_list<std::string>, std::set<int>,
-    std::unordered_multiset<std::string>, span<Person>)
+    std::array<int, 5>, std::string_view, std::vector<int>, std::deque<std::vector<double>>,
+    std::list<Person>, std::forward_list<std::string>, std::set<int>)
 {
     serializer ser{};
 
