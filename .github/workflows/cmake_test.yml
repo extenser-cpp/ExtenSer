@@ -3,8 +3,22 @@ name: CMake
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - '.clang-format'
+      - '.gitignore'
+      - '.pre-commit-config.yaml'
+      - 'LICENSE'
+      - '*.md'
+      - '*.MD'
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - '.clang-format'
+      - '.gitignore'
+      - '.pre-commit-config.yaml'
+      - 'LICENSE'
+      - '*.md'
+      - '*.MD'
 
 jobs:
   build_gcc:
