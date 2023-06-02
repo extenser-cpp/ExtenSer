@@ -556,6 +556,11 @@ namespace detail_json
                             { return sub_val.get<typename traits_t::value_type>(); });
                     }
                 }
+                else
+                {
+                    std::ignore = key;
+                    std::ignore = val;
+                }
             }
         }
 
@@ -590,6 +595,11 @@ namespace detail_json
                             val, j_obj, parse_arg<typename traits_t::value_type>);
                     }
                 }
+            }
+            else
+            {
+                std::ignore = key;
+                std::ignore = val;
             }
         }
 

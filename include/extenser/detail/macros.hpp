@@ -58,9 +58,7 @@ inline constexpr bool EXTENSER_ASSERT_NOTHROW = true;
 #define EXTENSER_POSTCONDITION(EXPR) EXTENSER_ASSERTION(EXPR)
 #define EXTENSER_PRECONDITION(EXPR) EXTENSER_ASSERTION(EXPR)
 
-#if defined(__clang__)
-#  define EXTENSER_INLINE [[clang::always_inline]]
-#elif defined(__GNUC__)
+#if defined(__GNUC__)
 #  define EXTENSER_INLINE [[gnu::always_inline]]
 #elif defined(_MSC_VER)
 #  define EXTENSER_INLINE __forceinline

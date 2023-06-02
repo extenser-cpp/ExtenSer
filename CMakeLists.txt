@@ -17,11 +17,15 @@ project(
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(BUILD_TESTING "Build the test tree" OFF)
+option(BUILD_BITSERY "Build the optional bitsery serial adapter" OFF)
 option(USE_MAGIC_ENUM "Build w/ magic_enum static reflection support for enum serialization" OFF)
 option(WERROR "Treat all warnings as errors" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CTest)
+endif()
 
 # ==== Compiler/Machine Info ====
 
@@ -326,6 +330,10 @@ install(
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ExtenSerConfigVersion.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
 
-if (BUILD_TESTING)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
     add_subdirectory(tests)
+endif()
+
+if (BUILD_BITSERY)
+    add_subdirectory(extras/bitsery_adapter)
 endif ()

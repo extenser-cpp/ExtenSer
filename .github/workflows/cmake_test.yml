@@ -23,13 +23,13 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=gcc-${{ matrix.gcc_version }} -DCMAKE_CXX_COMPILER=g++-${{ matrix.gcc_version }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=gcc-${{ matrix.gcc_version }} -DCMAKE_CXX_COMPILER=g++-${{ matrix.gcc_version }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON -DBUILD_BITSERY=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
 
     - name: Test
-      working-directory: ${{github.workspace}}/build/tests
+      working-directory: ${{github.workspace}}/build
       run: ctest -C ${{ matrix.build_type }} --output-on-failure
   
   build_llvm:
@@ -48,13 +48,13 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=clang-${{ matrix.llvm_version }} -DCMAKE_CXX_COMPILER=clang++-${{ matrix.llvm_version }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=clang-${{ matrix.llvm_version }} -DCMAKE_CXX_COMPILER=clang++-${{ matrix.llvm_version }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON -DBUILD_BITSERY=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
 
     - name: Test
-      working-directory: ${{github.workspace}}/build/tests
+      working-directory: ${{github.workspace}}/build
       run: ctest -C ${{ matrix.build_type }} --output-on-failure
     
   build_other:
@@ -68,12 +68,12 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTING=ON -DBUILD_BITSERY=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }}
 
     - name: Test
-      working-directory: ${{github.workspace}}/build/tests
+      working-directory: ${{github.workspace}}/build
       run: ctest -C ${{ matrix.build_type }} --output-on-failure
 

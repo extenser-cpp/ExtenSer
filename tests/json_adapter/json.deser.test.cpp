@@ -7,7 +7,11 @@
 // See accompanying file LICENSE or a copy at
 // https://opensource.org/license/bsd-3-clause/
 
-#include "../json.test.hpp"
+#include "extenser/json_adapter/extenser_json.hpp"
+#include "test_helpers.hpp"
+
+#define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
+#include <doctest/doctest.h>
 
 #include <algorithm>
 #include <array>
