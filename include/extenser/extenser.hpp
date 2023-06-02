@@ -386,6 +386,12 @@ public:
         }
     }
 
+    EXTENSER_INLINE void reset()
+    {
+        static_assert(!Deserialize, "Cannot call reset() on a deserializer");
+        (static_cast<serializer_t*>(this))->reset();
+    }
+
     EXTENSER_INLINE void as_bool(const std::string_view key, bool& val)
     {
         (static_cast<serializer_t*>(this))->as_bool(key, val);

@@ -59,6 +59,8 @@ namespace detail_json
     public:
         serializer() noexcept = default;
 
+        void reset() noexcept { m_json = nlohmann::json{}; }
+
         [[nodiscard]] auto object() const& noexcept(::EXTENSER_ASSERT_NOTHROW)
             -> const nlohmann::json&
         {

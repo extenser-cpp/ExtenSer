@@ -115,6 +115,12 @@ namespace detail_bitsery
     public:
         serializer() : m_ser(m_bytes) { m_bytes.reserve(64UL); }
 
+        void reset()
+        {
+            m_bytes.clear();
+            m_ser = bitsery::Serializer<output_adapter>{ m_bytes };
+        }
+
         [[nodiscard]] auto object() & -> const std::vector<std::uint8_t>&
         {
             flush();
