@@ -560,7 +560,7 @@ namespace detail_json
         }
 
         template<typename T>
-        void as_array(const std::string_view key, T& val) const
+        void as_array([[maybe_unused]] const std::string_view key, T& val) const
         {
             using traits_t = containers::traits<T>;
             using adapter_t = containers::adapter<T>;
