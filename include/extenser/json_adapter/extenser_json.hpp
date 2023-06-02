@@ -556,11 +556,16 @@ namespace detail_json
                             { return sub_val.get<typename traits_t::value_type>(); });
                     }
                 }
+                else
+                {
+                    std::ignore = key;
+                    std::ignore = val;
+                }
             }
         }
 
         template<typename T>
-        void as_array([[maybe_unused]] const std::string_view key, T& val) const
+        void as_array(const std::string_view key, T& val) const
         {
             using traits_t = containers::traits<T>;
             using adapter_t = containers::adapter<T>;
@@ -590,6 +595,11 @@ namespace detail_json
                             val, j_obj, parse_arg<typename traits_t::value_type>);
                     }
                 }
+            }
+            else
+            {
+                std::ignore = key;
+                std::ignore = val;
             }
         }
 
