@@ -20,8 +20,6 @@
 #include <bitsery/ext/std_tuple.h>
 #include <bitsery/ext/std_variant.h>
 #include <bitsery/traits/array.h>
-#include <bitsery/traits/core/traits.h>
-#include <bitsery/traits/array.h>
 #include <bitsery/traits/deque.h>
 #include <bitsery/traits/forward_list.h>
 #include <bitsery/traits/list.h>
@@ -90,8 +88,6 @@ struct TextTraits<std::basic_string_view<CharT, Traits>>
 
 namespace extenser
 {
-// TODO: Define ContainerTraits for extenser::span
-
 namespace detail_bitsery
 {
     class serializer;
@@ -106,12 +102,6 @@ namespace detail_bitsery
 
         struct config
         {
-#if defined(EXTENSER_BITSERY_EXACT_SZ)
-            static constexpr bool use_exact_size = true;
-#else
-            static constexpr bool use_exact_size = false;
-#endif
-
             static const std::size_t max_string_size = 256;
             static const std::size_t max_container_size = 256;
         };
@@ -238,22 +228,14 @@ namespace detail_bitsery
                             [this](S& ser, typename traits_t::value_type& value)
                             { serial_adapter::parse_obj(ser, *this, value); });
                     }
-
-                    //m_ser.container(val, config::max_container_size,
-                    //    [this](typename traits_t::value_type& value)
-                    //    {
-                    //        serial_adapter::parse_obj(m_ser, *this, value);
-                    //    });
                 }
             }
             else
             {
                 m_ser.ext(val, bitsery::ext::StdSet{ config::max_container_size },
-                    [this](S& ser, typename traits_t::value_type& key)
-                    { serial_adapter::parse_obj(ser, *this, key); });
+                    [this](S& ser, typename traits_t::value_type& value)
+                    { serial_adapter::parse_obj(ser, *this, value); });
             }
-
-            // TODO: Revise to use container traits and pass tests
         }
 
         template<typename T>
@@ -280,8 +262,12 @@ namespace detail_bitsery
         template<typename T1, typename T2>
         void as_tuple([[maybe_unused]] const std::string_view key, const std::pair<T1, T2>& val)
         {
-            serial_adapter::parse_obj(m_ser, *this, val.first);
-            serial_adapter::parse_obj(m_ser, *this, val.second);
+            using S = bitsery::Serializer<output_adapter>;
+
+            m_ser.object(val.first,
+                [this](S& ser, T1& value) { serial_adapter::parse_obj(ser, *this, value); });
+            m_ser.object(val.second,
+                [this](S& ser, T2& value) { serial_adapter::parse_obj(ser, *this, value); });
         }
 
         template<typename... Args>
@@ -321,7 +307,10 @@ namespace detail_bitsery
         template<typename T>
         void as_object([[maybe_unused]] const std::string_view key, const T& val)
         {
-            serial_adapter::parse_obj(m_ser, *this, val);
+            using S = bitsery::Serializer<output_adapter>;
+
+            m_ser.object(
+                val, [this](S& ser, T& value) { serial_adapter::parse_obj(ser, *this, value); });
         }
 
         void as_null([[maybe_unused]] const std::string_view key) noexcept
@@ -449,39 +438,15 @@ namespace detail_bitsery
                 else
                 {
                     m_ser.ext(val, bitsery::ext::StdSet{ config::max_container_size },
-                        [this](S& ser, typename traits_t::value_type& key)
-                        { serial_adapter::parse_obj(ser, *this, key); });
+                        [this](S& ser, typename traits_t::value_type& value)
+                        { serial_adapter::parse_obj(ser, *this, value); });
                 }
             }
-
-            // if constexpr (std::is_arithmetic_v<typename T::value_type>)
-            // {
-            //     m_ser.container<sizeof(typename T::value_type)>(val, config::max_container_size);
-            // }
-            // else
-            // {
-            //     m_ser.container(val, config::max_container_size);
-            // }
         }
-
-        // template<typename T, std::size_t N>
-        // void as_array([[maybe_unused]] const std::string_view key, span<T>& val)
-        // {
-        //     if constexpr (std::is_arithmetic_v<T>)
-        //     {
-        //         m_ser.container<sizeof(T)>(val);
-        //     }
-        //     else
-        //     {
-        //         m_ser.container(val);
-        //     }
-        // }
 
         template<typename T>
         void as_map([[maybe_unused]] const std::string_view key, T& val)
         {
-            std::ignore = val;
-
             using S = bitsery::Deserializer<input_adapter>;
             using key_t = typename T::key_type;
             using val_t = typename T::mapped_type;
@@ -564,14 +529,7 @@ namespace detail_bitsery
     {
         if constexpr (std::is_arithmetic_v<T>)
         {
-            if constexpr (config::use_exact_size)
-            {
-                ser.template value<sizeof(T)>(val);
-            }
-            else
-            {
-                ser.value8b(val);
-            }
+            ser.template value<sizeof(T)>(val);
         }
         else if constexpr (detail::is_stringlike_v<T>)
         {

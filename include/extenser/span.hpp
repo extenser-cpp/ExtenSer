@@ -257,7 +257,7 @@ public:
     constexpr auto subspan(size_type offset) const -> span
     {
         EXTENSER_PRECONDITION(offset <= m_sz);
-        return { begin() + m_sz, end() };
+        return { begin() + offset, end() };
     }
 
     constexpr auto subspan(size_type offset, size_type count) const -> span

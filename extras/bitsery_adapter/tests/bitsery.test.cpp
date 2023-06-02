@@ -9,7 +9,7 @@
 
 #define EXTENSER_ASSERT_THROW
 
-#define EXTENSER_BITSERY_EXACT_SZ
+//#define EXTENSER_BITSERY_EXACT_SZ
 
 #include "test_helpers.hpp"
 #include "extenser_bitsery.hpp"
@@ -447,7 +447,8 @@ TEST_CASE("a u8string_view can be serialized to bitsery")
 
 TEST_CASE_TEMPLATE("an array-like container can be serialized to bitsery", T_Arr,
     std::array<int, 5>, std::string_view, std::vector<int>, std::deque<std::vector<double>>,
-    std::list<Person>, std::forward_list<std::string>, std::set<int>)
+    std::list<Person>, std::forward_list<std::string>, std::set<int>,
+    std::unordered_multiset<std::string>, span<Person>)
 {
     serializer ser{};
 
@@ -459,7 +460,18 @@ TEST_CASE_TEMPLATE("an array-like container can be serialized to bitsery", T_Arr
 
     T_Arr test_val{};
     dser.as_array("", test_val);
-    CHECK(std::equal(std::begin(test_val), std::end(test_val), std::begin(expected_val)));
+
+    if constexpr (containers::traits<T_Arr>::is_sequential)
+    {
+        CHECK(std::equal(std::begin(test_val), std::end(test_val), std::begin(expected_val)));
+    }
+    else
+    {
+        for (const auto& key : expected_val)
+        {
+            CHECK_EQ(test_val.count(key), expected_val.count(key));
+        }
+    }
 }
 
 TEST_CASE("a map-like container can be serialized to bitsery")
@@ -481,7 +493,26 @@ TEST_CASE("a map-like container can be serialized to bitsery")
         CHECK_EQ(test_val, expected_val);
     }
 
-    SUBCASE("std::unordered_map") {}
+    SUBCASE("std::unordered_map")
+    {
+        const std::unordered_map<std::string, Person> expected_val{
+            { "Henrietta",
+                Person{ 16, "Henrietta Payne", {}, Pet{ "Ron", Pet::Species::Fish }, {} } },
+            { "Jerome", Person{ 12, "Jerome Banks", {}, {}, {} } },
+            { "@Rachel", Person{ 22, "Rachel Franks", {}, {}, {} } },
+            { "Ricardo",
+                Person{ 19, "Ricardo Montoya", {}, Pet{ "Sinbad", Pet::Species::Cat }, {} } }
+        };
+
+        REQUIRE_NOTHROW(ser.as_map("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        std::unordered_map<std::string, Person> test_val{};
+        dser.as_map("", test_val);
+
+        CHECK_EQ(test_val, expected_val);
+    }
 }
 
 TEST_CASE("a multimap-like container can be serialized to bitsery")
@@ -506,26 +537,223 @@ TEST_CASE("a multimap-like container can be serialized to bitsery")
         }
     }
 
-    SUBCASE("std::unordered_multimap") {}
+    SUBCASE("std::unordered_multimap")
+    {
+        const std::unordered_multimap<std::string, std::string> expected_val{ { "Stan Lee",
+                                                                                  "Marvel" },
+            { "Jack Kirby", "Marvel" }, { "Jack Kirby", "DC" }, { "Mike Mignola", "Dark Horse" },
+            { "Mike Mignola", "DC" }, { "Mike Mignola", "Marvel" }, { "Grant Morrison", "DC" } };
+
+        REQUIRE_NOTHROW(ser.as_multimap("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        std::unordered_multimap<std::string, std::string> test_val{};
+        dser.as_multimap("", test_val);
+
+        for (const auto& [k, v] : expected_val)
+        {
+            CHECK_EQ(test_val.count(k), expected_val.count(k));
+        }
+    }
 }
 
-TEST_CASE("a tuple can be serialized to bitsery") {}
+TEST_CASE("a tuple can be serialized to bitsery")
+{
+    serializer ser{};
 
-TEST_CASE("an optional can be serialized to bitsery") {}
+    SUBCASE("tuple<int, string, double>")
+    {
+        const std::tuple<int, std::string, double> expected_val{ 14, "Yellow Bus", 78.48 };
 
-TEST_CASE("a variant can be serialized to bitsery") {}
+        REQUIRE_NOTHROW(ser.as_tuple("", expected_val));
 
-TEST_CASE("a user-defined class can be serialized to bitsery") {}
+        deserializer dser{ ser.object() };
+
+        std::tuple<int, std::string, double> test_val{};
+        dser.as_tuple("", test_val);
+
+        CHECK_EQ(std::get<0>(test_val), std::get<0>(expected_val));
+        CHECK_EQ(std::get<1>(test_val), std::get<1>(expected_val));
+        CHECK_EQ(std::get<2>(test_val), std::get<2>(expected_val));
+    }
+
+    SUBCASE("std::pair")
+    {
+        const std::pair expected_val{ Fruit::Orange, Pet{ "Valerie", Pet::Species::Bird } };
+
+        REQUIRE_NOTHROW(ser.as_tuple("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        std::pair<Fruit, Pet> test_val{};
+        dser.as_tuple("", test_val);
+
+        CHECK_EQ(std::get<0>(test_val), std::get<0>(expected_val));
+        CHECK_EQ(std::get<1>(test_val), std::get<1>(expected_val));
+    }
+
+    SUBCASE("empty tuple")
+    {
+        const std::tuple<> expected_val{};
+
+        REQUIRE_NOTHROW(ser.as_tuple("", expected_val));
+
+        std::optional<deserializer> dser{};
+        CHECK_THROWS(dser.emplace(ser.object()));
+    }
+}
+
+TEST_CASE("an optional can be serialized to bitsery")
+{
+    serializer ser{};
+
+    SUBCASE("optional with a value")
+    {
+        const std::optional<int> expected_val{ 22 };
+
+        REQUIRE_NOTHROW(ser.as_optional("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        std::optional<int> test_val{};
+        dser.as_optional("", test_val);
+
+        REQUIRE(test_val.has_value());
+        CHECK_EQ(test_val.value(), expected_val.value());
+    }
+
+    SUBCASE("optional without a value")
+    {
+        const std::optional<Person> expected_val{};
+
+        REQUIRE_NOTHROW(ser.as_optional("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        std::optional<Person> test_val{};
+        dser.as_optional("", test_val);
+
+        REQUIRE_FALSE(test_val.has_value());
+    }
+}
+
+TEST_CASE("a variant can be serialized to bitsery")
+{
+    using test_type = std::variant<std::monostate, int, double, std::string, Person>;
+    static constexpr double test_epsilon{ 0.0001 };
+
+    serializer ser{};
+
+    SUBCASE("std::monostate")
+    {
+        const test_type expected_val{};
+
+        REQUIRE_NOTHROW(ser.as_variant("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        test_type test_val{};
+        dser.as_variant("", test_val);
+
+        CHECK(std::holds_alternative<std::monostate>(test_val));
+    }
+
+    SUBCASE("int")
+    {
+        const test_type expected_val{ 22 };
+
+        REQUIRE_NOTHROW(ser.as_variant("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        test_type test_val{};
+        dser.as_variant("", test_val);
+
+        REQUIRE(std::holds_alternative<int>(test_val));
+        CHECK_EQ(std::get<int>(test_val), std::get<int>(expected_val));
+    }
+
+    SUBCASE("double")
+    {
+        const test_type expected_val{ -87.111 };
+
+        REQUIRE_NOTHROW(ser.as_variant("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        test_type test_val{};
+        dser.as_variant("", test_val);
+
+        REQUIRE(std::holds_alternative<double>(test_val));
+        CHECK_EQ(std::get<double>(test_val),
+            doctest::Approx(std::get<double>(expected_val)).epsilon(test_epsilon));
+    }
+
+    SUBCASE("string")
+    {
+        const test_type expected_val{ "Hello, world" };
+
+        REQUIRE_NOTHROW(ser.as_variant("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        test_type test_val{};
+        dser.as_variant("", test_val);
+
+        REQUIRE(std::holds_alternative<std::string>(test_val));
+        CHECK_EQ(std::get<std::string>(test_val), std::get<std::string>(expected_val));
+    }
+
+    SUBCASE("object")
+    {
+        const test_type expected_val{ Person{ 55, "Earl Bixly", {}, {}, {} } };
+
+        REQUIRE_NOTHROW(ser.as_variant("", expected_val));
+
+        deserializer dser{ ser.object() };
+
+        test_type test_val{};
+        dser.as_variant("", test_val);
+
+        REQUIRE(std::holds_alternative<Person>(test_val));
+        CHECK_EQ(std::get<Person>(test_val), std::get<Person>(expected_val));
+    }
+}
+
+TEST_CASE("a user-defined class can be serialized to bitsery")
+{
+    serializer ser{};
+
+    const Person expected_val_friend{ 10, "Timmy Johnson", {},
+        { Pet{ "Sparky", Pet::Species::Dog } }, { { Fruit::Banana, 2 }, { Fruit::Apple, 2 } } };
+
+    const Person expected_val{ 22, "Franky Johnson", { expected_val_friend },
+        { Pet{ "Tommy", Pet::Species::Turtle } }, { { Fruit::Apple, 1 }, { Fruit::Mango, 2 } } };
+
+    REQUIRE_NOTHROW(ser.as_object("", expected_val));
+
+    deserializer dser{ ser.object() };
+
+    Person test_val{};
+    dser.as_object("", test_val);
+
+    REQUIRE_FALSE(test_val.friends.empty());
+    CHECK_EQ(test_val, expected_val);
+    CHECK_EQ(test_val.friends.front(), expected_val.friends.front());
+}
 
 TEST_CASE("null types can be serialized to bitsery")
 {
     serializer ser{};
+    std::optional<deserializer> dser{};
 
     REQUIRE_NOTHROW(ser.as_null(""));
+    REQUIRE_THROWS(dser.emplace(ser.object()));
+
     REQUIRE_NOTHROW(ser.as_int("", 2));
+    REQUIRE_NOTHROW(dser.emplace(ser.object()));
 
-    deserializer dser{ ser.object() };
-
-    REQUIRE_NOTHROW(dser.as_null(""));
+    REQUIRE_NOTHROW(dser->as_null(""));
 }
 } //namespace extenser::tests
