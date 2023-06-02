@@ -7,6 +7,18 @@
 # See accompanying file LICENSE or a copy at
 # https://opensource.org/license/bsd-3-clause/
 
+cmake_minimum_required(VERSION 3.12)
+
+project(
+        "ExtenSer Bitsery Adapter"
+        VERSION 0.1.0
+        DESCRIPTION "Bitsery adapter for the ExtenSer serialization library"
+        LANGUAGES CXX)
+
+if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CTest)
+endif()
+
 FetchContent_Declare(bitsery
         GIT_REPOSITORY https://github.com/fraillt/bitsery.git
         GIT_TAG d1a47e06e2104b195a19c73b61f1d5c1dceaa228

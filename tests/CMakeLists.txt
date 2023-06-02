@@ -9,7 +9,6 @@
 
 enable_testing()
 
-include(CTest)
 include(doctest)
 
 FetchContent_Declare(doctest
