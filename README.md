@@ -71,7 +71,10 @@ int main()
     
     std::map<std::string, int> input_map = { {"John", 22}, {"Jane", 33} };
     std::map<std::string, int> output_map{};
-    
+
+    // manually clear state of the serializer
+    serializer.reset();
+
     // Serialize multiple objects (does not overwrite)
     serializer.as_optional("opt", input_opt);
     serializer.as_map("map", input_map);
