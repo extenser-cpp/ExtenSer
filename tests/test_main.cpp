@@ -286,19 +286,22 @@ TEST_CASE("Simple JSON serialize/deserialize")
 
 TEST_CASE("README Example")
 {
-    extenser::serializer<json_adapter> serializer{};
-    extenser::deserializer<json_adapter> deserializer{ serializer.object() };
+    extenser::serializer<json_adapter> serializer1{};
 
     std::string input_str = "Hello, world!";
     std::string output_str{};
 
     // Serialize one object (overwrites existing serialized data)
-    serializer.serialize_object(input_str);
+    serializer1.serialize_object(input_str);
+
+    extenser::deserializer<json_adapter> deserializer1{ serializer1.object() };
 
     // Deserialize one object
-    deserializer.deserialize_object(output_str);
+    deserializer1.deserialize_object(output_str);
 
     REQUIRE_EQ(output_str, input_str);
+
+    extenser::serializer<json_adapter> serializer2{};
 
     std::optional<int> input_opt = 22;
     std::optional<int> output_opt{};
@@ -306,15 +309,15 @@ TEST_CASE("README Example")
     std::map<std::string, int> input_map = { { "John", 22 }, { "Jane", 33 } };
     std::map<std::string, int> output_map{};
 
-    serializer.reset();
-
     // Serialize multiple objects (does not overwrite)
-    serializer.as_optional("opt", input_opt);
-    serializer.as_map("map", input_map);
+    serializer2.as_optional("opt", input_opt);
+    serializer2.as_map("map", input_map);
+
+    extenser::deserializer<json_adapter> deserializer2{ serializer2.object() };
 
     // Deserialize multiple objects
-    deserializer.as_optional("opt", output_opt);
-    deserializer.as_map("map", output_map);
+    deserializer2.as_optional("opt", output_opt);
+    deserializer2.as_map("map", output_map);
 
     REQUIRE(output_opt.has_value());
     REQUIRE_EQ(output_opt.value(), input_opt.value());
