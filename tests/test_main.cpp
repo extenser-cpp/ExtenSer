@@ -11,9 +11,11 @@
 
 #include "extenser/json_adapter/extenser_json.hpp"
 #include "extenser/containers/array.hpp"
+#include "extenser/containers/map.hpp"
 #include "extenser/containers/queue.hpp"
 #include "extenser/containers/span.hpp"
 #include "extenser/containers/stack.hpp"
+#include "extenser/containers/string.hpp"
 #include "extenser/containers/vector.hpp"
 
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
@@ -280,5 +282,46 @@ TEST_CASE("Simple JSON serialize/deserialize")
 
     REQUIRE_EQ(out_person.age, 42);
     REQUIRE_EQ(out_person.name, "Jake");
+}
+
+TEST_CASE("README Example")
+{
+    extenser::serializer<json_adapter> serializer1{};
+
+    std::string input_str = "Hello, world!";
+    std::string output_str{};
+
+    // Serialize one object (overwrites existing serialized data)
+    serializer1.serialize_object(input_str);
+
+    extenser::deserializer<json_adapter> deserializer1{ serializer1.object() };
+
+    // Deserialize one object
+    deserializer1.deserialize_object(output_str);
+
+    REQUIRE_EQ(output_str, input_str);
+
+    extenser::serializer<json_adapter> serializer2{};
+
+    std::optional<int> input_opt = 22;
+    std::optional<int> output_opt{};
+
+    std::map<std::string, int> input_map = { { "John", 22 }, { "Jane", 33 } };
+    std::map<std::string, int> output_map{};
+
+    // Serialize multiple objects (does not overwrite)
+    serializer2.as_optional("opt", input_opt);
+    serializer2.as_map("map", input_map);
+
+    extenser::deserializer<json_adapter> deserializer2{ serializer2.object() };
+
+    // Deserialize multiple objects
+    deserializer2.as_optional("opt", output_opt);
+    deserializer2.as_map("map", output_map);
+
+    REQUIRE(output_opt.has_value());
+    REQUIRE_EQ(output_opt.value(), input_opt.value());
+
+    REQUIRE_EQ(input_map, output_map);
 }
 } //namespace extenser::tests

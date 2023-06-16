@@ -8,8 +8,8 @@ on:
       - '.gitignore'
       - '.pre-commit-config.yaml'
       - 'LICENSE'
-      - '*.md'
-      - '*.MD'
+      - '**.md'
+      - '**.MD'
   pull_request:
     branches: [ "main" ]
     paths-ignore:
@@ -17,8 +17,8 @@ on:
       - '.gitignore'
       - '.pre-commit-config.yaml'
       - 'LICENSE'
-      - '*.md'
-      - '*.MD'
+      - '**.md'
+      - '**.MD'
 
 jobs:
   build_gcc:
