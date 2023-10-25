@@ -55,10 +55,13 @@ namespace containers
     };
 } //namespace containers
 
-template<typename Adapter, bool Deserialize, typename T, typename Allocator>
-void serialize(serializer_base<Adapter, Deserialize>& ser, std::vector<T, Allocator>& val)
+namespace detail
 {
-    ser.as_array("", val);
-}
+    template<typename Adapter, bool Deserialize, typename T, typename Allocator>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, std::vector<T, Allocator>& val)
+    {
+        ser.as_array("", val);
+    }
+} //namespace detail
 } //namespace extenser
 #endif

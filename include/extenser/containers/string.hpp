@@ -114,11 +114,15 @@ namespace containers
     };
 } //namespace containers
 
-template<typename Adapter, bool Deserialize, typename CharT, typename Traits, typename Allocator>
-void serialize(
-    serializer_base<Adapter, Deserialize>& ser, std::basic_string<CharT, Traits, Allocator>& val)
+namespace detail
 {
-    ser.as_string("", val);
-}
+    template<typename Adapter, bool Deserialize, typename CharT, typename Traits,
+        typename Allocator>
+    void serialize(serializer_base<Adapter, Deserialize>& ser,
+        std::basic_string<CharT, Traits, Allocator>& val)
+    {
+        ser.as_string("", val);
+    }
+} //namespace detail
 } //namespace extenser
 #endif

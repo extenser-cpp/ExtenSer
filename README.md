@@ -50,45 +50,39 @@ ExtenSer is licensed under the [BSD 3-Clause License](LICENSE).
 #include <optional>
 #include <string>
 
+struct NoDefault
+{
+public:
+    NoDefault() = delete;
+    NoDefault(int num) : number(num) {}
+
+    template<typename S>
+    void serialize(extenser::generic_serializer<S>& ser)
+    {
+        ser.as_int("", number);
+    }
+
+    int number;
+};
+
 int main()
 {
-    extenser::serializer<json_adapter> serializer1{};
+    extenser::easy_serializer<json_adapter> serializer{};
 
-    std::string input_str = "Hello, world!";
-    std::string output_str{};
+    // Serialize default constructible type
+    const std::string input_str = "Hello, world!";
+    serializer.serialize_object(input_str);
 
-    // Serialize one object (overwrites existing serialized data)
-    serializer1.serialize_object(input_str);
-
-    extenser::deserializer<json_adapter> deserializer1{ serializer1.object() };
-
-    // Deserialize one object
-    deserializer1.deserialize_object(output_str);
-
+    const auto output_str = serializer.deserialize_object<std::string>();
     assert(output_str == input_str);
 
-    extenser::serializer<json_adapter> serializer2{};
-
-    std::optional<int> input_opt = 22;
-    std::optional<int> output_opt{};
+    // Serialize non-default constructible type
+    NotDefault input_nd(2);
+    serializer.serialize_object(input_nd);
     
-    std::map<std::string, int> input_map = { {"John", 22}, {"Jane", 33} };
-    std::map<std::string, int> output_map{};
-
-    // Serialize multiple objects (does not overwrite)
-    serializer2.as_optional("opt", input_opt);
-    serializer2.as_map("map", input_map);
-
-    extenser::deserializer<json_adapter> deserializer2{ serializer2.object() };
-    
-    // Deserialize multiple objects
-    deserializer2.as_optional("opt", output_opt);
-    deserializer2.as_map("map", output_map);
-    
-    assert(output_opt.has_value());
-    assert(output_opt.value() == input_opt.value());
-    
-    assert(input_map == output_map);
+    NotDefault out_nd(1);
+    serializer.deserialize_object(out_nd);
+    assert(out_nd.number == 2);
 }
 ```
 

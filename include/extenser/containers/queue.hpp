@@ -15,7 +15,7 @@
 
 #include <queue>
 
-namespace extenser
+namespace extenser::detail
 {
 template<typename Adapter, bool Deserialize, typename T, typename Container, typename Compare>
 void serialize(
@@ -29,5 +29,5 @@ void serialize(serializer_base<Adapter, Deserialize>& ser, std::queue<T, Contain
 {
     ser.as_array("", reinterpret_cast<Container&>(val));
 }
-} //namespace extenser
+} //namespace extenser::detail
 #endif

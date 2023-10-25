@@ -39,7 +39,7 @@ struct SimplePerson
     std::string name{};
 
     template<typename S>
-    void serialize(extenser::generic_serializer<S>& ser)
+    void serialize(S& ser)
     {
         ser.as_int("age", age);
         ser.as_string("name", name);
@@ -61,19 +61,11 @@ TEST_CASE("C-Array")
     int arr[200];
     std::iota(std::begin(arr), std::end(arr), 0);
 
-    serializer<json_adapter> ser{};
+    easy_serializer<json_adapter> ser{};
     ser.serialize_object(arr);
 
-    auto obj = std::move(ser).object();
-
-    REQUIRE(obj.is_array());
-    REQUIRE_EQ(obj.size(), 200);
-    REQUIRE_EQ(obj[0], 0);
-    REQUIRE_EQ(obj[199], 199);
-
     std::fill(std::begin(arr), std::end(arr), 0);
-    deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(arr);
+    ser.deserialize_object(arr);
 
     REQUIRE_EQ(arr[0], 0);
     REQUIRE_EQ(arr[199], 199);
@@ -88,24 +80,15 @@ TEST_CASE("C++ Array")
     std::array<int, 50> fix_arr;
     std::iota(fix_arr.begin(), fix_arr.end(), 0);
 
-    serializer<json_adapter> ser{};
+    easy_serializer<json_adapter> ser{};
     ser.serialize_object(fix_arr);
 
-    auto obj = std::move(ser).object();
-
-    REQUIRE(obj.is_array());
-    REQUIRE_EQ(obj.size(), 50);
-    REQUIRE_EQ(obj[0], 0);
-    REQUIRE_EQ(obj[49], 49);
-
     std::fill(fix_arr.begin(), fix_arr.end(), 0);
-    obj[49] = 52;
 
-    deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(fix_arr);
+    ser.deserialize_object(fix_arr);
 
     REQUIRE_EQ(fix_arr[0], 0);
-    REQUIRE_EQ(fix_arr[49], 52);
+    REQUIRE_EQ(fix_arr[49], 49);
 }
 
 TEST_CASE("Span")
@@ -115,26 +98,17 @@ TEST_CASE("Span")
 
     span<int> span(dyn_arr.begin(), 50);
 
-    serializer<json_adapter> ser{};
+    easy_serializer<json_adapter> ser{};
     ser.serialize_object(span);
 
-    auto obj = std::move(ser).object();
-
-    REQUIRE(obj.is_array());
-    REQUIRE_EQ(obj.size(), 50);
-    REQUIRE_EQ(obj[0], 0);
-    REQUIRE_EQ(obj[49], 49);
-
     std::fill(dyn_arr.begin(), dyn_arr.end(), 0);
-    obj[49] = 52;
 
-    deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(span);
+    ser.deserialize_object(span);
 
     REQUIRE_EQ(span[0], 0);
-    REQUIRE_EQ(span[49], 52);
+    REQUIRE_EQ(span[49], 49);
     REQUIRE_EQ(dyn_arr[0], 0);
-    REQUIRE_EQ(dyn_arr[49], 52);
+    REQUIRE_EQ(dyn_arr[49], 49);
     REQUIRE_EQ(dyn_arr[99], 0);
 }
 
@@ -146,16 +120,10 @@ TEST_CASE("P. Queue")
     queue.push(9);
     queue.push(-1);
 
-    serializer<json_adapter> ser{};
+    easy_serializer<json_adapter> ser{};
     ser.serialize_object(queue);
 
-    auto obj = std::move(ser).object();
-
-    REQUIRE(obj.is_array());
-    REQUIRE_EQ(obj.size(), 3);
-
-    deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(queue);
+    ser.deserialize_object(queue);
 
     REQUIRE_EQ(queue.top(), 9);
 }
@@ -168,22 +136,14 @@ TEST_CASE("Queue")
     queue.push(9);
     queue.push(-1);
 
-    serializer<json_adapter> ser{};
+    easy_serializer<json_adapter> ser{};
     ser.serialize_object(queue);
 
-    auto obj = std::move(ser).object();
+    ser.deserialize_object(queue);
 
-    REQUIRE(obj.is_array());
-    REQUIRE_EQ(obj.size(), 3);
-
-    obj.insert(obj.begin(), 3);
-    REQUIRE_EQ(obj.size(), 4);
-
-    deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(queue);
-
-    REQUIRE_EQ(queue.size(), 4);
-    REQUIRE_EQ(queue.front(), 3);
+    REQUIRE_EQ(queue.size(), 3);
+    REQUIRE_EQ(queue.front(), 1);
+    REQUIRE_EQ(queue.back(), -1);
 }
 
 TEST_CASE("Stack")
@@ -193,44 +153,26 @@ TEST_CASE("Stack")
     stk.push(4);
     stk.push(-1);
 
-    serializer<json_adapter> ser{};
+    easy_serializer<json_adapter> ser{};
     ser.serialize_object(stk);
 
-    auto obj = std::move(ser).object();
+    ser.deserialize_object(stk);
 
-    REQUIRE(obj.is_array());
-    REQUIRE_EQ(obj.size(), 3);
-
-    obj.push_back(3);
-    REQUIRE_EQ(obj.size(), 4);
-
-    deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(stk);
-
-    REQUIRE_EQ(stk.size(), 4);
-    REQUIRE_EQ(stk.top(), 3);
+    REQUIRE_EQ(stk.size(), 3);
+    REQUIRE_EQ(stk.top(), -1);
 }
 
 TEST_CASE("Vector")
 {
     std::vector<int> nvec{ 1, 2, 3, 4, 5 };
 
-    serializer<json_adapter> ser{};
+    easy_serializer<json_adapter> ser{};
     ser.serialize_object(nvec);
 
-    auto obj = std::move(ser).object();
+    ser.deserialize_object(nvec);
 
-    REQUIRE(obj.is_array());
-    REQUIRE_EQ(obj.size(), 5);
-
-    obj.push_back(6);
-    REQUIRE_EQ(obj.size(), 6);
-
-    deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(nvec);
-
-    REQUIRE_EQ(nvec.size(), 6);
-    REQUIRE_EQ(nvec.at(5), 6);
+    REQUIRE_EQ(nvec.size(), 5);
+    REQUIRE_EQ(nvec.at(4), 5);
 }
 
 TEST_CASE("View")
@@ -240,21 +182,12 @@ TEST_CASE("View")
 
     view<int> view(dyn_arr.begin(), 50);
 
-    serializer<json_adapter> ser{};
+    easy_serializer<json_adapter> ser{};
     ser.serialize_object(view);
 
-    auto obj = std::move(ser).object();
-
-    REQUIRE(obj.is_array());
-    REQUIRE_EQ(obj.size(), 50);
-    REQUIRE_EQ(obj[0], 0);
-    REQUIRE_EQ(obj[49], 49);
-
     std::fill(dyn_arr.begin(), dyn_arr.end(), 0);
-    obj[49] = 52;
 
-    deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(view);
+    ser.deserialize_object(view);
 
     REQUIRE_EQ(view[0], 0);
     REQUIRE_EQ(view[49], 0);
@@ -266,62 +199,68 @@ TEST_CASE("View")
 TEST_CASE("Simple JSON serialize/deserialize")
 {
     const SimplePerson in_person{ 42, "Jake" };
-    serializer<json_adapter> ser{};
+    easy_serializer<json_adapter> ser{};
     ser.serialize_object(in_person);
 
-    auto obj = std::move(ser).object();
-
-    REQUIRE(obj.contains("age"));
-    REQUIRE_EQ(obj["age"], 42);
-    REQUIRE(obj.contains("name"));
-    REQUIRE_EQ(obj["name"], "Jake");
-
     SimplePerson out_person{};
-    deserializer<json_adapter> dser{ obj };
-    dser.deserialize_object(out_person);
+
+    ser.deserialize_object(out_person);
 
     REQUIRE_EQ(out_person.age, 42);
     REQUIRE_EQ(out_person.name, "Jake");
 }
 
+struct NoDefault
+{
+public:
+    NoDefault() = delete;
+    NoDefault(int num) : number(num) {}
+
+    template<typename S>
+    void serialize(extenser::generic_serializer<S>& ser)
+    {
+        ser.as_int("", number);
+    }
+
+    int number;
+};
+
 TEST_CASE("README Example")
 {
-    extenser::serializer<json_adapter> serializer1{};
+    extenser::easy_serializer<json_adapter> serializer{};
 
-    std::string input_str = "Hello, world!";
-    std::string output_str{};
+    // Serialize default constructible type
+    const std::string input_str = "Hello, world!";
+    serializer.serialize_object(input_str);
 
-    // Serialize one object (overwrites existing serialized data)
-    serializer1.serialize_object(input_str);
-
-    extenser::deserializer<json_adapter> deserializer1{ serializer1.object() };
-
-    // Deserialize one object
-    deserializer1.deserialize_object(output_str);
-
+    const auto output_str = serializer.deserialize_object<std::string>();
+    REQUIRE(!output_str.empty());
     REQUIRE_EQ(output_str, input_str);
 
-    extenser::serializer<json_adapter> serializer2{};
+    // Serialize non-default constructible type
+    NoDefault input_nd(2);
 
-    std::optional<int> input_opt = 22;
-    std::optional<int> output_opt{};
+    serializer.serialize_object(input_nd);
 
-    std::map<std::string, int> input_map = { { "John", 22 }, { "Jane", 33 } };
-    std::map<std::string, int> output_map{};
+    NoDefault out_nd(1);
 
-    // Serialize multiple objects (does not overwrite)
-    serializer2.as_optional("opt", input_opt);
-    serializer2.as_map("map", input_map);
+    serializer.deserialize_object(out_nd);
+    REQUIRE_EQ(out_nd.number, 2);
+}
 
-    extenser::deserializer<json_adapter> deserializer2{ serializer2.object() };
+TEST_CASE("New syntax")
+{
+    easy_serializer<json_adapter> serializer{};
 
-    // Deserialize multiple objects
-    deserializer2.as_optional("opt", output_opt);
-    deserializer2.as_map("map", output_map);
+    std::string input_str = "Hello, world!";
 
-    REQUIRE(output_opt.has_value());
-    REQUIRE_EQ(output_opt.value(), input_opt.value());
+    // Serialize one object (overwrites existing serialized data)
+    serializer.serialize_object(input_str);
 
-    REQUIRE_EQ(input_map, output_map);
+    // Deserialize one object
+    auto output_str = serializer.deserialize_object<std::string>();
+
+    REQUIRE_FALSE(output_str.empty());
+    REQUIRE_EQ(output_str, input_str);
 }
 } //namespace extenser::tests
