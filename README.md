@@ -52,7 +52,6 @@ ExtenSer is licensed under the [BSD 3-Clause License](LICENSE).
 
 struct NoDefault
 {
-public:
     NoDefault() = delete;
     NoDefault(int num) : number(num) {}
 

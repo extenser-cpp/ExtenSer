@@ -212,9 +212,8 @@ TEST_CASE("Simple JSON serialize/deserialize")
 
 struct NoDefault
 {
-public:
     NoDefault() = delete;
-    NoDefault(int num) : number(num) {}
+    explicit NoDefault(int num) : number(num) {}
 
     template<typename S>
     void serialize(extenser::generic_serializer<S>& ser)
@@ -239,11 +238,9 @@ TEST_CASE("README Example")
 
     // Serialize non-default constructible type
     NoDefault input_nd(2);
-
     serializer.serialize_object(input_nd);
 
     NoDefault out_nd(1);
-
     serializer.deserialize_object(out_nd);
     REQUIRE_EQ(out_nd.number, 2);
 }
