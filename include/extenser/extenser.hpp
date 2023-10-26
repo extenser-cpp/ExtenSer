@@ -345,6 +345,9 @@ public:
     using serializer_t = std::conditional_t<Deserialize, typename Adapter::deserializer_t,
         typename Adapter::serializer_t>;
 
+    using bytes_t = typename Adapter::bytes_t;
+    using serial_t = typename Adapter::serial_t;
+
     static constexpr std::size_t max_variant_size = 10;
 
     template<typename T>
@@ -384,6 +387,26 @@ public:
         {
             serialize(*this, std::forward<T>(val));
         }
+    }
+
+    EXTENSER_INLINE static auto to_bytes(const serial_t& obj) -> bytes_t
+    {
+        return Adapter::to_bytes(obj);
+    }
+
+    EXTENSER_INLINE static auto to_bytes(serial_t&& obj) -> bytes_t
+    {
+        return Adapter::to_bytes(std::move(obj));
+    }
+
+    EXTENSER_INLINE static auto from_bytes(const bytes_t& bytes) -> serial_t
+    {
+        return Adapter::from_bytes(bytes);
+    }
+
+    EXTENSER_INLINE static auto from_bytes(bytes_t&& bytes) -> serial_t
+    {
+        return Adapter::from_bytes(std::move(bytes));
     }
 
     EXTENSER_INLINE void as_bool(const std::string_view key, bool& val)

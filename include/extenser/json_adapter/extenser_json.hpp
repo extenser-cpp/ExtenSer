@@ -52,6 +52,26 @@ namespace detail_json
         using serializer_t = serializer;
         using deserializer_t = deserializer;
         using config = void;
+
+        [[nodiscard]] static auto to_bytes(const nlohmann::json& obj) -> std::string
+        {
+            return obj.dump();
+        }
+
+        [[nodiscard]] static auto to_bytes(nlohmann::json&& obj) -> std::string
+        {
+            return std::move(obj).dump();
+        }
+
+        [[nodiscard]] static auto from_bytes(const std::string& str) -> nlohmann::json
+        {
+            return nlohmann::json::parse(str);
+        }
+
+        [[nodiscard]] static auto from_bytes(std::string&& str) -> nlohmann::json
+        {
+            return nlohmann::json::parse(std::move(str));
+        }
     };
 
     class serializer : public serializer_base<serial_adapter, false>
