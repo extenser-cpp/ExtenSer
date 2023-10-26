@@ -95,18 +95,21 @@ namespace containers
 #endif
 } //namespace containers
 
+namespace detail
+{
 #if defined(__cpp_lib_span)
-template<typename Adapter, bool Deserialize, typename T, std::size_t N>
-void serialize(serializer_base<Adapter, Deserialize>& ser, span<T, N>& val)
-{
-    ser.as_array("", val);
-}
+    template<typename Adapter, bool Deserialize, typename T, std::size_t N>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, span<T, N>& val)
+    {
+        ser.as_array("", val);
+    }
 #else
-template<typename Adapter, bool Deserialize, typename T>
-void serialize(serializer_base<Adapter, Deserialize>& ser, span<T>& val)
-{
-    ser.as_array("", val);
-}
+    template<typename Adapter, bool Deserialize, typename T>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, span<T>& val)
+    {
+        ser.as_array("", val);
+    }
 #endif
+} //namespace detail
 } //namespace extenser
 #endif

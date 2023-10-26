@@ -84,17 +84,21 @@ namespace containers
     };
 } //namespace containers
 
-template<typename Adapter, bool Deserialize, typename Key, typename Compare, typename Allocator>
-void serialize(serializer_base<Adapter, Deserialize>& ser, std::set<Key, Compare, Allocator>& val)
+namespace detail
 {
-    ser.as_array("", val);
-}
+    template<typename Adapter, bool Deserialize, typename Key, typename Compare, typename Allocator>
+    void serialize(
+        serializer_base<Adapter, Deserialize>& ser, std::set<Key, Compare, Allocator>& val)
+    {
+        ser.as_array("", val);
+    }
 
-template<typename Adapter, bool Deserialize, typename Key, typename Compare, typename Allocator>
-void serialize(
-    serializer_base<Adapter, Deserialize>& ser, std::multiset<Key, Compare, Allocator>& val)
-{
-    ser.as_array("", val);
-}
+    template<typename Adapter, bool Deserialize, typename Key, typename Compare, typename Allocator>
+    void serialize(
+        serializer_base<Adapter, Deserialize>& ser, std::multiset<Key, Compare, Allocator>& val)
+    {
+        ser.as_array("", val);
+    }
+} //namespace detail
 } //namespace extenser
 #endif

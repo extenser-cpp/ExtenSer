@@ -88,20 +88,23 @@ namespace containers
     };
 } //namespace containers
 
-template<typename Adapter, bool Deserialize, typename Key, typename T, typename Compare,
-    typename Allocator>
-void serialize(
-    serializer_base<Adapter, Deserialize>& ser, std::map<Key, T, Compare, Allocator>& val)
+namespace detail
 {
-    ser.as_map("", val);
-}
+    template<typename Adapter, bool Deserialize, typename Key, typename T, typename Compare,
+        typename Allocator>
+    void serialize(
+        serializer_base<Adapter, Deserialize>& ser, std::map<Key, T, Compare, Allocator>& val)
+    {
+        ser.as_map("", val);
+    }
 
-template<typename Adapter, bool Deserialize, typename Key, typename T, typename Compare,
-    typename Allocator>
-void serialize(
-    serializer_base<Adapter, Deserialize>& ser, std::multimap<Key, T, Compare, Allocator>& val)
-{
-    ser.as_map("", val);
-}
+    template<typename Adapter, bool Deserialize, typename Key, typename T, typename Compare,
+        typename Allocator>
+    void serialize(
+        serializer_base<Adapter, Deserialize>& ser, std::multimap<Key, T, Compare, Allocator>& val)
+    {
+        ser.as_map("", val);
+    }
+} //namespace detail
 } //namespace extenser
 #endif

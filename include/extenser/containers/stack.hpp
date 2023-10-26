@@ -15,12 +15,12 @@
 
 #include <stack>
 
-namespace extenser
+namespace extenser::detail
 {
 template<typename Adapter, bool Deserialize, typename T, typename Container>
 void serialize(serializer_base<Adapter, Deserialize>& ser, std::stack<T, Container>& val)
 {
     ser.as_array("", reinterpret_cast<Container&>(val));
 }
-} //namespace extenser
+} //namespace extenser::detail
 #endif

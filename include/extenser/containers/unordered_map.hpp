@@ -91,20 +91,23 @@ namespace containers
     };
 } //namespace containers
 
-template<typename Adapter, bool Deserialize, typename Key, typename T, typename Hash,
-    typename KeyEqual, typename Allocator>
-void serialize(serializer_base<Adapter, Deserialize>& ser,
-    std::unordered_map<Key, T, Hash, KeyEqual, Allocator>& val)
+namespace detail
 {
-    ser.as_map("", val);
-}
+    template<typename Adapter, bool Deserialize, typename Key, typename T, typename Hash,
+        typename KeyEqual, typename Allocator>
+    void serialize(serializer_base<Adapter, Deserialize>& ser,
+        std::unordered_map<Key, T, Hash, KeyEqual, Allocator>& val)
+    {
+        ser.as_map("", val);
+    }
 
-template<typename Adapter, bool Deserialize, typename Key, typename T, typename Hash,
-    typename KeyEqual, typename Allocator>
-void serialize(serializer_base<Adapter, Deserialize>& ser,
-    std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& val)
-{
-    ser.as_map("", val);
-}
+    template<typename Adapter, bool Deserialize, typename Key, typename T, typename Hash,
+        typename KeyEqual, typename Allocator>
+    void serialize(serializer_base<Adapter, Deserialize>& ser,
+        std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& val)
+    {
+        ser.as_map("", val);
+    }
+} //namespace detail
 } //namespace extenser
 #endif

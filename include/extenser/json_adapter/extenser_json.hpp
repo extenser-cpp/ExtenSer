@@ -54,7 +54,7 @@ namespace detail_json
         using config = void;
     };
 
-    class serializer : public serializer_base<serial_adapter, false>
+    class serializer : public detail::serializer_base<serial_adapter, false>
     {
     public:
         serializer() noexcept = default;
@@ -392,7 +392,7 @@ namespace detail_json
         nlohmann::json m_json{};
     };
 
-    class deserializer : public serializer_base<serial_adapter, true>
+    class deserializer : public detail::serializer_base<serial_adapter, true>
     {
     public:
         explicit deserializer(const nlohmann::json& obj) noexcept : m_json(obj) {}
