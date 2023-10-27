@@ -49,7 +49,7 @@ jobs:
   build_llvm:
     strategy:
       matrix:
-        llvm_version: [14, 15, 16]
+        llvm_version: [13, 14, 15]
         build_type: [Debug, Release]
         include:
           - llvm_version: 16
