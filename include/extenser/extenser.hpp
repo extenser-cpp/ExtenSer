@@ -389,26 +389,6 @@ public:
         }
     }
 
-    EXTENSER_INLINE static auto to_bytes(const serial_t& obj) -> bytes_t
-    {
-        return Adapter::to_bytes(obj);
-    }
-
-    EXTENSER_INLINE static auto to_bytes(serial_t&& obj) -> bytes_t
-    {
-        return Adapter::to_bytes(std::move(obj));
-    }
-
-    EXTENSER_INLINE static auto from_bytes(const bytes_t& bytes) -> serial_t
-    {
-        return Adapter::from_bytes(bytes);
-    }
-
-    EXTENSER_INLINE static auto from_bytes(bytes_t&& bytes) -> serial_t
-    {
-        return Adapter::from_bytes(std::move(bytes));
-    }
-
     EXTENSER_INLINE void as_bool(const std::string_view key, bool& val)
     {
         (static_cast<serializer_t*>(this))->as_bool(key, val);
