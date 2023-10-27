@@ -40,6 +40,12 @@
 
 namespace extenser
 {
+template<typename Adapter, bool Deserialize>
+void serialize(serializer_base<Adapter, Deserialize>& ser, nlohmann::json& obj)
+{
+    ser.as_object("", obj);
+}
+
 namespace detail_json
 {
     class serializer;
@@ -178,6 +184,11 @@ namespace detail_json
         void as_variant(const std::string_view key, const std::variant<Args...>& val)
         {
             push_variant(val, subobject(key));
+        }
+
+        void as_object(const std::string_view key, const nlohmann::json& val)
+        {
+            subobject(key) = val;
         }
 
         template<typename T>
@@ -786,6 +797,11 @@ namespace detail_json
                 default:
                     EXTENSER_ASSUME(0);
             }
+        }
+
+        void as_object(const std::string_view key, nlohmann::json& val) const
+        {
+            val = subobject(key);
         }
 
         template<typename T>
