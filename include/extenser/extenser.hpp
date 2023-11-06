@@ -15,7 +15,6 @@
 #include "span.hpp"
 
 #include <cstddef>
-#include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <string_view>
@@ -249,7 +248,6 @@ public:
     generic_serializer& operator=(const generic_serializer&) = delete;
     generic_serializer& operator=(generic_serializer&&) = delete;
 
-    template<typename T>
     EXTENSER_INLINE void as_bool(const std::string_view key, bool& val)
     {
         (static_cast<Derived*>(this))->as_bool(key, val);
@@ -348,7 +346,7 @@ public:
     using bytes_t = typename Adapter::bytes_t;
     using serial_t = typename Adapter::serial_t;
 
-    static constexpr std::size_t max_variant_size = 10;
+    static constexpr std::size_t max_variant_size = 14;
 
     template<typename T>
     void serialize_object(const T& val)
