@@ -52,10 +52,49 @@ namespace containers
             std::transform(first, last, container.begin(), convert_fn);
         }
     };
+
+    template<typename T, std::size_t N>
+    struct traits<T[N]>
+    {
+        using container_type = T[N];
+        using size_type = std::size_t;
+        using value_type = T;
+        using adapter_type = adapter<T[N]>;
+
+        static constexpr bool has_fixed_size = true;
+        static constexpr bool is_contiguous = true;
+        static constexpr bool is_mutable = !std::is_const_v<T>;
+        static constexpr bool is_sequential = true;
+    };
+
+    template<typename T, std::size_t N>
+    class adapter<T[N]> : public sequential_adapter<T[N]>
+    {
+    public:
+        static constexpr auto size([[maybe_unused]] const T (&container)[N]) -> std::size_t
+        {
+            return N;
+        }
+
+        template<typename InputIt, typename ConversionOp>
+        static void assign_from_range(
+            T (&container)[N], InputIt first, InputIt last, ConversionOp convert_fn)
+        {
+            EXTENSER_PRECONDITION(std::distance(first, last) == N);
+            std::transform(first, last, &container[0], convert_fn);
+        }
+    };
 } //namespace containers
 
 template<typename Adapter, bool Deserialize, typename T, std::size_t N>
 void serialize(serializer_base<Adapter, Deserialize>& ser, std::array<T, N>& val)
+{
+    span arr_span{ val };
+    ser.as_array("", arr_span);
+}
+
+template<typename Adapter, bool Deserialize, typename T, std::size_t N>
+void serialize(serializer_base<Adapter, Deserialize>& ser, T (&val)[N])
 {
     span arr_span{ val };
     ser.as_array("", arr_span);
