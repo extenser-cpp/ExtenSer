@@ -71,7 +71,10 @@ namespace containers
     class adapter<T[N]> : public sequential_adapter<T[N]>
     {
     public:
-        static constexpr auto size(const T (&container)[N]) -> std::size_t { return N; }
+        static constexpr auto size([[maybe_unused]] const T (&container)[N]) -> std::size_t
+        {
+            return N;
+        }
 
         template<typename InputIt, typename ConversionOp>
         static void assign_from_range(
