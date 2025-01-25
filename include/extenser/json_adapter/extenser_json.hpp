@@ -16,10 +16,10 @@
 #  if defined(__GNUC__) && !defined(__clang__)
 #    pragma GCC diagnostic push
 #    pragma GCC diagnostic ignored "-Wconversion"
-#    include <magic_enum.hpp>
+#    include <magic_enum/magic_enum.hpp>
 #    pragma GCC diagnostic pop
 #  else
-#    include <magic_enum.hpp>
+#    include <magic_enum/magic_enum.hpp>
 #  endif
 #endif
 
@@ -40,11 +40,14 @@
 
 namespace extenser
 {
-template<typename Adapter, bool Deserialize>
-void serialize(serializer_base<Adapter, Deserialize>& ser, nlohmann::json& obj)
+namespace detail
 {
-    ser.as_object("", obj);
-}
+    template<typename Adapter, bool Deserialize>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, nlohmann::json& obj)
+    {
+        ser.as_object("", obj);
+    }
+} //namespace detail
 
 namespace detail_json
 {
@@ -58,26 +61,6 @@ namespace detail_json
         using serializer_t = serializer;
         using deserializer_t = deserializer;
         using config = void;
-
-        [[nodiscard]] static auto to_bytes(const nlohmann::json& obj) -> std::string
-        {
-            return obj.dump();
-        }
-
-        [[nodiscard]] static auto to_bytes(nlohmann::json&& obj) -> std::string
-        {
-            return std::move(obj).dump();
-        }
-
-        [[nodiscard]] static auto from_bytes(const std::string& str) -> nlohmann::json
-        {
-            return nlohmann::json::parse(str);
-        }
-
-        [[nodiscard]] static auto from_bytes(std::string&& str) -> nlohmann::json
-        {
-            return nlohmann::json::parse(std::move(str));
-        }
     };
 
     class serializer : public detail::serializer_base<serial_adapter, false>
@@ -219,12 +202,10 @@ namespace detail_json
 #if defined(EXTENSER_USE_MAGIC_ENUM)
             if (!magic_enum::enum_contains<no_ref_t>(arg))
             {
-                throw serialization_error{
-                    std::string{ "Invalid enum value: " }
+                throw serialization_error{ std::string{ "Invalid enum value: " }
                         .append(std::to_string(static_cast<std::underlying_type_t<no_ref_t>>(arg)))
                         .append(" for type: ")
-                        .append(magic_enum::enum_type_name<no_ref_t>())
-                };
+                        .append(magic_enum::enum_type_name<no_ref_t>()) };
             }
 
             push_string(magic_enum::enum_name<no_ref_t>(arg), obj);
@@ -320,8 +301,7 @@ namespace detail_json
             auto& var_val = obj["v_val"];
 
             std::visit([&var_val](auto&& l_val)
-                { push_arg(std::forward<decltype(l_val)>(l_val), var_val); },
-                arg);
+                { push_arg(std::forward<decltype(l_val)>(l_val), var_val); }, arg);
         }
 
         template<typename T>
@@ -426,9 +406,7 @@ namespace detail_json
     class deserializer : public detail::serializer_base<serial_adapter, true>
     {
     public:
-        explicit deserializer(const nlohmann::json& obj) noexcept : m_p_json(&obj)
-        {
-        }
+        explicit deserializer(const nlohmann::json& obj) noexcept : m_p_json(&obj) {}
 
         void as_bool(const std::string_view key, bool& val) const
         {
@@ -510,9 +488,9 @@ namespace detail_json
                 if (!result.has_value())
                 {
                     throw deserialization_error{ std::string{ "Invalid enum value: \"" }
-                                                     .append(subobject(key).get<std::string>())
-                                                     .append("\" for type: ")
-                                                     .append(magic_enum::enum_type_name<T>()) };
+                            .append(subobject(key).get<std::string>())
+                            .append("\" for type: ")
+                            .append(magic_enum::enum_type_name<T>()) };
                 }
 
                 val = *result;
@@ -569,8 +547,7 @@ namespace detail_json
                             }
                         }
 
-                        adapter_t::assign_from_range(val, str.begin(), str.end(),
-                            [](const char c)
+                        adapter_t::assign_from_range(val, str.begin(), str.end(), [](const char c)
                             { return static_cast<typename traits_t::value_type>(c); });
                     }
                     else
@@ -958,9 +935,9 @@ namespace detail_json
                 };
 #else
                 throw deserialization_error{ std::string{ "JSON error: expected type: " }
-                                                 .append(typeid(no_ref_t).name())
-                                                 .append(", got type: ")
-                                                 .append(arg.type_name()) };
+                        .append(typeid(no_ref_t).name())
+                        .append(", got type: ")
+                        .append(arg.type_name()) };
 #endif
             }
 

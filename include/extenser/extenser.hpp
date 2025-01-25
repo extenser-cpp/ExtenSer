@@ -33,9 +33,8 @@ namespace detail
         static_assert(std::conjunction_v<std::is_invocable<F, Ts>...>,
             "applied function must be able to take given args");
 
-        std::apply([func = std::forward<F>(func)](auto&&... args)
-            { (func(std::forward<decltype(args)>(args)), ...); },
-            tuple);
+        std::apply([f = std::forward<F>(func)](auto&&... args)
+            { (f(std::forward<decltype(args)>(args)), ...); }, tuple);
     }
 } //namespace detail
 
@@ -345,7 +344,7 @@ namespace detail
         using serializer_t = std::conditional_t<Deserialize, typename Adapter::deserializer_t,
             typename Adapter::serializer_t>;
 
-        static constexpr std::size_t max_variant_size = 10;
+        static constexpr std::size_t max_variant_size = 14;
 
         template<typename T>
         void serialize_object(const T& val)
@@ -359,13 +358,13 @@ namespace detail
             // Necessary for bi-directional serialization
             if constexpr (detail::has_serialize_mem_v<no_ref_t>)
             {
-                const_cast<T&>(val).serialize(
-                    *this); // NOLINT(cppcoreguidelines-pro-type-const-cast)
+                // NOLINT(cppcoreguidelines-pro-type-const-cast)
+                const_cast<T&>(val).serialize(*this);
             }
             else
             {
-                serialize(
-                    *this, const_cast<T&>(val)); // NOLINT(cppcoreguidelines-pro-type-const-cast)
+                // NOLINT(cppcoreguidelines-pro-type-const-cast)
+                serialize(*this, const_cast<T&>(val));
             }
         }
 

@@ -288,7 +288,7 @@ include(system_link)
 
 FetchContent_Declare(nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG bc889afb4c5bf1c0d8ee29ef35eaaf4c8bef8a5d
+    GIT_TAG 9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
@@ -299,7 +299,7 @@ target_link_libraries_system(extenser-json INTERFACE nlohmann_json::nlohmann_jso
 if (USE_MAGIC_ENUM OR BUILD_TESTING)
   FetchContent_Declare(magic_enum
       GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
-      GIT_TAG e1a68e9dd3d2e9180b04c8aeacd4975db745e6b8
+      GIT_TAG e046b69a3736d314fad813e159b1c192eaef92cd
   )
   FetchContent_MakeAvailable(magic_enum)
 

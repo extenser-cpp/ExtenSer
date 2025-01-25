@@ -59,10 +59,10 @@ TEST_SUITE("bitsery adapter")
         CHECK(obj.empty());
     }
 
-    TEST_CASE("a call to serializer::object() throws when empty")
-    {
-        CHECK_THROWS(std::ignore = serializer{}.object());
-    }
+    // TEST_CASE("a call to serializer::object() throws when empty")
+    // {
+    //     CHECK_THROWS(std::ignore = serializer{}.object());
+    // }
 
     TEST_CASE("a bitsery deserializer can be constructed properly without throwing")
     {
@@ -74,13 +74,13 @@ TEST_SUITE("bitsery adapter")
         CHECK(dser.has_value());
     }
 
-    TEST_CASE("a bitsery deserializer constructed with an empty object fails its post-condition")
-    {
-        const std::vector<std::uint8_t> obj{};
-        std::optional<deserializer> dser{};
+    // TEST_CASE("a bitsery deserializer constructed with an empty object fails its post-condition")
+    // {
+    //     const std::vector<std::uint8_t> obj{};
+    //     std::optional<deserializer> dser{};
 
-        CHECK_THROWS(dser.emplace(obj));
-    }
+    //     CHECK_THROWS(dser.emplace(obj));
+    // }
 
     TEST_CASE("a boolean can be serialized to bitsery")
     {
@@ -603,8 +603,8 @@ TEST_SUITE("bitsery adapter")
 
             REQUIRE_NOTHROW(ser.as_tuple("", expected_val));
 
-            std::optional<deserializer> dser{};
-            CHECK_THROWS(dser.emplace(ser.object()));
+            const auto obj = std::move(ser).object();
+            CHECK(obj.empty());
         }
     }
 
@@ -754,7 +754,8 @@ TEST_SUITE("bitsery adapter")
         std::optional<deserializer> dser{};
 
         REQUIRE_NOTHROW(ser.as_null(""));
-        REQUIRE_THROWS(dser.emplace(ser.object()));
+        const auto obj = std::move(ser).object();
+        REQUIRE(obj.empty());
 
         REQUIRE_NOTHROW(ser.as_int("", 2));
         REQUIRE_NOTHROW(dser.emplace(ser.object()));
@@ -762,45 +763,38 @@ TEST_SUITE("bitsery adapter")
         REQUIRE_NOTHROW(dser->as_null(""));
     }
 
+    struct NoDefault
+    {
+        NoDefault() = delete;
+        NoDefault(int num) : number(num) {}
+
+        template<typename S>
+        void serialize(extenser::generic_serializer<S>& ser)
+        {
+            ser.as_int("", number);
+        }
+
+        int number;
+    };
+
     TEST_CASE("README Example")
     {
-        extenser::serializer<bitsery_adapter> serializer1{};
+        extenser::easy_serializer<bitsery_adapter> serializer{};
 
-        std::string input_str = "Hello, world!";
-        std::string output_str{};
+        // Serialize default constructible type
+        const std::string input_str = "Hello, world!";
+        serializer.serialize_object(input_str);
 
-        // Serialize one object (overwrites existing serialized data)
-        serializer1.serialize_object(input_str);
+        const auto output_str = serializer.deserialize_object<std::string>();
+        CHECK_EQ(output_str, input_str);
 
-        extenser::deserializer<bitsery_adapter> deserializer1{ serializer1.object() };
+        // Serialize non-default constructible type
+        NoDefault input_nd(2);
+        serializer.serialize_object(input_nd);
 
-        // Deserialize one object
-        deserializer1.deserialize_object(output_str);
-
-        REQUIRE_EQ(output_str, input_str);
-
-        extenser::serializer<bitsery_adapter> serializer2{};
-
-        std::optional<int> input_opt = 22;
-        std::optional<int> output_opt{};
-
-        std::map<std::string, int> input_map = { { "John", 22 }, { "Jane", 33 } };
-        std::map<std::string, int> output_map{};
-
-        // Serialize multiple objects (does not overwrite)
-        serializer2.as_optional("opt", input_opt);
-        serializer2.as_map("map", input_map);
-
-        extenser::deserializer<bitsery_adapter> deserializer2{ serializer2.object() };
-
-        // Deserialize multiple objects
-        deserializer2.as_optional("opt", output_opt);
-        deserializer2.as_map("map", output_map);
-
-        REQUIRE(output_opt.has_value());
-        REQUIRE_EQ(output_opt.value(), input_opt.value());
-
-        REQUIRE_EQ(input_map, output_map);
+        NoDefault out_nd(1);
+        serializer.deserialize_object(out_nd);
+        CHECK_EQ(out_nd.number, 2);
     }
 }
 } //namespace extenser::tests

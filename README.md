@@ -76,10 +76,10 @@ int main()
     assert(output_str == input_str);
 
     // Serialize non-default constructible type
-    NotDefault input_nd(2);
+    NoDefault input_nd(2);
     serializer.serialize_object(input_nd);
     
-    NotDefault out_nd(1);
+    NoDefault out_nd(1);
     serializer.deserialize_object(out_nd);
     assert(out_nd.number == 2);
 }
