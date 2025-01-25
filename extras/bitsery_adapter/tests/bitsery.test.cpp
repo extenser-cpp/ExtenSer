@@ -779,21 +779,21 @@ TEST_SUITE("bitsery adapter")
 
     TEST_CASE("README Example")
     {
-        extenser::easy_serializer<bitsery_adapter> serializer{};
+        extenser::easy_serializer<bitsery_adapter> ser{};
 
         // Serialize default constructible type
         const std::string input_str = "Hello, world!";
-        serializer.serialize_object(input_str);
+        ser.serialize_object(input_str);
 
-        const auto output_str = serializer.deserialize_object<std::string>();
+        const auto output_str = ser.deserialize_object<std::string>();
         CHECK_EQ(output_str, input_str);
 
         // Serialize non-default constructible type
         NoDefault input_nd(2);
-        serializer.serialize_object(input_nd);
+        ser.serialize_object(input_nd);
 
         NoDefault out_nd(1);
-        serializer.deserialize_object(out_nd);
+        ser.deserialize_object(out_nd);
         CHECK_EQ(out_nd.number, 2);
     }
 }
