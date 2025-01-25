@@ -24,6 +24,7 @@
 #include "extenser/containers/unordered_set.hpp"
 #include "extenser/containers/vector.hpp"
 
+#include <cstdint>
 #include <optional>
 
 namespace extenser::tests

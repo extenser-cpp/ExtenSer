@@ -40,6 +40,12 @@
 
 namespace extenser
 {
+template<typename Adapter, bool Deserialize>
+void serialize(serializer_base<Adapter, Deserialize>& ser, nlohmann::json& obj)
+{
+    ser.as_object("", obj);
+}
+
 namespace detail_json
 {
     class serializer;
@@ -52,6 +58,26 @@ namespace detail_json
         using serializer_t = serializer;
         using deserializer_t = deserializer;
         using config = void;
+
+        [[nodiscard]] static auto to_bytes(const nlohmann::json& obj) -> std::string
+        {
+            return obj.dump();
+        }
+
+        [[nodiscard]] static auto to_bytes(nlohmann::json&& obj) -> std::string
+        {
+            return std::move(obj).dump();
+        }
+
+        [[nodiscard]] static auto from_bytes(const std::string& str) -> nlohmann::json
+        {
+            return nlohmann::json::parse(str);
+        }
+
+        [[nodiscard]] static auto from_bytes(std::string&& str) -> nlohmann::json
+        {
+            return nlohmann::json::parse(std::move(str));
+        }
     };
 
     class serializer : public detail::serializer_base<serial_adapter, false>
@@ -158,6 +184,11 @@ namespace detail_json
         void as_variant(const std::string_view key, const std::variant<Args...>& val)
         {
             push_variant(val, subobject(key));
+        }
+
+        void as_object(const std::string_view key, const nlohmann::json& val)
+        {
+            subobject(key) = val;
         }
 
         template<typename T>
@@ -395,10 +426,11 @@ namespace detail_json
     class deserializer : public detail::serializer_base<serial_adapter, true>
     {
     public:
-        explicit deserializer(const nlohmann::json& obj) noexcept : m_json(obj) {}
+        explicit deserializer(const nlohmann::json& obj) noexcept : m_p_json(&obj)
+        {
+        }
 
-        template<typename T>
-        void as_bool(const std::string_view key, T& val) const
+        void as_bool(const std::string_view key, bool& val) const
         {
             try
             {
@@ -763,9 +795,46 @@ namespace detail_json
                     }
                     [[fallthrough]];
 
+                case 10:
+                    if constexpr (arg_sz > 10)
+                    {
+                        val = parse_arg<decltype(std::get<10>(val))>(obj.at("v_val"));
+                        return;
+                    }
+                    [[fallthrough]];
+
+                case 11:
+                    if constexpr (arg_sz > 11)
+                    {
+                        val = parse_arg<decltype(std::get<11>(val))>(obj.at("v_val"));
+                        return;
+                    }
+                    [[fallthrough]];
+
+                case 12:
+                    if constexpr (arg_sz > 12)
+                    {
+                        val = parse_arg<decltype(std::get<12>(val))>(obj.at("v_val"));
+                        return;
+                    }
+                    [[fallthrough]];
+
+                case 13:
+                    if constexpr (arg_sz > 13)
+                    {
+                        val = parse_arg<decltype(std::get<13>(val))>(obj.at("v_val"));
+                        return;
+                    }
+                    [[fallthrough]];
+
                 default:
                     EXTENSER_ASSUME(0);
             }
+        }
+
+        void as_object(const std::string_view key, nlohmann::json& val) const
+        {
+            val = subobject(key);
         }
 
         template<typename T>
@@ -782,11 +851,11 @@ namespace detail_json
     private:
         [[nodiscard]] auto subobject(const std::string_view key) const -> const nlohmann::json&
         {
-            EXTENSER_PRECONDITION(key.empty() || m_json.is_object());
+            EXTENSER_PRECONDITION(key.empty() || m_p_json->is_object());
 
             try
             {
-                return key.empty() ? m_json : m_json.at(key);
+                return key.empty() ? *m_p_json : m_p_json->at(key);
             }
             catch (const deserialization_error&)
             {
@@ -953,7 +1022,7 @@ namespace detail_json
             }
         }
 
-        const nlohmann::json& m_json;
+        const nlohmann::json* m_p_json;
     };
 } //namespace detail_json
 
