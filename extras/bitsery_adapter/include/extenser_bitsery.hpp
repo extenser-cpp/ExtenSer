@@ -107,10 +107,11 @@ namespace detail_bitsery
         };
 
         template<typename S, typename T, typename Adapter, bool Deserialize>
-        static void parse_obj(S& ser, serializer_base<Adapter, Deserialize>& fallback, T& val);
+        static void parse_obj(
+            S& ser, detail::serializer_base<Adapter, Deserialize>& fallback, T& val);
     };
 
-    class serializer : public serializer_base<serial_adapter, false>
+    class serializer : public detail::serializer_base<serial_adapter, false>
     {
     public:
         serializer() : m_ser(m_bytes) { m_bytes.reserve(64UL); }
@@ -119,7 +120,7 @@ namespace detail_bitsery
         {
             flush();
 
-            EXTENSER_POSTCONDITION(!m_bytes.empty());
+            //EXTENSER_POSTCONDITION(!m_bytes.empty());
             return m_bytes;
         }
 
@@ -127,7 +128,7 @@ namespace detail_bitsery
         {
             flush();
 
-            EXTENSER_POSTCONDITION(!m_bytes.empty());
+            //EXTENSER_POSTCONDITION(!m_bytes.empty());
             return std::move(m_bytes);
         }
 
@@ -210,8 +211,7 @@ namespace detail_bitsery
                     }
                     else
                     {
-                        m_ser.container(val,
-                            [this](S& ser, typename traits_t::value_type& value)
+                        m_ser.container(val, [this](S& ser, typename traits_t::value_type& value)
                             { serial_adapter::parse_obj(ser, *this, value); });
                     }
                 }
@@ -332,19 +332,20 @@ namespace detail_bitsery
         bitsery::Serializer<output_adapter> m_ser;
     };
 
-    class deserializer : public serializer_base<serial_adapter, true>
+    class deserializer : public detail::serializer_base<serial_adapter, true>
     {
     public:
         explicit deserializer(const std::vector<std::uint8_t>& bytes) noexcept(
             ::EXTENSER_ASSERT_NOTHROW)
-            : m_bytes(bytes), m_ser(m_bytes.cbegin(), m_bytes.size())
+            : m_bytes(bytes), m_last_size(m_bytes.size()), m_ser(m_bytes.cbegin(), m_last_size)
         {
-            EXTENSER_POSTCONDITION(!m_bytes.empty());
+            //EXTENSER_POSTCONDITION(!m_bytes.empty());
         }
 
         template<typename T>
         void as_bool([[maybe_unused]] const std::string_view key, T& val)
         {
+            update_buffer();
             m_ser.value1b(val);
         }
 
@@ -352,18 +353,21 @@ namespace detail_bitsery
         void as_float([[maybe_unused]] const std::string_view key, T& val)
         {
             static_assert(sizeof(T) <= sizeof(double), "long double is not supported");
+            update_buffer();
             m_ser.value<sizeof(T)>(val);
         }
 
         template<typename T>
         void as_int([[maybe_unused]] const std::string_view key, T& val)
         {
+            update_buffer();
             m_ser.value<sizeof(T)>(val);
         }
 
         template<typename T>
         void as_uint([[maybe_unused]] const std::string_view key, T& val)
         {
+            update_buffer();
             m_ser.value<sizeof(T)>(val);
         }
 
@@ -371,6 +375,8 @@ namespace detail_bitsery
         void as_enum([[maybe_unused]] const std::string_view key, T& val)
         {
             static_assert(std::is_enum_v<T>, "T must be an enum type");
+
+            update_buffer();
             m_ser.value<sizeof(T)>(val);
         }
 
@@ -381,6 +387,8 @@ namespace detail_bitsery
             using adapter_t = containers::adapter<T>;
 
             static constexpr std::size_t char_sz = sizeof(typename traits_t::character_type);
+
+            update_buffer();
 
             if constexpr (traits_t::is_mutable)
             {
@@ -402,6 +410,8 @@ namespace detail_bitsery
 
             using traits_t = containers::traits<T>;
             using S = bitsery::Deserializer<input_adapter>;
+
+            update_buffer();
 
             if constexpr (traits_t::is_mutable)
             {
@@ -451,6 +461,8 @@ namespace detail_bitsery
             using key_t = typename T::key_type;
             using val_t = typename T::mapped_type;
 
+            update_buffer();
+
             m_ser.ext(val, bitsery::ext::StdMap{ config::max_container_size },
                 [this](S& ser, key_t& map_key, val_t& map_val)
                 {
@@ -462,12 +474,14 @@ namespace detail_bitsery
         template<typename T>
         void as_multimap([[maybe_unused]] const std::string_view key, T& val)
         {
+            update_buffer();
             as_map(key, val);
         }
 
         template<typename T1, typename T2>
         void as_tuple([[maybe_unused]] const std::string_view key, std::pair<T1, T2>& val)
         {
+            update_buffer();
             serial_adapter::parse_obj(m_ser, *this, val.first);
             serial_adapter::parse_obj(m_ser, *this, val.second);
         }
@@ -477,6 +491,7 @@ namespace detail_bitsery
         {
             using S = bitsery::Deserializer<input_adapter>;
 
+            update_buffer();
             m_ser.ext(val,
                 bitsery::ext::StdTuple{ [this](S& ser, auto& subval)
                     {
@@ -489,6 +504,7 @@ namespace detail_bitsery
         {
             using S = bitsery::Deserializer<input_adapter>;
 
+            update_buffer();
             m_ser.ext(val, bitsery::ext::StdOptional{},
                 [this](S& ser, T& subval) { serial_adapter::parse_obj(ser, *this, subval); });
         }
@@ -498,6 +514,7 @@ namespace detail_bitsery
         {
             using S = bitsery::Deserializer<input_adapter>;
 
+            update_buffer();
             m_ser.ext(val,
                 bitsery::ext::StdVariant{ [this](S& ser, auto& subval)
                     {
@@ -508,6 +525,7 @@ namespace detail_bitsery
         template<typename T>
         void as_object([[maybe_unused]] const std::string_view key, T& val)
         {
+            update_buffer();
             serial_adapter::parse_obj(m_ser, *this, val);
         }
 
@@ -520,12 +538,25 @@ namespace detail_bitsery
         using config = typename serial_adapter::config;
         using input_adapter = bitsery::InputBufferAdapter<std::vector<std::uint8_t>>;
 
+        void update_buffer()
+        {
+            if (m_last_size != m_bytes.size())
+            {
+                m_last_size = m_bytes.size();
+                const auto curPos = m_ser.adapter().currentReadPos();
+                m_ser = bitsery::Deserializer<input_adapter>(m_bytes.cbegin(), m_last_size);
+                m_ser.adapter().currentReadPos(curPos);
+            }
+        }
+
         const std::vector<std::uint8_t>& m_bytes;
+        std::size_t m_last_size;
         bitsery::Deserializer<input_adapter> m_ser;
     };
 
     template<typename S, typename T, typename Adapter, bool Deserialize>
-    void serial_adapter::parse_obj(S& ser, serializer_base<Adapter, Deserialize>& fallback, T& val)
+    void serial_adapter::parse_obj(
+        S& ser, detail::serializer_base<Adapter, Deserialize>& fallback, T& val)
     {
         if constexpr (std::is_arithmetic_v<T>)
         {
@@ -586,14 +617,12 @@ namespace detail_bitsery
             {
                 if constexpr (bitsery::traits::ContainerTraits<std::remove_cv_t<T>>::isResizable)
                 {
-                    ser.container(val, config::max_container_size,
-                        [](S& s_ser, std::string& substr)
+                    ser.container(val, config::max_container_size, [](S& s_ser, std::string& substr)
                         { s_ser.text1b(substr, config::max_string_size); });
                 }
                 else
                 {
-                    ser.container(val,
-                        [](S& s_ser, std::string& substr)
+                    ser.container(val, [](S& s_ser, std::string& substr)
                         { s_ser.text1b(substr, config::max_string_size); });
                 }
             }

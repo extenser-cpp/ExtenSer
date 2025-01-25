@@ -59,18 +59,21 @@ namespace containers
     };
 } //namespace containers
 
-template<typename Adapter, typename CharT, typename Traits>
-void serialize(
-    serializer_base<Adapter, false>& ser, const std::basic_string_view<CharT, Traits> val)
+namespace detail
 {
-    ser.as_string("", val);
-}
+    template<typename Adapter, typename CharT, typename Traits>
+    void serialize(
+        serializer_base<Adapter, false>& ser, const std::basic_string_view<CharT, Traits> val)
+    {
+        ser.as_string("", val);
+    }
 
-template<typename Adapter, typename CharT, typename Traits>
-void serialize([[maybe_unused]] serializer_base<Adapter, true>& ser,
-    [[maybe_unused]] std::basic_string_view<CharT, Traits>& val)
-{
-    // nop
-}
+    template<typename Adapter, typename CharT, typename Traits>
+    void serialize([[maybe_unused]] serializer_base<Adapter, true>& ser,
+        [[maybe_unused]] std::basic_string_view<CharT, Traits>& val)
+    {
+        // nop
+    }
+} //namespace detail
 } //namespace extenser
 #endif

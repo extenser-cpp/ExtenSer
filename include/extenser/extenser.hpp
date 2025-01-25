@@ -33,9 +33,8 @@ namespace detail
         static_assert(std::conjunction_v<std::is_invocable<F, Ts>...>,
             "applied function must be able to take given args");
 
-        std::apply([func = std::forward<F>(func)](auto&&... args)
-            { (func(std::forward<decltype(args)>(args)), ...); },
-            tuple);
+        std::apply([f = std::forward<F>(func)](auto&&... args)
+            { (f(std::forward<decltype(args)>(args)), ...); }, tuple);
     }
 } //namespace detail
 
@@ -336,319 +335,353 @@ protected:
     generic_serializer(generic_serializer&&) noexcept = default;
 };
 
-template<typename Adapter, bool Deserialize>
-class serializer_base : public generic_serializer<serializer_base<Adapter, Deserialize>>
+namespace detail
+{
+    template<typename Adapter, bool Deserialize>
+    class serializer_base : public generic_serializer<serializer_base<Adapter, Deserialize>>
+    {
+    public:
+        using serializer_t = std::conditional_t<Deserialize, typename Adapter::deserializer_t,
+            typename Adapter::serializer_t>;
+
+        static constexpr std::size_t max_variant_size = 14;
+
+        template<typename T>
+        void serialize_object(const T& val)
+        {
+            using no_ref_t = detail::remove_cvref_t<T>;
+
+            static_assert(!Deserialize, "Cannot call serialize_object() on a deserializer");
+            static_assert(!std::is_pointer_v<no_ref_t>,
+                "Cannot serialize a pointer directly, wrap it in a span or view");
+
+            // Necessary for bi-directional serialization
+            if constexpr (detail::has_serialize_mem_v<no_ref_t>)
+            {
+                // NOLINT(cppcoreguidelines-pro-type-const-cast)
+                const_cast<T&>(val).serialize(*this);
+            }
+            else
+            {
+                // NOLINT(cppcoreguidelines-pro-type-const-cast)
+                serialize(*this, const_cast<T&>(val));
+            }
+        }
+
+        template<typename T>
+        void deserialize_object(T&& val)
+        {
+            using no_ref_t = detail::remove_cvref_t<T>;
+
+            static_assert(Deserialize, "Cannot call deserialize_object() on a serializer");
+            static_assert(!std::is_pointer_v<no_ref_t>,
+                "Cannot serialize a pointer directly, wrap it in a span or view");
+
+            if constexpr (detail::has_serialize_mem_v<no_ref_t>)
+            {
+                std::forward<T>(val).serialize(*this);
+            }
+            else
+            {
+                serialize(*this, std::forward<T>(val));
+            }
+        }
+
+        EXTENSER_INLINE void as_bool(const std::string_view key, bool& val)
+        {
+            (static_cast<serializer_t*>(this))->as_bool(key, val);
+        }
+
+        template<typename T>
+        EXTENSER_INLINE void as_float(const std::string_view key, T& val)
+        {
+            static_assert(is_float_serializable<T>, "T must be a floating-point type");
+            (static_cast<serializer_t*>(this))->as_float(key, val);
+        }
+
+        template<typename T>
+        EXTENSER_INLINE void as_int(const std::string_view key, T& val)
+        {
+            static_assert(is_int_serializable<T>, "T must be a signed integral type");
+            (static_cast<serializer_t*>(this))->as_int(key, val);
+        }
+
+        template<typename T>
+        EXTENSER_INLINE void as_uint(const std::string_view key, T& val)
+        {
+            static_assert(is_uint_serializable<T>, "T must be an unsigned integral type");
+            (static_cast<serializer_t*>(this))->as_uint(key, val);
+        }
+
+        template<typename T>
+        EXTENSER_INLINE void as_enum(const std::string_view key, T& val)
+        {
+            static_assert(is_enum_serializable<T>, "T must be an enum type");
+            (static_cast<serializer_t*>(this))->as_enum(key, val);
+        }
+
+        template<typename T>
+        EXTENSER_INLINE void as_string(const std::string_view key, T& val)
+        {
+            static_assert(is_string_serializable<T>, "T must be convertible to std::string_view");
+            (static_cast<serializer_t*>(this))->as_string(key, val);
+        }
+
+        template<typename T>
+        EXTENSER_INLINE void as_array(const std::string_view key, T& val)
+        {
+            static_assert(is_array_serializable<T>, "T must have begin() and end()");
+
+            (static_cast<serializer_t*>(this))->as_array(key, val);
+        }
+
+        template<typename T>
+        EXTENSER_INLINE void as_map(const std::string_view key, T& val)
+        {
+            static_assert(
+                is_map_serializable<T> || is_multimap_serializable<T>, "T must be a map type");
+
+            if constexpr (is_multimap_serializable<T>)
+            {
+                (static_cast<serializer_t*>(this))->as_multimap(key, val);
+            }
+            else
+            {
+                (static_cast<serializer_t*>(this))->as_map(key, val);
+            }
+        }
+
+        template<typename T1, typename T2>
+        EXTENSER_INLINE void as_tuple(const std::string_view key, std::pair<T1, T2>& val)
+        {
+            (static_cast<serializer_t*>(this))->as_tuple(key, val);
+        }
+
+        template<typename... Args>
+        EXTENSER_INLINE void as_tuple(const std::string_view key, std::tuple<Args...>& val)
+        {
+            (static_cast<serializer_t*>(this))->as_tuple(key, val);
+        }
+
+        template<typename T>
+        EXTENSER_INLINE void as_optional(const std::string_view key, std::optional<T>& val)
+        {
+            (static_cast<serializer_t*>(this))->as_optional(key, val);
+        }
+
+        template<typename... Args>
+        EXTENSER_INLINE void as_variant(const std::string_view key, std::variant<Args...>& val)
+        {
+            static_assert(
+                sizeof...(Args) < max_variant_size, "arg count can't exceed max_variant_size");
+
+            (static_cast<serializer_t*>(this))->as_variant(key, val);
+        }
+
+        template<typename T>
+        EXTENSER_INLINE void as_object(const std::string_view key, T& val)
+        {
+            static_assert(is_object_serializable<T>, "serialize function for T could not be found");
+            (static_cast<serializer_t*>(this))->as_object(key, val);
+        }
+
+        EXTENSER_INLINE void as_null(const std::string_view key)
+        {
+            (static_cast<serializer_t*>(this))->as_null(key);
+        }
+    };
+
+    // Overloads for common types
+    template<typename Adapter>
+    void serialize(serializer_base<Adapter, false>& ser, const bool val)
+    {
+        static_cast<typename Adapter::serializer_t&>(ser).as_bool("", val);
+    }
+
+    template<typename Adapter>
+    void serialize(serializer_base<Adapter, true>& ser, bool& val)
+    {
+        ser.as_bool("", val);
+    }
+
+    template<typename Adapter, typename T,
+        std::enable_if_t<
+            (std::is_integral_v<T> && std::is_signed_v<T> && (!std::is_same_v<T, bool>)), bool> =
+            true>
+    void serialize(serializer_base<Adapter, false>& ser, const T val)
+    {
+        static_cast<typename Adapter::serializer_t&>(ser).as_int("", val);
+    }
+
+    template<typename Adapter, typename T,
+        std::enable_if_t<
+            (std::is_integral_v<T> && std::is_signed_v<T> && (!std::is_same_v<T, bool>)), bool> =
+            true>
+    void serialize(serializer_base<Adapter, true>& ser, T& val)
+    {
+        ser.as_int("", val);
+    }
+
+    template<typename Adapter, typename T,
+        std::enable_if_t<
+            (std::is_integral_v<T> && std::is_unsigned_v<T> && (!std::is_same_v<T, bool>)), bool> =
+            true>
+    void serialize(serializer_base<Adapter, false>& ser, const T val)
+    {
+        static_cast<typename Adapter::serializer_t&>(ser).as_uint("", val);
+    }
+
+    template<typename Adapter, typename T,
+        std::enable_if_t<
+            (std::is_integral_v<T> && std::is_unsigned_v<T> && (!std::is_same_v<T, bool>)), bool> =
+            true>
+    void serialize(serializer_base<Adapter, true>& ser, T& val)
+    {
+        ser.as_uint("", val);
+    }
+
+    template<typename Adapter, typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
+    void serialize(serializer_base<Adapter, false>& ser, const T val)
+    {
+        static_cast<typename Adapter::serializer_t&>(ser).as_enum("", val);
+    }
+
+    template<typename Adapter, typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
+    void serialize(serializer_base<Adapter, true>& ser, T& val)
+    {
+        ser.as_enum("", val);
+    }
+
+    template<typename Adapter, typename T,
+        std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
+    void serialize(serializer_base<Adapter, false>& ser, const T val)
+    {
+        static_cast<typename Adapter::serializer_t&>(ser).as_float("", val);
+    }
+
+    template<typename Adapter, typename T,
+        std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
+    void serialize(serializer_base<Adapter, true>& ser, T& val)
+    {
+        ser.as_float("", val);
+    }
+
+    template<typename Adapter, bool Deserialize, typename T,
+        std::enable_if_t<std::is_pointer_v<T>, bool> = true>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
+    {
+        using underlying_t = std::remove_cv_t<std::remove_pointer_t<T>>;
+
+        static_assert(std::is_same_v<underlying_t, char> || std::is_same_v<underlying_t, wchar_t>,
+            "Non-string pointers are not supported, please wrap in a span or use another "
+            "container");
+
+        if constexpr (std::is_same_v<underlying_t, wchar_t>)
+        {
+            std::wstring_view str_view{ val };
+            ser.as_string("", str_view);
+        }
+        else
+        {
+            std::string_view str_view{ val };
+            ser.as_string("", str_view);
+        }
+    }
+
+    template<typename Adapter, bool Deserialize, typename T,
+        std::enable_if_t<std::is_array_v<T>, bool> = true>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
+    {
+        if constexpr (std::is_same_v<detail::remove_cvref_t<std::remove_all_extents_t<T>>, char>)
+        {
+            std::string_view str_view{ val };
+            ser.as_string("", str_view);
+        }
+        else if constexpr (std::is_same_v<detail::remove_cvref_t<std::remove_all_extents_t<T>>,
+                               wchar_t>)
+        {
+            std::wstring_view str_view{ val };
+            ser.as_string("", str_view);
+        }
+        else
+        {
+            span arr_span{ val };
+            ser.as_array("", arr_span);
+        }
+    }
+
+    template<typename Adapter, bool Deserialize, typename T1, typename T2>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, std::pair<T1, T2>& val)
+    {
+        ser.as_tuple("", val);
+    }
+
+    template<typename Adapter, bool Deserialize, typename... Args>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, std::tuple<Args...>& val)
+    {
+        ser.as_tuple("", val);
+    }
+
+    template<typename Adapter, bool Deserialize, typename T>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, std::optional<T>& val)
+    {
+        ser.as_optional("", val);
+    }
+
+    template<typename Adapter, bool Deserialize>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, [[maybe_unused]] std::nullptr_t& val)
+    {
+        ser.as_null("");
+    }
+
+    template<typename Adapter, bool Deserialize>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, [[maybe_unused]] std::nullopt_t& val)
+    {
+        ser.as_null("");
+    }
+
+    template<typename Adapter, bool Deserialize>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, [[maybe_unused]] std::monostate& val)
+    {
+        ser.as_null("");
+    }
+
+    template<typename Adapter, bool Deserialize, typename... Args>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, std::variant<Args...>& val)
+    {
+        ser.as_variant("", val);
+    }
+} //namespace detail
+
+template<typename Adapter>
+class easy_serializer
 {
 public:
-    using serializer_t = std::conditional_t<Deserialize, typename Adapter::deserializer_t,
-        typename Adapter::serializer_t>;
-
-    using bytes_t = typename Adapter::bytes_t;
-    using serial_t = typename Adapter::serial_t;
-
-    static constexpr std::size_t max_variant_size = 14;
+    easy_serializer() noexcept : m_deserializer(m_serializer.object()) {}
 
     template<typename T>
     void serialize_object(const T& val)
     {
-        using no_ref_t = detail::remove_cvref_t<T>;
+        m_serializer.serialize_object(val);
+    }
 
-        static_assert(!Deserialize, "Cannot call serialize_object() on a deserializer");
-        static_assert(!std::is_pointer_v<no_ref_t>,
-            "Cannot serialize a pointer directly, wrap it in a span or view");
-
-        // Necessary for bi-directional serialization
-        if constexpr (detail::has_serialize_mem_v<no_ref_t>)
-        {
-            const_cast<T&>(val).serialize(*this); // NOLINT(cppcoreguidelines-pro-type-const-cast)
-        }
-        else
-        {
-            serialize(*this, const_cast<T&>(val)); // NOLINT(cppcoreguidelines-pro-type-const-cast)
-        }
+    template<typename T, std::enable_if_t<std::is_default_constructible_v<T>, bool> = true>
+    T deserialize_object()
+    {
+        T t;
+        m_deserializer.deserialize_object(t);
+        return t;
     }
 
     template<typename T>
     void deserialize_object(T&& val)
     {
-        using no_ref_t = detail::remove_cvref_t<T>;
-
-        static_assert(Deserialize, "Cannot call deserialize_object() on a serializer");
-        static_assert(!std::is_pointer_v<no_ref_t>,
-            "Cannot serialize a pointer directly, wrap it in a span or view");
-
-        if constexpr (detail::has_serialize_mem_v<no_ref_t>)
-        {
-            std::forward<T>(val).serialize(*this);
-        }
-        else
-        {
-            serialize(*this, std::forward<T>(val));
-        }
+        m_deserializer.deserialize_object(std::forward<T>(val));
     }
 
-    EXTENSER_INLINE void as_bool(const std::string_view key, bool& val)
-    {
-        (static_cast<serializer_t*>(this))->as_bool(key, val);
-    }
-
-    template<typename T>
-    EXTENSER_INLINE void as_float(const std::string_view key, T& val)
-    {
-        static_assert(is_float_serializable<T>, "T must be a floating-point type");
-        (static_cast<serializer_t*>(this))->as_float(key, val);
-    }
-
-    template<typename T>
-    EXTENSER_INLINE void as_int(const std::string_view key, T& val)
-    {
-        static_assert(is_int_serializable<T>, "T must be a signed integral type");
-        (static_cast<serializer_t*>(this))->as_int(key, val);
-    }
-
-    template<typename T>
-    EXTENSER_INLINE void as_uint(const std::string_view key, T& val)
-    {
-        static_assert(is_uint_serializable<T>, "T must be an unsigned integral type");
-        (static_cast<serializer_t*>(this))->as_uint(key, val);
-    }
-
-    template<typename T>
-    EXTENSER_INLINE void as_enum(const std::string_view key, T& val)
-    {
-        static_assert(is_enum_serializable<T>, "T must be an enum type");
-        (static_cast<serializer_t*>(this))->as_enum(key, val);
-    }
-
-    template<typename T>
-    EXTENSER_INLINE void as_string(const std::string_view key, T& val)
-    {
-        static_assert(is_string_serializable<T>, "T must be convertible to std::string_view");
-        (static_cast<serializer_t*>(this))->as_string(key, val);
-    }
-
-    template<typename T>
-    EXTENSER_INLINE void as_array(const std::string_view key, T& val)
-    {
-        static_assert(is_array_serializable<T>, "T must have begin() and end()");
-
-        (static_cast<serializer_t*>(this))->as_array(key, val);
-    }
-
-    template<typename T>
-    EXTENSER_INLINE void as_map(const std::string_view key, T& val)
-    {
-        static_assert(
-            is_map_serializable<T> || is_multimap_serializable<T>, "T must be a map type");
-
-        if constexpr (is_multimap_serializable<T>)
-        {
-            (static_cast<serializer_t*>(this))->as_multimap(key, val);
-        }
-        else
-        {
-            (static_cast<serializer_t*>(this))->as_map(key, val);
-        }
-    }
-
-    template<typename T1, typename T2>
-    EXTENSER_INLINE void as_tuple(const std::string_view key, std::pair<T1, T2>& val)
-    {
-        (static_cast<serializer_t*>(this))->as_tuple(key, val);
-    }
-
-    template<typename... Args>
-    EXTENSER_INLINE void as_tuple(const std::string_view key, std::tuple<Args...>& val)
-    {
-        (static_cast<serializer_t*>(this))->as_tuple(key, val);
-    }
-
-    template<typename T>
-    EXTENSER_INLINE void as_optional(const std::string_view key, std::optional<T>& val)
-    {
-        (static_cast<serializer_t*>(this))->as_optional(key, val);
-    }
-
-    template<typename... Args>
-    EXTENSER_INLINE void as_variant(const std::string_view key, std::variant<Args...>& val)
-    {
-        static_assert(
-            sizeof...(Args) < max_variant_size, "arg count can't exceed max_variant_size");
-
-        (static_cast<serializer_t*>(this))->as_variant(key, val);
-    }
-
-    template<typename T>
-    EXTENSER_INLINE void as_object(const std::string_view key, T& val)
-    {
-        static_assert(is_object_serializable<T>, "serialize function for T could not be found");
-        (static_cast<serializer_t*>(this))->as_object(key, val);
-    }
-
-    EXTENSER_INLINE void as_null(const std::string_view key)
-    {
-        (static_cast<serializer_t*>(this))->as_null(key);
-    }
+private:
+    typename Adapter::serializer_t m_serializer{};
+    typename Adapter::deserializer_t m_deserializer;
 };
-
-template<typename Adapter>
-using serializer = typename Adapter::serializer_t;
-
-template<typename Adapter>
-using deserializer = typename Adapter::deserializer_t;
-
-// Overloads for common types
-template<typename Adapter>
-void serialize(serializer_base<Adapter, false>& ser, const bool val)
-{
-    static_cast<typename Adapter::serializer_t&>(ser).as_bool("", val);
-}
-
-template<typename Adapter>
-void serialize(serializer_base<Adapter, true>& ser, bool& val)
-{
-    ser.as_bool("", val);
-}
-
-template<typename Adapter, typename T,
-    std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && (!std::is_same_v<T, bool>)),
-        bool> = true>
-void serialize(serializer_base<Adapter, false>& ser, const T val)
-{
-    static_cast<typename Adapter::serializer_t&>(ser).as_int("", val);
-}
-
-template<typename Adapter, typename T,
-    std::enable_if_t<(std::is_integral_v<T> && std::is_signed_v<T> && (!std::is_same_v<T, bool>)),
-        bool> = true>
-void serialize(serializer_base<Adapter, true>& ser, T& val)
-{
-    ser.as_int("", val);
-}
-
-template<typename Adapter, typename T,
-    std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && (!std::is_same_v<T, bool>)),
-        bool> = true>
-void serialize(serializer_base<Adapter, false>& ser, const T val)
-{
-    static_cast<typename Adapter::serializer_t&>(ser).as_uint("", val);
-}
-
-template<typename Adapter, typename T,
-    std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T> && (!std::is_same_v<T, bool>)),
-        bool> = true>
-void serialize(serializer_base<Adapter, true>& ser, T& val)
-{
-    ser.as_uint("", val);
-}
-
-template<typename Adapter, typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
-void serialize(serializer_base<Adapter, false>& ser, const T val)
-{
-    static_cast<typename Adapter::serializer_t&>(ser).as_enum("", val);
-}
-
-template<typename Adapter, typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
-void serialize(serializer_base<Adapter, true>& ser, T& val)
-{
-    ser.as_enum("", val);
-}
-
-template<typename Adapter, typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
-void serialize(serializer_base<Adapter, false>& ser, const T val)
-{
-    static_cast<typename Adapter::serializer_t&>(ser).as_float("", val);
-}
-
-template<typename Adapter, typename T, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
-void serialize(serializer_base<Adapter, true>& ser, T& val)
-{
-    ser.as_float("", val);
-}
-
-template<typename Adapter, bool Deserialize, typename T,
-    std::enable_if_t<std::is_pointer_v<T>, bool> = true>
-void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
-{
-    using underlying_t = std::remove_cv_t<std::remove_pointer_t<T>>;
-
-    static_assert(std::is_same_v<underlying_t, char> || std::is_same_v<underlying_t, wchar_t>,
-        "Non-string pointers are not supported, please wrap in a span or use another container");
-
-    if constexpr (std::is_same_v<underlying_t, wchar_t>)
-    {
-        std::wstring_view str_view{ val };
-        ser.as_string("", str_view);
-    }
-    else
-    {
-        std::string_view str_view{ val };
-        ser.as_string("", str_view);
-    }
-}
-
-template<typename Adapter, bool Deserialize, typename T,
-    std::enable_if_t<std::is_array_v<T>, bool> = true>
-void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
-{
-    if constexpr (std::is_same_v<detail::remove_cvref_t<std::remove_all_extents_t<T>>, char>)
-    {
-        std::string_view str_view{ val };
-        ser.as_string("", str_view);
-    }
-    else if constexpr (std::is_same_v<detail::remove_cvref_t<std::remove_all_extents_t<T>>,
-                           wchar_t>)
-    {
-        std::wstring_view str_view{ val };
-        ser.as_string("", str_view);
-    }
-    else
-    {
-        span arr_span{ val };
-        ser.as_array("", arr_span);
-    }
-}
-
-template<typename Adapter, bool Deserialize, typename T1, typename T2>
-void serialize(serializer_base<Adapter, Deserialize>& ser, std::pair<T1, T2>& val)
-{
-    ser.as_tuple("", val);
-}
-
-template<typename Adapter, bool Deserialize, typename... Args>
-void serialize(serializer_base<Adapter, Deserialize>& ser, std::tuple<Args...>& val)
-{
-    ser.as_tuple("", val);
-}
-
-template<typename Adapter, bool Deserialize, typename T>
-void serialize(serializer_base<Adapter, Deserialize>& ser, std::optional<T>& val)
-{
-    ser.as_optional("", val);
-}
-
-template<typename Adapter, bool Deserialize>
-void serialize(serializer_base<Adapter, Deserialize>& ser, [[maybe_unused]] std::nullptr_t& val)
-{
-    ser.as_null("");
-}
-
-template<typename Adapter, bool Deserialize>
-void serialize(serializer_base<Adapter, Deserialize>& ser, [[maybe_unused]] std::nullopt_t& val)
-{
-    ser.as_null("");
-}
-
-template<typename Adapter, bool Deserialize>
-void serialize(serializer_base<Adapter, Deserialize>& ser, [[maybe_unused]] std::monostate& val)
-{
-    ser.as_null("");
-}
-
-template<typename Adapter, bool Deserialize, typename... Args>
-void serialize(serializer_base<Adapter, Deserialize>& ser, std::variant<Args...>& val)
-{
-    ser.as_variant("", val);
-}
 } //namespace extenser
 #endif //EXTENSER_HPP

@@ -10,10 +10,10 @@
 cmake_minimum_required(VERSION 3.12)
 
 project(
-        "ExtenSer"
-        VERSION 0.1.0
-        DESCRIPTION "Extensible, generic serialization library for C++"
-        LANGUAGES CXX)
+    "ExtenSer"
+    VERSION 0.1.1
+    DESCRIPTION "Extensible, generic serialization library for C++"
+    LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -24,52 +24,52 @@ option(WERROR "Treat all warnings as errors" ON)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-    include(CTest)
-endif()
+  include(CTest)
+endif ()
 
 # ==== Compiler/Machine Info ====
 
-if(WIN32)
+if (WIN32)
   set(TARGET_WINDOWS TRUE)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+  if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CXX_MSVC TRUE)
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(CXX_MINGW TRUE)
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "GNU")
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "GNU")
       set(CXX_CLANG TRUE)
-    else()
+    else ()
       set(CXX_CLANG_CL TRUE)
       add_compile_options(/EHsc)
-    endif()
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+    endif ()
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     set(CXX_INTEL TRUE)
-  else()
+  else ()
     message(FATAL_ERROR "Invalid compiler: ${CMAKE_CXX_COMPILER_ID}, supported compilers for Windows are: [MSVC, GNU, Clang, Intel]")
-  endif()
-elseif(UNIX AND NOT APPLE)
+  endif ()
+elseif (UNIX AND NOT APPLE)
   set(TARGET_LINUX TRUE)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(CXX_GCC TRUE)
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CXX_CLANG TRUE)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     set(CXX_INTEL TRUE)
-  else()
+  else ()
     message(FATAL_ERROR "Invalid compiler: ${CMAKE_CXX_COMPILER_ID}, supported compilers for UNIX are: [GNU, Clang, Intel]")
-  endif()
-elseif(APPLE)
+  endif ()
+elseif (APPLE)
   set(TARGET_APPLE TRUE)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(CXX_GCC TRUE)
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CXX_CLANG TRUE)
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+  elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
     set(CXX_INTEL TRUE)
-  else()
+  else ()
     message(FATAL_ERROR "Invalid compiler: ${CMAKE_CXX_COMPILER_ID}, supported compilers for macOS are: [GNU, Clang, Intel]")
-  endif()
-endif()
+  endif ()
+endif ()
 
 # ==== Build Types ====
 
@@ -78,13 +78,13 @@ include(CheckCXXCompilerFlag)
 get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 set(ALLOWED_BUILD_TYPES Debug Release MinSizeRel RelWithDebInfo)
 
-if(CXX_MSVC OR CXX_CLANG_CL)
+if (CXX_MSVC OR CXX_CLANG_CL)
   check_cxx_compiler_flag("/fsanitize=address" SUPPORTS_ASAN)
   check_cxx_compiler_flag("/fsanitize=thread" SUPPORTS_TSAN)
-  if(CXX_CLANG_CL)
+  if (CXX_CLANG_CL)
     list(APPEND ALLOWED_BUILD_TYPES Coverage)
-  endif()
-else()
+  endif ()
+else ()
   list(APPEND ALLOWED_BUILD_TYPES Coverage)
   set(TMP_REQ_LIB ${CMAKE_REQUIRED_LIBRARIES})
   set(CMAKE_REQUIRED_LIBRARIES "-fsanitize=address;asan")
@@ -92,30 +92,30 @@ else()
   set(CMAKE_REQUIRED_LIBRARIES "-fsanitize=thread;tsan")
   check_cxx_compiler_flag("-fsanitize=thread" SUPPORTS_TSAN)
   set(CMAKE_REQUIRED_LIBRARIES ${TMP_REQ_LIB})
-endif()
+endif ()
 
-if(SUPPORTS_ASAN)
+if (SUPPORTS_ASAN)
   list(APPEND ALLOWED_BUILD_TYPES "ASAN")
-endif()
+endif ()
 
-if(SUPPORTS_TSAN)
+if (SUPPORTS_TSAN)
   list(APPEND ALLOWED_BUILD_TYPES "TSAN")
-endif()
+endif ()
 
-if(IS_MULTI_CONFIG)
-  foreach(BTYPE IN LISTS ALLOWED_BUILD_TYPES)
+if (IS_MULTI_CONFIG)
+  foreach (BTYPE IN LISTS ALLOWED_BUILD_TYPES)
     if (NOT ${BTYPE} IN_LIST CMAKE_CONFIGURATION_TYPES)
       list(APPEND CMAKE_CONFIGURATION_TYPES ${BTYPE})
-    endif()
-  endforeach()
-else()
+    endif ()
+  endforeach ()
+else ()
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${ALLOWED_BUILD_TYPES}")
-  if(NOT CMAKE_BUILD_TYPE)
+  if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
-  elseif(NOT CMAKE_BUILD_TYPE IN_LIST ALLOWED_BUILD_TYPES)
+  elseif (NOT CMAKE_BUILD_TYPE IN_LIST ALLOWED_BUILD_TYPES)
     message(FATAL_ERROR "Unknown BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
-  endif()
-endif()
+  endif ()
+endif ()
 
 if (CXX_CLANG OR CXX_GCC OR CXX_INTEL)
   set(GCC_COVERAGE_FLAGS "--coverage")
@@ -139,8 +139,8 @@ if (CXX_CLANG OR CXX_GCC OR CXX_INTEL)
   set(CMAKE_SHARED_LINKER_FLAGS_TSAN "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} ${GCC_TSAN_FLAGS}" CACHE STRING "")
   set(CMAKE_STATIC_LINKER_FLAGS_TSAN "${CMAKE_STATIC_LINKER_FLAGS}" CACHE STRING "")
   set(CMAKE_MODULE_LINKER_FLAGS_TSAN "${CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO} ${GCC_TSAN_FLAGS}" CACHE STRING "")
-elseif(CXX_MSVC OR CXX_CLANG_CL)
-  if(CXX_CLANG_CL)
+elseif (CXX_MSVC OR CXX_CLANG_CL)
+  if (CXX_CLANG_CL)
     set(CLANG_COVERAGE_FLAGS "-fprofile-instr-generate -fcoverage-mapping")
 
     set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG} ${CLANG_COVERAGE_FLAGS}" CACHE STRING "")
@@ -148,18 +148,18 @@ elseif(CXX_MSVC OR CXX_CLANG_CL)
     set(CMAKE_SHARED_LINKER_FLAGS_COVERAGE "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} ${CLANG_COVERAGE_FLAGS}" CACHE STRING "")
     set(CMAKE_STATIC_LINKER_FLAGS_COVERAGE "${CMAKE_STATIC_LINKER_FLAGS_DEBUG}" CACHE STRING "")
     set(CMAKE_MODULE_LINKER_FLAGS_COVERAGE "${CMAKE_MODULE_LINKER_FLAGS_DEBUG} ${CLANG_COVERAGE_FLAGS}" CACHE STRING "")
-  endif()
+  endif ()
 
   set(CMAKE_CXX_FLAGS_ASAN "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /fsanitize=address /Oy-" CACHE STRING "")
   set(CMAKE_EXE_LINKER_FLAGS_ASAN ${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} CACHE STRING "")
   set(CMAKE_SHARED_LINKER_FLAGS_ASAN ${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} CACHE STRING "")
   set(CMAKE_STATIC_LINKER_FLAGS_ASAN ${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO} CACHE STRING "")
   set(CMAKE_MODULE_LINKER_FLAGS_ASAN ${CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO} CACHE STRING "")
-endif()
+endif ()
 
 # ==== Compiler/Linker Flags ====
 
-if(CXX_MSVC)
+if (CXX_MSVC)
   set(FULL_WARNING
       /W4
       /experimental:external
@@ -198,11 +198,11 @@ if(CXX_MSVC)
       /Zc:__cplusplus
       /bigobj
       -D_WIN32_WINNT=0x0A00)
-  if(WERROR)
+  if (WERROR)
     list(APPEND FULL_WARNING /WX)
     list(APPEND MIN_WARNING /WX)
-  endif()
-elseif(CXX_GCC OR CXX_MINGW OR CXX_INTEL)
+  endif ()
+elseif (CXX_GCC OR CXX_MINGW OR CXX_INTEL)
   set(FULL_WARNING
       -Wall
       -Wextra
@@ -226,16 +226,16 @@ elseif(CXX_GCC OR CXX_MINGW OR CXX_INTEL)
       -Wmisleading-indentation
       -Wmissing-field-initializers)
   set(MIN_WARNING -Wall)
-  if(CXX_MINGW)
+  if (CXX_MINGW)
     list(APPEND FULL_WARNING -Wa,-mbig-obj)
     list(APPEND MIN_WARNING -Wa,-mbig-obj)
     set(USE_PCH OFF)
-  endif()
-  if(WERROR)
+  endif ()
+  if (WERROR)
     list(APPEND FULL_WARNING -Werror)
     list(APPEND MIN_WARNING -Werror)
-  endif()
-elseif(CXX_CLANG OR CXX_CLANG_CL)
+  endif ()
+elseif (CXX_CLANG OR CXX_CLANG_CL)
   set(FULL_WARNING
       -Weverything
       -Wno-c++98-compat
@@ -255,19 +255,19 @@ elseif(CXX_CLANG OR CXX_CLANG_CL)
       -Wno-unused-template
       -Wno-assume)
   set(MIN_WARNING -Wall)
-  if(CXX_CLANG_CL)
+  if (CXX_CLANG_CL)
     list(APPEND FULL_WARNING
         /bigobj
         -D_WIN32_WINNT=0x0A00)
     list(APPEND MIN_WARNING
         /bigobj
         -D_WIN32_WINNT=0x0A00)
-  endif()
-  if(WERROR)
+  endif ()
+  if (WERROR)
     list(APPEND FULL_WARNING -Werror)
     list(APPEND MIN_WARNING -Werror)
-  endif()
-endif()
+  endif ()
+endif ()
 
 # ==== Target(s) ====
 
@@ -275,21 +275,21 @@ add_library(extenser INTERFACE include/extenser/extenser.hpp)
 add_library(ExtenSer::extenser ALIAS extenser)
 
 if (CXX_MSVC AND (MSVC_VERSION GREATER_EQUAL 1914))
-    target_compile_options(extenser INTERFACE "/Zc:__cplusplus")
+  target_compile_options(extenser INTERFACE "/Zc:__cplusplus")
 endif ()
 
 include(GNUInstallDirs)
 target_include_directories(
-        extenser INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+    extenser INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 include(FetchContent)
 include(system_link)
 
 FetchContent_Declare(nlohmann_json
-        GIT_REPOSITORY https://github.com/nlohmann/json.git
-        GIT_TAG bc889afb4c5bf1c0d8ee29ef35eaaf4c8bef8a5d
-        )
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG 9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03
+)
 FetchContent_MakeAvailable(nlohmann_json)
 
 add_library(extenser-json INTERFACE include/extenser/json_adapter/extenser_json.hpp)
@@ -297,16 +297,16 @@ target_link_libraries(extenser-json INTERFACE extenser)
 target_link_libraries_system(extenser-json INTERFACE nlohmann_json::nlohmann_json)
 
 if (USE_MAGIC_ENUM OR BUILD_TESTING)
-    FetchContent_Declare(magic_enum
-            GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
-            GIT_TAG e1a68e9dd3d2e9180b04c8aeacd4975db745e6b8
-            )
-    FetchContent_MakeAvailable(magic_enum)
+  FetchContent_Declare(magic_enum
+      GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+      GIT_TAG e046b69a3736d314fad813e159b1c192eaef92cd
+  )
+  FetchContent_MakeAvailable(magic_enum)
 
-    if (USE_MAGIC_ENUM)
-        target_link_libraries_system(extenser-json INTERFACE magic_enum::magic_enum)
-        target_compile_definitions(extenser-json INTERFACE EXTENSER_USE_MAGIC_ENUM)
-    endif ()
+  if (USE_MAGIC_ENUM)
+    target_link_libraries_system(extenser-json INTERFACE magic_enum::magic_enum)
+    target_compile_definitions(extenser-json INTERFACE EXTENSER_USE_MAGIC_ENUM)
+  endif ()
 endif ()
 
 # ==== Target Installation ====
@@ -314,26 +314,26 @@ endif ()
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
-        ${CMAKE_CURRENT_BINARY_DIR}/ExtenSerConfigVersion.cmake
-        COMPATIBILITY SameMajorVersion)
+    ${CMAKE_CURRENT_BINARY_DIR}/ExtenSerConfigVersion.cmake
+    COMPATIBILITY SameMajorVersion)
 
 install(
-        TARGETS extenser
-        EXPORT extenser-targets
-        INCLUDES
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    TARGETS extenser
+    EXPORT extenser-targets
+    INCLUDES
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(
-        EXPORT extenser-targets
-        FILE "ExtenSerConfig.cmake"
-        NAMESPACE ExtenSer::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
+    EXPORT extenser-targets
+    FILE "ExtenSerConfig.cmake"
+    NAMESPACE ExtenSer::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ExtenSerConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
 
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
-    add_subdirectory(tests)
-endif()
+if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+  add_subdirectory(tests)
+endif ()
 
 if (BUILD_BITSERY)
-    add_subdirectory(extras/bitsery_adapter)
+  add_subdirectory(extras/bitsery_adapter)
 endif ()

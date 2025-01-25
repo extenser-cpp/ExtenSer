@@ -24,12 +24,12 @@ jobs:
   build_gcc:
     strategy:
       matrix:
-        gcc_version: [9, 10, 11, 12]
+        gcc_version: [12, 13, 14]
         build_type: [Debug, Release]
         include:
-          - gcc_version: 12
+          - gcc_version: 14
             build_type: ASAN
-          - gcc_version: 12
+          - gcc_version: 14
             build_type: TSAN
     runs-on: ubuntu-latest
     
@@ -49,12 +49,12 @@ jobs:
   build_llvm:
     strategy:
       matrix:
-        llvm_version: [13, 14, 15]
+        llvm_version: [16, 17, 18]
         build_type: [Debug, Release]
         include:
-          - llvm_version: 15
+          - llvm_version: 18
             build_type: ASAN
-          - llvm_version: 15
+          - llvm_version: 18
             build_type: TSAN
     runs-on: ubuntu-latest
     

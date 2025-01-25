@@ -86,18 +86,21 @@ namespace containers
     };
 } //namespace containers
 
-template<typename Adapter, bool Deserialize, typename T, std::size_t N>
-void serialize(serializer_base<Adapter, Deserialize>& ser, std::array<T, N>& val)
+namespace detail
 {
-    span arr_span{ val };
-    ser.as_array("", arr_span);
-}
-
-template<typename Adapter, bool Deserialize, typename T, std::size_t N>
-void serialize(serializer_base<Adapter, Deserialize>& ser, T (&val)[N])
-{
-    span arr_span{ val };
-    ser.as_array("", arr_span);
-}
+    template<typename Adapter, bool Deserialize, typename T, std::size_t N>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, std::array<T, N>& val)
+    {
+        span arr_span{ val };
+        ser.as_array("", arr_span);
+    }
+  
+    template<typename Adapter, bool Deserialize, typename T, std::size_t N>
+    void serialize(serializer_base<Adapter, Deserialize>& ser, T (&val)[N])
+    {
+        span arr_span{ val };
+        ser.as_array("", arr_span);
+    }
+} //namespace detail
 } //namespace extenser
 #endif
