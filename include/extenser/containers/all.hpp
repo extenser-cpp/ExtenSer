@@ -7,8 +7,8 @@
 // See accompanying file LICENSE or a copy at
 // https://opensource.org/license/bsd-3-clause/
 
-#ifndef EXTENSER_CONTAINERS_ARRAY_HPP
-#define EXTENSER_CONTAINERS_ARRAY_HPP
+#ifndef EXTENSER_CONTAINERS_ALL_HPP
+#define EXTENSER_CONTAINERS_ALL_HPP
 
 #include "array.hpp"
 #include "deque.hpp"
