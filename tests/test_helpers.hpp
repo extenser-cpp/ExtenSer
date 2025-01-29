@@ -130,6 +130,23 @@ void serialize(generic_serializer<S>& ser, Person& person)
     ser.as_map("fruit_count", person.fruit_count);
 }
 
+template<typename CharT>
+struct c_struct
+{
+    CharT name[64];
+    size_t str_len;
+    CharT* str;
+};
+
+template<typename CharT, typename S>
+void serialize(generic_serializer<S>& ser, c_struct<CharT>& value)
+{
+    ser.as_string("name", value.name);
+    ser.as_uint("str_len", value.str_len);
+    span<CharT> str{ value.str, value.str_len };
+    ser.as_string("str", str);
+}
+
 inline auto create_3d_vec(std::size_t x_sz, std::size_t y_sz, std::size_t z_sz)
 {
     std::vector<std::vector<std::vector<double>>> x;

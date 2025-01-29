@@ -23,10 +23,6 @@ option(WERROR "Treat all warnings as errors" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
-if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
-  include(CTest)
-endif ()
-
 # ==== Compiler/Machine Info ====
 
 if (WIN32)

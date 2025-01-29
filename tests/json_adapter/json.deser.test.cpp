@@ -1190,6 +1190,32 @@ TEST_SUITE("json::deserializer")
             }
         }
 
+        GIVEN("a deserializer with a JSON object representing a class with c-style strings")
+        {
+            const auto test_obj = nlohmann::json::parse(
+                R"({"name": "Ralph Jones", "str_len": 13, "str": "Hello, world!"})");
+            const deserializer dser{ test_obj };
+
+            WHEN("the class is deserialized")
+            {
+                std::string buffer(64, '\0');
+
+                c_struct<char> test_val{};
+                test_val.str = buffer.data();
+
+                REQUIRE_NOTHROW(dser.as_object("", test_val));
+
+                THEN("the class is properly assigned")
+                {
+                    CHECK_EQ(std::string_view{ test_val.name }, "Ralph Jones");
+                    REQUIRE_EQ(test_val.str_len, 13);
+                    buffer.resize(test_val.str_len);
+                    CHECK_EQ(buffer, "Hello, world!");
+                    CHECK_EQ(std::string_view{ test_val.str }, "Hello, world!");
+                }
+            }
+        }
+
         GIVEN("a deserializer with a JSON object containing a sub-object representing a class")
         {
             const auto test_obj = nlohmann::json::parse(

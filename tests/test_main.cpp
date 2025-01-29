@@ -23,12 +23,10 @@
 
 #include <algorithm>
 #include <array>
-#include <memory>
 #include <numeric>
 #include <queue>
 #include <stack>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace
@@ -77,7 +75,7 @@ TEST_CASE("C-Array")
 
 TEST_CASE("C++ Array")
 {
-    std::array<int, 50> fix_arr;
+    std::array<int, 50> fix_arr; // NOLINT(*-pro-type-member-init)
     std::iota(fix_arr.begin(), fix_arr.end(), 0);
 
     easy_serializer<json_adapter> ser{};
@@ -248,16 +246,50 @@ TEST_CASE("README Example")
 TEST_CASE("New syntax")
 {
     easy_serializer<json_adapter> serializer{};
+    const auto& json = serializer.object();
 
-    std::string input_str = "Hello, world!";
+    REQUIRE(json.is_null());
+
+    const std::string input_str = "Hello, world!";
 
     // Serialize one object (overwrites existing serialized data)
     serializer.serialize_object(input_str);
 
+    REQUIRE(json.is_string());
+
     // Deserialize one object
-    auto output_str = serializer.deserialize_object<std::string>();
+    const auto output_str = serializer.deserialize_object<std::string>();
 
     REQUIRE_FALSE(output_str.empty());
-    REQUIRE_EQ(output_str, input_str);
+    CHECK_EQ(output_str, input_str);
+
+    SUBCASE("Serializing overwrites")
+    {
+        REQUIRE(json.is_string());
+
+        const std::vector<float> input_vec{ 0.1f, 0.2f, 0.3f };
+        serializer.serialize_object(input_vec);
+
+        REQUIRE(json.is_array());
+
+        const auto output_vec = serializer.deserialize_object<std::vector<float>>();
+
+        REQUIRE_FALSE(output_vec.empty());
+        CHECK_EQ(output_vec, input_vec);
+    }
+}
+
+TEST_CASE("'Quick' methods")
+{
+    const std::string input_str = "Hello, world!";
+
+    const auto json = easy_serializer<json_adapter>::quick_serialize(input_str);
+
+    REQUIRE(json.is_string());
+
+    const auto output_str = easy_serializer<json_adapter>::quick_deserialize<std::string>(json);
+
+    REQUIRE_FALSE(output_str.empty());
+    CHECK_EQ(output_str, input_str);
 }
 } //namespace extenser::tests

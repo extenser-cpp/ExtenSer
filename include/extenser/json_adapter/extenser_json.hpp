@@ -67,15 +67,17 @@ namespace detail_json
     {
     public:
         serializer() noexcept = default;
+        explicit serializer(const nlohmann::json& json) : m_json(json) {}
+        explicit serializer(nlohmann::json&& json) noexcept : m_json(std::move(json)) {}
 
-        [[nodiscard]] auto object() const& noexcept(::EXTENSER_ASSERT_NOTHROW)
+        [[nodiscard]] auto object() const& noexcept(EXTENSER_ASSERT_NOTHROW)
             -> const nlohmann::json&
         {
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
             return m_json;
         }
 
-        [[nodiscard]] auto object() && noexcept(::EXTENSER_ASSERT_NOTHROW) -> nlohmann::json&&
+        [[nodiscard]] auto object() && noexcept(EXTENSER_ASSERT_NOTHROW) -> nlohmann::json&&
         {
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
             return std::move(m_json);
@@ -514,7 +516,12 @@ namespace detail_json
             using traits_t = containers::string_traits<T>;
             using adapter_t = containers::adapter<T>;
 
-            if constexpr (std::is_same_v<T, std::string>)
+            if constexpr (std::is_array_v<T>)
+            {
+                span arr{ val };
+                as_string(key, arr);
+            }
+            else if constexpr (std::is_same_v<T, std::string>)
             {
                 try
                 {
@@ -541,20 +548,20 @@ namespace detail_json
 
                         if constexpr (traits_t::has_fixed_size)
                         {
-                            if (str.size() != adapter_t::size(val))
+                            if (str.size() > adapter_t::size(val))
                             {
                                 throw deserialization_error{ "JSON error: array out of bounds" };
                             }
                         }
 
-                        adapter_t::assign_from_range(val, str.begin(), str.end(), [](const char c)
+                        adapter_t::assign_from_range(val, str.cbegin(), str.cend(), [](const char c)
                             { return static_cast<typename traits_t::value_type>(c); });
                     }
                     else
                     {
                         if constexpr (traits_t::has_fixed_size)
                         {
-                            if (sub_obj.size() != adapter_t::size(val))
+                            if (sub_obj.size() > adapter_t::size(val))
                             {
                                 throw deserialization_error{ "JSON error: array out of bounds" };
                             }
@@ -817,7 +824,7 @@ namespace detail_json
         template<typename T>
         void as_object(const std::string_view key, T& val) const
         {
-            val = parse_arg<T>(subobject(key));
+            parse_arg_inplace<T>(subobject(key), val);
         }
 
         void as_null([[maybe_unused]] const std::string_view key) const
@@ -958,6 +965,42 @@ namespace detail_json
             }
 
             return out_val;
+        }
+
+        template<typename T>
+        static void parse_arg_inplace(const nlohmann::json& arg, T& val)
+        {
+            using no_ref_t = detail::remove_cvref_t<detail::decay_str_t<T>>;
+
+            if (!validate_arg<no_ref_t>(arg))
+            {
+#if defined(EXTENSER_NO_RTTI)
+                throw deserialization_error{
+                    std::string{ "JSON error: expected type: {NO-RTTI}, got type: " }.append(
+                        arg.type_name())
+                };
+#else
+                throw deserialization_error{ std::string{ "JSON error: expected type: " }
+                        .append(typeid(no_ref_t).name())
+                        .append(", got type: ")
+                        .append(arg.type_name()) };
+#endif
+            }
+
+            deserializer ser{ arg };
+
+            try
+            {
+                ser.deserialize_object(val);
+            }
+            catch (const deserialization_error&)
+            {
+                throw;
+            }
+            catch (const std::exception& ex)
+            {
+                throw deserialization_error{ ex.what() };
+            }
         }
 
         [[nodiscard]] static auto get_next_arg(

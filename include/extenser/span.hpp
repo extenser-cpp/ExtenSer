@@ -48,11 +48,17 @@ namespace detail
 
         constexpr span_iterator(pointer ptr) noexcept : m_ptr(ptr) {}
 
-        constexpr auto operator*() const noexcept -> reference { return *m_ptr; }
+        constexpr auto operator*() const noexcept -> reference
+        {
+            EXTENSER_PRECONDITION(m_ptr != nullptr);
+            return *m_ptr;
+        }
+
         constexpr auto operator->() const noexcept -> pointer { return m_ptr; }
 
         constexpr auto operator++() noexcept -> span_iterator&
         {
+            EXTENSER_PRECONDITION(m_ptr != nullptr);
             ++m_ptr;
             return *this;
         }
@@ -66,6 +72,7 @@ namespace detail
 
         constexpr auto operator--() noexcept -> span_iterator&
         {
+            EXTENSER_PRECONDITION(m_ptr != nullptr);
             --m_ptr;
             return *this;
         }
@@ -79,6 +86,7 @@ namespace detail
 
         constexpr auto operator+=(const difference_type offset) noexcept -> span_iterator&
         {
+            EXTENSER_PRECONDITION(m_ptr != nullptr);
             m_ptr += offset;
             return *this;
         }
@@ -100,6 +108,7 @@ namespace detail
 
         constexpr auto operator-=(const difference_type offset) noexcept -> span_iterator&
         {
+            EXTENSER_PRECONDITION(m_ptr != nullptr);
             m_ptr -= offset;
             return *this;
         }
@@ -138,7 +147,7 @@ namespace detail
         constexpr auto to_address() const noexcept -> pointer { return m_ptr; }
 
     private:
-        pointer m_ptr{ nullptr };
+        pointer m_ptr;
     };
 
 #  if defined(__clang__) && __clang_major__ >= 16
@@ -175,6 +184,7 @@ public:
         typename = std::enable_if_t<detail::constructible_from_iterator_v<element_type, It>>>
     constexpr span(It first, size_type count) : m_head_ptr(&*first), m_sz(count)
     {
+        EXTENSER_POSTCONDITION(m_head_ptr != nullptr);
     }
 
     template<typename It, typename End,
@@ -184,28 +194,33 @@ public:
         : m_head_ptr(&*first), m_sz(static_cast<size_type>(std::distance(first, last)))
     {
         EXTENSER_PRECONDITION(std::distance(first, last) >= 0);
+        EXTENSER_POSTCONDITION(m_head_ptr != nullptr);
     }
 
     template<std::size_t N>
     constexpr span(detail::type_identity_t<element_type> (&arr)[N]) noexcept
         : m_head_ptr(std::data(arr)), m_sz(N)
     {
+        EXTENSER_POSTCONDITION(m_head_ptr != nullptr);
     }
 
     template<typename U, std::size_t N>
     constexpr span(std::array<U, N>& arr) noexcept : m_head_ptr(std::data(arr)), m_sz(N)
     {
+        EXTENSER_POSTCONDITION(m_head_ptr != nullptr);
     }
 
     template<typename U, std::size_t N>
     constexpr span(const std::array<U, N>& arr) noexcept : m_head_ptr(std::data(arr)), m_sz(N)
     {
+        EXTENSER_POSTCONDITION(m_head_ptr != nullptr);
     }
 
     template<typename U>
     constexpr span(const span<U>& source) noexcept
         : m_head_ptr(source.m_head_ptr), m_sz(source.m_sz)
     {
+        EXTENSER_POSTCONDITION(m_head_ptr != nullptr);
     }
 
     constexpr span(const span&) noexcept = default;
@@ -215,29 +230,39 @@ public:
     constexpr auto operator=(span&&) -> span& = delete;
 
     constexpr auto begin() const noexcept -> iterator { return { m_head_ptr }; }
-    constexpr auto end() const noexcept -> iterator { return { m_head_ptr + m_sz }; }
+
+    constexpr auto end() const noexcept -> iterator
+    {
+        EXTENSER_PRECONDITION(m_head_ptr != nullptr);
+        return { m_head_ptr + m_sz };
+    }
+
     constexpr auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{ end() }; }
     constexpr auto rend() const noexcept -> reverse_iterator { return reverse_iterator{ begin() }; }
 
     constexpr auto front() const -> reference
     {
+        EXTENSER_PRECONDITION(m_head_ptr != nullptr);
         EXTENSER_PRECONDITION(m_sz != 0);
         return *m_head_ptr;
     }
 
     constexpr auto back() const -> reference
     {
+        EXTENSER_PRECONDITION(m_head_ptr != nullptr);
         EXTENSER_PRECONDITION(m_sz != 0);
         return *(m_head_ptr + m_sz);
     }
 
     constexpr auto operator[](size_type idx) const -> reference
     {
+        EXTENSER_PRECONDITION(m_head_ptr != nullptr);
         EXTENSER_PRECONDITION(idx < m_sz);
         return *(m_head_ptr + idx);
     }
 
     constexpr auto data() const noexcept -> pointer { return m_head_ptr; }
+
     [[nodiscard]] constexpr auto empty() const noexcept -> bool { return m_sz == 0; }
     constexpr auto size() const noexcept -> size_type { return m_sz; }
     constexpr auto size_bytes() const noexcept -> size_type { return m_sz * sizeof(T); }
