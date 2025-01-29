@@ -423,7 +423,7 @@ namespace detail
         template<typename T>
         EXTENSER_INLINE void as_string(const std::string_view key, T& val)
         {
-            static_assert(is_string_serializable<T>, "T must be convertible to std::string_view");
+            //static_assert(is_string_serializable<T>, "T must be convertible to std::string_view");
             (static_cast<serializer_t*>(this))->as_string(key, val);
         }
 

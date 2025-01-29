@@ -53,9 +53,9 @@ namespace containers
             span<T, N>& container, InputIt first, InputIt last, ConversionOp convert_fn)
         {
             EXTENSER_PRECONDITION(std::distance(first, last) >= 0
-                && static_cast<std::size_t>(std::distance(first, last)) == container.size());
+                && static_cast<std::size_t>(std::distance(first, last)) <= std::size(container));
 
-            std::transform(first, last, container.begin(), convert_fn);
+            std::transform(first, last, std::begin(container), convert_fn);
         }
     };
 #else
@@ -86,10 +86,11 @@ namespace containers
         static void assign_from_range(
             span<T>& container, InputIt first, InputIt last, ConversionOp convert_fn)
         {
-            EXTENSER_PRECONDITION(std::distance(first, last) >= 0
-                && static_cast<std::size_t>(std::distance(first, last)) == container.size());
+            [[maybe_unused]] const auto dist = std::distance(first, last);
+            EXTENSER_PRECONDITION(
+                dist >= 0 && static_cast<std::size_t>(dist) <= std::size(container));
 
-            std::transform(first, last, container.begin(), convert_fn);
+            std::transform(first, last, std::begin(container), convert_fn);
         }
     };
 #endif

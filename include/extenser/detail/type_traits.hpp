@@ -209,10 +209,62 @@ struct decay_str<const char*>
 };
 
 template<>
+struct decay_str<const wchar_t*>
+{
+    using type = const std::wstring&;
+};
+
+template<>
+struct decay_str<const char16_t*>
+{
+    using type = const std::u16string&;
+};
+
+template<>
+struct decay_str<const char32_t*>
+{
+    using type = const std::u32string&;
+};
+
+#if defined(__cpp_char8_t)
+template<>
+struct decay_str<const char8_t*>
+{
+    using type = const std::u8string&;
+};
+#endif
+
+template<>
 struct decay_str<const char*&>
 {
     using type = const std::string&;
 };
+
+template<>
+struct decay_str<const wchar_t*&>
+{
+    using type = const std::wstring&;
+};
+
+template<>
+struct decay_str<const char16_t*&>
+{
+    using type = const std::u16string&;
+};
+
+template<>
+struct decay_str<const char32_t*&>
+{
+    using type = const std::u32string&;
+};
+
+#if defined(__cpp_char8_t)
+template<>
+struct decay_str<const char8_t*&>
+{
+    using type = const std::u8string&;
+};
+#endif
 
 template<>
 struct decay_str<const char* const&>
@@ -220,17 +272,95 @@ struct decay_str<const char* const&>
     using type = const std::string&;
 };
 
+template<>
+struct decay_str<const wchar_t* const&>
+{
+    using type = const std::wstring&;
+};
+
+template<>
+struct decay_str<const char16_t* const&>
+{
+    using type = const std::u16string&;
+};
+
+template<>
+struct decay_str<const char32_t* const&>
+{
+    using type = const std::u32string&;
+};
+
+#if defined(__cpp_char8_t)
+template<>
+struct decay_str<const char8_t* const&>
+{
+    using type = const std::u8string&;
+};
+#endif
+
 template<std::size_t N>
 struct decay_str<const char (&)[N]>
 {
     using type = const std::string&;
 };
 
+template<std::size_t N>
+struct decay_str<const wchar_t (&)[N]>
+{
+    using type = const std::wstring&;
+};
+
+template<std::size_t N>
+struct decay_str<const char16_t (&)[N]>
+{
+    using type = const std::u16string&;
+};
+
+template<std::size_t N>
+struct decay_str<const char32_t (&)[N]>
+{
+    using type = const std::u32string&;
+};
+
+#if defined(__cpp_char8_t)
+template<std::size_t N>
+struct decay_str<const char8_t (&)[N]>
+{
+    using type = const std::u8string&;
+};
+#endif
+
 template<>
 struct decay_str<std::string_view>
 {
     using type = const std::string&;
 };
+
+template<>
+struct decay_str<std::wstring_view>
+{
+    using type = const std::wstring&;
+};
+
+template<>
+struct decay_str<std::u16string_view>
+{
+    using type = const std::u16string&;
+};
+
+template<>
+struct decay_str<std::u32string_view>
+{
+    using type = const std::u32string&;
+};
+
+#if defined(__cpp_char8_t)
+template<>
+struct decay_str<std::u8string_view>
+{
+    using type = const std::u8string&;
+};
+#endif
 
 template<typename T>
 using decay_str_t = typename decay_str<T>::type;
