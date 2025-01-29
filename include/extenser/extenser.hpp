@@ -345,18 +345,20 @@ namespace detail
             typename Adapter::serializer_t>;
 
         static constexpr std::size_t max_variant_size = 14;
+        static constexpr bool is_deserializer = Deserialize;
+        static constexpr bool is_serializer = !Deserialize;
 
         template<typename T>
         void serialize_object(const T& val)
         {
-            using no_ref_t = detail::remove_cvref_t<T>;
+            using no_ref_t = remove_cvref_t<T>;
 
             static_assert(!Deserialize, "Cannot call serialize_object() on a deserializer");
             static_assert(!std::is_pointer_v<no_ref_t>,
                 "Cannot serialize a pointer directly, wrap it in a span or view");
 
             // Necessary for bi-directional serialization
-            if constexpr (detail::has_serialize_mem_v<no_ref_t>)
+            if constexpr (has_serialize_mem_v<no_ref_t>)
             {
                 // NOLINT(cppcoreguidelines-pro-type-const-cast)
                 const_cast<T&>(val).serialize(*this);
@@ -371,13 +373,13 @@ namespace detail
         template<typename T>
         void deserialize_object(T&& val)
         {
-            using no_ref_t = detail::remove_cvref_t<T>;
+            using no_ref_t = remove_cvref_t<T>;
 
             static_assert(Deserialize, "Cannot call deserialize_object() on a serializer");
             static_assert(!std::is_pointer_v<no_ref_t>,
                 "Cannot serialize a pointer directly, wrap it in a span or view");
 
-            if constexpr (detail::has_serialize_mem_v<no_ref_t>)
+            if constexpr (has_serialize_mem_v<no_ref_t>)
             {
                 std::forward<T>(val).serialize(*this);
             }
@@ -661,6 +663,30 @@ public:
     using serializer_t = typename Adapter::serializer_t;
     using deserializer_t = typename Adapter::deserializer_t;
 
+    template<typename T>
+    [[nodiscard]] static auto quick_serialize(const T& val) -> serial_t
+    {
+        serializer_t ser{};
+        ser.serialize_object(val);
+        return std::move(ser).object();
+    }
+
+    template<typename T>
+    static void quick_deserialize(const serial_t& serial, T& val)
+    {
+        deserializer_t des{ serial };
+        des.deserialize_object(val);
+    }
+
+    template<typename T, std::enable_if_t<std::is_default_constructible_v<T>, bool> = true>
+    [[nodiscard]] static auto quick_deserialize(const serial_t& serial) -> T
+    {
+        deserializer_t des{ serial };
+        T t;
+        des.deserialize_object(t);
+        return t;
+    }
+
     easy_serializer() : m_deserializer(m_serializer.object()) {}
 
     explicit easy_serializer(const serial_t& serial)
@@ -674,9 +700,10 @@ public:
     }
 
     template<typename T>
-    void serialize_object(const T& val)
+    auto serialize_object(const T& val) -> easy_serializer&
     {
         m_serializer.serialize_object(val);
+        return *this;
     }
 
     template<typename T, std::enable_if_t<std::is_default_constructible_v<T>, bool> = true>
@@ -688,9 +715,10 @@ public:
     }
 
     template<typename T>
-    void deserialize_object(T&& val)
+    auto deserialize_object(T&& val) -> easy_serializer&
     {
         m_deserializer.deserialize_object(std::forward<T>(val));
+        return *this;
     }
 
     auto object() const& -> const serial_t& { return m_serializer.object(); }

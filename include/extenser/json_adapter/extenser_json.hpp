@@ -70,14 +70,14 @@ namespace detail_json
         explicit serializer(const nlohmann::json& json) : m_json(json) {}
         explicit serializer(nlohmann::json&& json) noexcept : m_json(std::move(json)) {}
 
-        [[nodiscard]] auto object() const& noexcept(::EXTENSER_ASSERT_NOTHROW)
+        [[nodiscard]] auto object() const& noexcept(EXTENSER_ASSERT_NOTHROW)
             -> const nlohmann::json&
         {
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
             return m_json;
         }
 
-        [[nodiscard]] auto object() && noexcept(::EXTENSER_ASSERT_NOTHROW) -> nlohmann::json&&
+        [[nodiscard]] auto object() && noexcept(EXTENSER_ASSERT_NOTHROW) -> nlohmann::json&&
         {
             EXTENSER_POSTCONDITION(m_json.is_null() || !m_json.empty());
             return std::move(m_json);
