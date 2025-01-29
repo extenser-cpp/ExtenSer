@@ -248,11 +248,16 @@ TEST_CASE("README Example")
 TEST_CASE("New syntax")
 {
     easy_serializer<json_adapter> serializer{};
+    const auto& json = serializer.object();
+
+    REQUIRE(json.is_null());
 
     std::string input_str = "Hello, world!";
 
     // Serialize one object (overwrites existing serialized data)
     serializer.serialize_object(input_str);
+
+    REQUIRE(json.is_string());
 
     // Deserialize one object
     auto output_str = serializer.deserialize_object<std::string>();

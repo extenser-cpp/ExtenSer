@@ -657,7 +657,21 @@ template<typename Adapter>
 class easy_serializer
 {
 public:
-    easy_serializer() noexcept : m_deserializer(m_serializer.object()) {}
+    using serial_t = typename Adapter::serial_t;
+    using serializer_t = typename Adapter::serializer_t;
+    using deserializer_t = typename Adapter::deserializer_t;
+
+    easy_serializer() : m_deserializer(m_serializer.object()) {}
+
+    explicit easy_serializer(const serial_t& serial)
+        : m_serializer(serial), m_deserializer(m_serializer.object())
+    {
+    }
+
+    explicit easy_serializer(serial_t&& serial)
+        : m_serializer(std::move(serial)), m_deserializer(m_serializer.object())
+    {
+    }
 
     template<typename T>
     void serialize_object(const T& val)
@@ -666,7 +680,7 @@ public:
     }
 
     template<typename T, std::enable_if_t<std::is_default_constructible_v<T>, bool> = true>
-    T deserialize_object()
+    [[nodiscard]] auto deserialize_object() -> T
     {
         T t;
         m_deserializer.deserialize_object(t);
@@ -679,9 +693,12 @@ public:
         m_deserializer.deserialize_object(std::forward<T>(val));
     }
 
+    auto object() const& -> const serial_t& { return m_serializer.object(); }
+    [[nodiscard]] auto object() && -> serial_t&& { return std::move(m_serializer).object(); }
+
 private:
-    typename Adapter::serializer_t m_serializer{};
-    typename Adapter::deserializer_t m_deserializer;
+    serializer_t m_serializer{};
+    deserializer_t m_deserializer;
 };
 } //namespace extenser
 #endif //EXTENSER_HPP
