@@ -1198,8 +1198,10 @@ TEST_SUITE("json::deserializer")
 
             WHEN("the class is deserialized")
             {
+                std::string buffer(64, '\0');
+
                 c_struct<char> test_val{};
-                test_val.str = new char[64]{};
+                test_val.str = buffer.data();
 
                 REQUIRE_NOTHROW(dser.as_object("", test_val));
 
@@ -1207,6 +1209,8 @@ TEST_SUITE("json::deserializer")
                 {
                     CHECK_EQ(std::string_view{ test_val.name }, "Ralph Jones");
                     REQUIRE_EQ(test_val.str_len, 13);
+                    buffer.resize(test_val.str_len);
+                    CHECK_EQ(buffer, "Hello, world!");
                     CHECK_EQ(std::string_view{ test_val.str }, "Hello, world!");
                 }
             }
