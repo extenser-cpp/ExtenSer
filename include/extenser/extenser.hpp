@@ -83,7 +83,7 @@ namespace containers
     template<typename Container>
     struct string_traits : sequential_traits<Container>
     {
-        using character_type = typename Container::value_type;
+        using character_type = typename traits<Container>::value_type;
         using typename sequential_traits<Container>::container_type;
         using typename sequential_traits<Container>::size_type;
         using typename sequential_traits<Container>::value_type;

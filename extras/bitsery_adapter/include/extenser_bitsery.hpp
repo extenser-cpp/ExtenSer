@@ -650,7 +650,14 @@ namespace detail_bitsery
         }
         else
         {
-            serialize(fallback, val);
+            if constexpr(Deserialize)
+            {
+                fallback.deserialize_object(val);
+            }
+            else
+            {
+                fallback.serialize_object(val);
+            }
         }
     }
 } //namespace detail_bitsery

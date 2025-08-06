@@ -233,7 +233,7 @@ public:
 
     constexpr auto end() const noexcept -> iterator
     {
-        EXTENSER_PRECONDITION(m_head_ptr != nullptr);
+        EXTENSER_PRECONDITION(m_head_ptr != nullptr || m_sz == 0);
         return { m_head_ptr + m_sz };
     }
 
