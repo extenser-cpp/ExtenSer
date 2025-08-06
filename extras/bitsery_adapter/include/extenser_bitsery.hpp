@@ -384,7 +384,6 @@ namespace detail_bitsery
         void as_string([[maybe_unused]] const std::string_view key, T& val)
         {
             using traits_t = containers::string_traits<T>;
-            using adapter_t = containers::adapter<T>;
 
             static constexpr std::size_t char_sz = sizeof(typename traits_t::character_type);
 
