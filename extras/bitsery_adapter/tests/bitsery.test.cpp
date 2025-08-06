@@ -27,38 +27,6 @@
 
 namespace extenser::tests
 {
-class Foo
-{
-public:
-    explicit constexpr Foo(int num) noexcept : m_num(num) {}
-    [[nodiscard]] constexpr int num() const noexcept { return m_num; }
-
-    template<typename S>
-    void serialize(extenser::generic_serializer<S>& ser)
-    {
-        ser.as_int("num", m_num);
-    }
-
-private:
-    int m_num;
-};
-
-class Bar
-{
-public:
-    explicit constexpr Bar(int num) noexcept : m_foo(num) {}
-    [[nodiscard]] constexpr int num() const noexcept { return m_foo.num(); }
-
-    template<typename S>
-    void serialize(extenser::generic_serializer<S>& ser)
-    {
-        ser.as_object("foo", m_foo);
-    }
-
-private:
-    Foo m_foo;
-};
-
 TEST_SUITE("bitsery adapter")
 {
     using serializer = bitsery_adapter::serializer_t;
@@ -799,16 +767,16 @@ TEST_SUITE("bitsery adapter")
     {
         serializer ser{};
 
-        const Bar bar(4);
+        static constexpr Bar expected_val(4);
 
-        REQUIRE_NOTHROW(ser.as_object("", bar));
+        REQUIRE_NOTHROW(ser.as_object("", expected_val));
 
-        deserializer dser{ser.object()};
+        deserializer dser{ ser.object() };
 
-        Bar bar_out{0};
-        dser.as_object("", bar_out);
+        Bar test_val{ 0 };
+        dser.as_object("", test_val);
 
-        CHECK_EQ(bar_out.num(), bar.num());
+        CHECK_EQ(test_val, expected_val);
     }
 
     struct NoDefault

@@ -1331,6 +1331,68 @@ TEST_SUITE("json::serializer")
         }
     }
 
+    SCENARIO("a user-defined class with serialize as a member fn can be serialized to JSON")
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a user-defined class is serialized")
+            {
+                const Bar test_val{ 4 };
+
+                REQUIRE_NOTHROW(ser.as_object("", test_val));
+
+                THEN("the JSON object holds an object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE_FALSE(obj.empty());
+
+                    AND_THEN("the object holds all of its members")
+                    {
+                        REQUIRE(obj.contains("foo"));
+                        REQUIRE(obj["foo"].is_object());
+
+                        REQUIRE(obj["foo"].contains("num"));
+                        REQUIRE(obj["foo"]["num"].is_number_integer());
+                        CHECK_EQ(obj["foo"]["num"].get<int>(), test_val.num());
+                    }
+                }
+            }
+
+            WHEN("a user-defined class is serialized as a sub-object")
+            {
+                const Bar test_val{ 4 };
+
+                REQUIRE_NOTHROW(ser.as_object("test_val", test_val));
+
+                THEN("the JSON object has a sub-object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE(obj.contains("test_val"));
+                    const auto& sub_obj = obj["test_val"];
+
+                    AND_THEN("the sub-object holds and object")
+                    {
+                        REQUIRE(sub_obj.is_object());
+                        REQUIRE_FALSE(sub_obj.empty());
+
+                        AND_THEN("the object holds all its members")
+                        {
+                            REQUIRE(sub_obj.contains("foo"));
+                            REQUIRE(sub_obj["foo"].is_object());
+
+                            REQUIRE(sub_obj["foo"].contains("num"));
+                            REQUIRE(sub_obj["foo"]["num"].is_number_integer());
+                            CHECK_EQ(sub_obj["foo"]["num"].get<int>(), test_val.num());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     SCENARIO("null types can be serialized to JSON")
     {
         GIVEN("a default-init serializer")
