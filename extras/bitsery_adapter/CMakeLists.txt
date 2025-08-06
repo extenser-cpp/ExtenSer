@@ -21,7 +21,7 @@ endif()
 
 FetchContent_Declare(bitsery
         GIT_REPOSITORY https://github.com/fraillt/bitsery.git
-        GIT_TAG ee992d8b5782e41792e4810c5b00ad4625783427
+        GIT_TAG ee992d8b5782e41792e4810c5b00ad4625783427 # 5.2.4
         )
 FetchContent_MakeAvailable(bitsery)
 
