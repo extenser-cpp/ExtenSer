@@ -394,7 +394,7 @@ namespace detail_bitsery
             {
                 if constexpr (traits_t::has_fixed_size)
                 {
-                    m_ser.text<char_sz>(val, adapter_t::size(val));
+                    m_ser.text<char_sz>(val);
                 }
                 else
                 {
@@ -650,7 +650,7 @@ namespace detail_bitsery
         }
         else
         {
-            if constexpr(Deserialize)
+            if constexpr (Deserialize)
             {
                 fallback.deserialize_object(val);
             }
