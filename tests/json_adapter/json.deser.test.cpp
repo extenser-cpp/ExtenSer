@@ -1253,5 +1253,44 @@ TEST_SUITE("json::deserializer")
             }
         }
     }
+
+    SCENARIO("a user-defined class with serialize as a member fn can be deserialized from JSON")
+    {
+        GIVEN("a deserializer with a JSON object representing a class")
+        {
+            const auto test_obj = nlohmann::json::parse(R"({"foo": { "num": 4 }})");
+            const deserializer dser{ test_obj };
+
+            WHEN("the class is deserialized")
+            {
+                Bar test_val{ 0 };
+
+                REQUIRE_NOTHROW(dser.as_object("", test_val));
+
+                THEN("the class is properly assigned")
+                {
+                    CHECK_EQ(test_val.num(), 4);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON object containing a sub-object representing a class")
+        {
+            const auto test_obj = nlohmann::json::parse(R"({"test_val": {"foo": { "num": 4 } }})");
+            const deserializer dser{ test_obj };
+
+            WHEN("the sub-object is deserialized")
+            {
+                Bar test_val{ 0 };
+
+                REQUIRE_NOTHROW(dser.as_object("test_val", test_val));
+
+                THEN("the class is properly assigned")
+                {
+                    CHECK_EQ(test_val.num(), 4);
+                }
+            }
+        }
+    }
 }
 } //namespace extenser::tests

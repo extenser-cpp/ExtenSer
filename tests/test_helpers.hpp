@@ -147,6 +147,48 @@ void serialize(generic_serializer<S>& ser, c_struct<CharT>& value)
     ser.as_string("str", str);
 }
 
+class Foo
+{
+public:
+    explicit constexpr Foo(const int num) noexcept : m_num(num) {}
+    [[nodiscard]] constexpr int num() const noexcept { return m_num; }
+
+    template<typename S>
+    void serialize(generic_serializer<S>& ser)
+    {
+        ser.as_int("num", m_num);
+    }
+
+    constexpr friend bool operator==(const Foo& lhs, const Foo& rhs) noexcept
+    {
+        return lhs.m_num == rhs.m_num;
+    }
+
+private:
+    int m_num;
+};
+
+class Bar
+{
+public:
+    explicit constexpr Bar(const int num) noexcept : m_foo(num) {}
+    [[nodiscard]] constexpr int num() const noexcept { return m_foo.num(); }
+
+    template<typename S>
+    void serialize(generic_serializer<S>& ser)
+    {
+        ser.as_object("foo", m_foo);
+    }
+
+    constexpr friend bool operator==(const Bar& lhs, const Bar& rhs) noexcept
+    {
+        return lhs.m_foo == rhs.m_foo;
+    }
+
+private:
+    Foo m_foo;
+};
+
 inline auto create_3d_vec(std::size_t x_sz, std::size_t y_sz, std::size_t z_sz)
 {
     std::vector<std::vector<std::vector<double>>> x;
