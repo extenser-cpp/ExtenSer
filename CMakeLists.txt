@@ -249,7 +249,8 @@ elseif (CXX_CLANG OR CXX_CLANG_CL)
             -Wno-missing-braces
             -Wno-covered-switch-default
             -Wno-unused-template
-            -Wno-assume)
+            -Wno-assume
+            -Wno-poison-system-directories)
     set(MIN_WARNING -Wall)
     if (CXX_CLANG_CL)
         list(APPEND FULL_WARNING
