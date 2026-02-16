@@ -94,7 +94,7 @@ namespace detail
         span arr_span{ val };
         ser.as_array("", arr_span);
     }
-  
+
     template<typename Adapter, bool Deserialize, typename T, std::size_t N>
     void serialize(serializer_base<Adapter, Deserialize>& ser, T (&val)[N])
     {
