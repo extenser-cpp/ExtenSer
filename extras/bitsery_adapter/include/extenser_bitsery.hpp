@@ -277,9 +277,7 @@ namespace detail_bitsery
 
             m_ser.ext(val,
                 bitsery::ext::StdTuple{ [this](S& ser, auto& subval)
-                    {
-                        serial_adapter::parse_obj(ser, *this, subval);
-                    } });
+                    { serial_adapter::parse_obj(ser, *this, subval); } });
         }
 
         template<typename T>
@@ -299,9 +297,7 @@ namespace detail_bitsery
 
             m_ser.ext(val,
                 bitsery::ext::StdVariant{ [this](S& ser, auto& subval)
-                    {
-                        serial_adapter::parse_obj(ser, *this, subval);
-                    } });
+                    { serial_adapter::parse_obj(ser, *this, subval); } });
         }
 
         template<typename T>
@@ -493,9 +489,7 @@ namespace detail_bitsery
             update_buffer();
             m_ser.ext(val,
                 bitsery::ext::StdTuple{ [this](S& ser, auto& subval)
-                    {
-                        serial_adapter::parse_obj(ser, *this, subval);
-                    } });
+                    { serial_adapter::parse_obj(ser, *this, subval); } });
         }
 
         template<typename T>
@@ -516,9 +510,7 @@ namespace detail_bitsery
             update_buffer();
             m_ser.ext(val,
                 bitsery::ext::StdVariant{ [this](S& ser, auto& subval)
-                    {
-                        serial_adapter::parse_obj(ser, *this, subval);
-                    } });
+                    { serial_adapter::parse_obj(ser, *this, subval); } });
         }
 
         template<typename T>
@@ -629,18 +621,14 @@ namespace detail_bitsery
         else if constexpr (detail::is_tuple_v<T>)
         {
             ser.ext(val,
-                bitsery::ext::StdTuple{ [&fallback](S& s_ser, auto& subval)
-                    {
-                        parse_obj(s_ser, fallback, subval);
-                    } });
+                bitsery::ext::StdTuple{
+                    [&fallback](S& s_ser, auto& subval) { parse_obj(s_ser, fallback, subval); } });
         }
         else if constexpr (detail::is_variant_v<T>)
         {
             ser.ext(val,
-                bitsery::ext::StdVariant{ [&fallback](S& s_ser, auto& subval)
-                    {
-                        parse_obj(s_ser, fallback, subval);
-                    } });
+                bitsery::ext::StdVariant{
+                    [&fallback](S& s_ser, auto& subval) { parse_obj(s_ser, fallback, subval); } });
         }
         else if constexpr (std::is_same_v<T, std::nullptr_t> || std::is_same_v<T, std::monostate>
             || std::is_same_v<T, std::nullopt_t>)

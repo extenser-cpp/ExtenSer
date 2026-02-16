@@ -11,28 +11,19 @@ enable_testing()
 
 include(doctest)
 
-# FetchContent_Declare(doctest
-#     GIT_REPOSITORY https://github.com/doctest/doctest.git
-#     GIT_TAG ae7a13539fb71f270b87eb2e874fbac80bc8dda2
-#     )
-# FetchContent_MakeAvailable(doctest)
-
-# add_library(doctest_runner OBJECT test_runner.cpp)
-# target_link_libraries_system(doctest_runner PUBLIC doctest::doctest)
-
 add_executable(bitsery-test bitsery.test.cpp)
 target_link_libraries(bitsery-test PRIVATE doctest_runner extenser-bitsery)
 target_compile_features(bitsery-test PRIVATE cxx_std_17)
 target_compile_options(bitsery-test PRIVATE ${FULL_WARNING})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
-  include(CodeCoverage)
-  
-  set(GCOVR_ADDITIONAL_ARGS --merge-mode-functions=separate)
-  set(COVERAGE_EXCLUDES "${PROJECT_BINARY_DIR}/*" "${PROJECT_SOURCE_DIR}/tests/*")
+    include(CodeCoverage)
 
-  setup_target_for_coverage_gcovr_html(NAME bitsery_gcovr EXECUTABLE bitsery-test DEPENDENCIES bitsery-test)
-  setup_target_for_coverage_lcov(NAME bitsery_lcov EXECUTABLE bitsery-test DEPENDENCIES bitsery-test)
+    set(GCOVR_ADDITIONAL_ARGS --merge-mode-functions=separate)
+    set(COVERAGE_EXCLUDES "${PROJECT_BINARY_DIR}/*" "${PROJECT_SOURCE_DIR}/tests/*")
+
+    setup_target_for_coverage_gcovr_html(NAME bitsery_gcovr EXECUTABLE bitsery-test DEPENDENCIES bitsery-test)
+    setup_target_for_coverage_lcov(NAME bitsery_lcov EXECUTABLE bitsery-test DEPENDENCIES bitsery-test)
 endif ()
 
 doctest_discover_tests(bitsery-test ADD_LABELS 1)

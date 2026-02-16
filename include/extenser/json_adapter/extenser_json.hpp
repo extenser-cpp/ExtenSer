@@ -542,6 +542,11 @@ namespace detail_json
                 {
                     const auto& sub_obj = subobject(key);
 
+                    if (!sub_obj.is_string() && !sub_obj.is_array())
+                    {
+                        throw deserialization_error{ "JSON error: expected string-like type" };
+                    }
+
                     if constexpr (std::is_same_v<typename traits_t::character_type, char>)
                     {
                         const auto str = sub_obj.get<std::string>();
