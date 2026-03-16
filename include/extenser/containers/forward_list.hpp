@@ -52,8 +52,13 @@ namespace containers
             using reverse_it = std::reverse_iterator<InputIt>;
 
             container.clear();
-            std::transform(reverse_it{ last }, reverse_it{ first }, std::front_inserter(container),
-                convert_fn);
+
+            auto tail = container.before_begin();
+
+            for (; first != last; ++first)
+            {
+                tail = container.emplace_after(tail, convert_fn(*first));
+            }
         }
     };
 } //namespace containers

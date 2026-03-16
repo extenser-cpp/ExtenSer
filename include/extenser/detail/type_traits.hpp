@@ -42,7 +42,7 @@ namespace extenser::detail
 
 EXTENSER_CHECKER(has_begin, std::declval<T>().begin(), typename T::iterator);
 EXTENSER_CHECKER(has_end, std::declval<T>().end(), typename T::iterator);
-EXTENSER_CHECKER(has_size, std::declval<T>().size(), typename T::iterator);
+EXTENSER_CHECKER(has_size, std::declval<T>().size(), typename T::size_type);
 EXTENSER_CHECKER(has_set_key, typename T::value_type{}, typename T::key_type);
 EXTENSER_CHECKER(
     has_map_iterator, std::declval<typename T::iterator>()->second, typename T::mapped_type);
