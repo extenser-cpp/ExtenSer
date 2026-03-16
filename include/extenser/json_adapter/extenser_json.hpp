@@ -327,7 +327,7 @@ namespace detail_json
 
             auto key_str = key_obj.get<std::string>();
 
-            if (key_str.front() == '@')
+            if (!key_str.empty() && key_str.front() == '@')
             {
                 // Escape '@' at front of string
                 key_str.insert(key_str.begin(), '@');
@@ -671,13 +671,15 @@ namespace detail_json
         template<typename... Args>
         void as_tuple(const std::string_view key, std::tuple<Args...>& val) const
         {
-            if (subobject(key).size() != sizeof...(Args))
+            const auto& obj = subobject(key);
+
+            if (obj.size() != sizeof...(Args))
             {
                 throw deserialization_error{ "JSON error: invalid number of args" };
             }
 
             [[maybe_unused]] std::size_t arg_counter = 0;
-            val = { parse_args<Args>(subobject(key), arg_counter)... };
+            val = { parse_args<Args>(obj, arg_counter)... };
         }
 
         template<typename T>
@@ -887,11 +889,12 @@ namespace detail_json
             {
                 return arg.is_string();
             }
-            else if constexpr (detail::is_map_v<T> || detail::is_pair_v<T>)
+            else if constexpr (detail::is_map_v<T>)
             {
                 return arg.is_object();
             }
-            else if constexpr (detail::is_container_v<T> || detail::is_tuple_v<T>)
+            else if constexpr (detail::is_container_v<T> || detail::is_pair_v<T>
+                || detail::is_tuple_v<T>)
             {
                 return arg.is_array();
             }
@@ -908,7 +911,7 @@ namespace detail_json
 
         [[nodiscard]] static auto parse_key_str(std::string_view key_str) -> nlohmann::json
         {
-            if (key_str.front() == '@')
+            if (!key_str.empty() && key_str.front() == '@')
             {
                 if (key_str.size() <= 1 || key_str[1] != '@')
                 {
@@ -953,23 +956,107 @@ namespace detail_json
 #endif
             }
 
-            no_ref_t out_val;
-            deserializer ser{ arg };
+            if constexpr (std::is_same_v<no_ref_t, bool> || std::is_arithmetic_v<no_ref_t>)
+            {
+                try
+                {
+                    return arg.get<no_ref_t>();
+                }
+                catch (const deserialization_error&)
+                {
+                    throw;
+                }
+                catch (const std::exception& ex)
+                {
+                    throw deserialization_error{ ex.what() };
+                }
+            }
+            else if constexpr (std::is_same_v<no_ref_t, std::string>)
+            {
+                try
+                {
+                    return arg.get<std::string>();
+                }
+                catch (const deserialization_error&)
+                {
+                    throw;
+                }
+                catch (const std::exception& ex)
+                {
+                    throw deserialization_error{ ex.what() };
+                }
+            }
+            else if constexpr (detail::is_stringlike_v<no_ref_t>)
+            {
+                no_ref_t out_val;
 
-            try
-            {
-                ser.deserialize_object(out_val);
-            }
-            catch (const deserialization_error&)
-            {
-                throw;
-            }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
-            }
+                try
+                {
+                    using traits_t = containers::string_traits<T>;
+                    using adapter_t = containers::adapter<T>;
 
-            return out_val;
+                    if constexpr (std::is_same_v<typename traits_t::character_type, char>)
+                    {
+                        const auto str = arg.get<std::string>();
+
+                        if constexpr (traits_t::has_fixed_size)
+                        {
+                            if (str.size() > adapter_t::size(out_val))
+                            {
+                                throw deserialization_error{ "JSON error: array out of bounds" };
+                            }
+                        }
+
+                        adapter_t::assign_from_range(out_val, str.cbegin(), str.cend(),
+                            [](const char c)
+                            { return static_cast<typename traits_t::value_type>(c); });
+                    }
+                    else
+                    {
+                        if constexpr (traits_t::has_fixed_size)
+                        {
+                            if (arg.size() > adapter_t::size(out_val))
+                            {
+                                throw deserialization_error{ "JSON error: array out of bounds" };
+                            }
+                        }
+
+                        adapter_t::assign_from_range(out_val, arg.begin(), arg.end(),
+                            [](const nlohmann::json& sub_val)
+                            { return sub_val.get<typename traits_t::value_type>(); });
+                    }
+                }
+                catch (const deserialization_error&)
+                {
+                    throw;
+                }
+                catch (const std::exception& ex)
+                {
+                    throw deserialization_error{ ex.what() };
+                }
+
+                return out_val;
+            }
+            else
+            {
+                no_ref_t out_val;
+                deserializer ser{ arg };
+
+                try
+                {
+                    ser.deserialize_object(out_val);
+                }
+                catch (const deserialization_error&)
+                {
+                    throw;
+                }
+                catch (const std::exception& ex)
+                {
+                    throw deserialization_error{ ex.what() };
+                }
+
+                return out_val;
+            }
         }
 
         template<typename T>

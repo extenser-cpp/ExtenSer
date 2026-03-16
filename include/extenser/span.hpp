@@ -190,10 +190,11 @@ public:
     template<typename It, typename End,
         typename = std::enable_if_t<detail::constructible_from_iterator_v<element_type, It>
             && !std::is_convertible_v<End, size_type>>>
-    constexpr span(It first, End last)
-        : m_head_ptr(&*first), m_sz(static_cast<size_type>(std::distance(first, last)))
+    constexpr span(It first, End last) : m_head_ptr(&*first)
     {
         EXTENSER_PRECONDITION(std::distance(first, last) >= 0);
+        m_sz = static_cast<size_type>(std::distance(first, last));
+
         EXTENSER_POSTCONDITION(m_head_ptr != nullptr);
     }
 
@@ -220,7 +221,6 @@ public:
     constexpr span(const span<U>& source) noexcept
         : m_head_ptr(source.m_head_ptr), m_sz(source.m_sz)
     {
-        EXTENSER_POSTCONDITION(m_head_ptr != nullptr);
     }
 
     constexpr span(const span&) noexcept = default;
@@ -251,7 +251,7 @@ public:
     {
         EXTENSER_PRECONDITION(m_head_ptr != nullptr);
         EXTENSER_PRECONDITION(m_sz != 0);
-        return *(m_head_ptr + m_sz);
+        return *(m_head_ptr + m_sz - 1);
     }
 
     constexpr auto operator[](size_type idx) const -> reference
