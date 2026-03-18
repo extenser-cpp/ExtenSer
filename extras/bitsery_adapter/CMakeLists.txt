@@ -25,10 +25,10 @@ FetchContent_Declare(bitsery
 )
 FetchContent_MakeAvailable(bitsery)
 
-add_library(extenser-bitsery INTERFACE include/extenser_bitsery.hpp)
-target_link_libraries(extenser-bitsery INTERFACE extenser)
-target_link_libraries_system(extenser-bitsery INTERFACE extenser Bitsery::bitsery)
-target_include_directories(extenser-bitsery INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+add_library(extenser_bitsery INTERFACE include/extenser_bitsery.hpp)
+target_link_libraries(extenser_bitsery INTERFACE extenser)
+target_link_libraries_system(extenser_bitsery INTERFACE extenser Bitsery::bitsery)
+target_include_directories(extenser_bitsery INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 if (BUILD_TESTING)
