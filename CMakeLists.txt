@@ -289,9 +289,9 @@ FetchContent_Declare(nlohmann_json
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
-add_library(extenser-json INTERFACE include/extenser/json_adapter/extenser_json.hpp)
-target_link_libraries(extenser-json INTERFACE extenser)
-target_link_libraries_system(extenser-json INTERFACE nlohmann_json::nlohmann_json)
+add_library(extenser_json INTERFACE include/extenser/json_adapter/extenser_json.hpp)
+target_link_libraries(extenser_json INTERFACE extenser)
+target_link_libraries_system(extenser_json INTERFACE nlohmann_json::nlohmann_json)
 
 if (USE_MAGIC_ENUM OR BUILD_TESTING)
     FetchContent_Declare(magic_enum
@@ -301,8 +301,8 @@ if (USE_MAGIC_ENUM OR BUILD_TESTING)
     FetchContent_MakeAvailable(magic_enum)
 
     if (USE_MAGIC_ENUM)
-        target_link_libraries_system(extenser-json INTERFACE magic_enum::magic_enum)
-        target_compile_definitions(extenser-json INTERFACE EXTENSER_USE_MAGIC_ENUM)
+        target_link_libraries_system(extenser_json INTERFACE magic_enum::magic_enum)
+        target_compile_definitions(extenser_json INTERFACE EXTENSER_USE_MAGIC_ENUM)
     endif ()
 endif ()
 
@@ -316,11 +316,11 @@ write_basic_package_version_file(
 
 install(
         TARGETS extenser
-        EXPORT extenser-targets
+        EXPORT extenser_targets
         INCLUDES
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(
-        EXPORT extenser-targets
+        EXPORT extenser_targets
         FILE "ExtenSerConfig.cmake"
         NAMESPACE ExtenSer::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/extenser)
