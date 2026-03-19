@@ -49,8 +49,6 @@ namespace containers
         static void assign_from_range(std::forward_list<T, Allocator>& container, InputIt first,
             InputIt last, ConversionOp convert_fn)
         {
-            using reverse_it = std::reverse_iterator<InputIt>;
-
             container.clear();
 
             auto tail = container.before_begin();
