@@ -7,6 +7,10 @@
 // See accompanying file LICENSE or a copy at
 // https://opensource.org/license/bsd-3-clause/
 
+#if defined(EXTENSER_USE_MAGIC_ENUM) && !defined(EXTENSER_USE_MAGIC_ENUM_TEST)
+#  undef EXTENSER_USE_MAGIC_ENUM
+#endif
+
 #include "extenser/json_adapter/extenser_json.hpp"
 #include "test_helpers.hpp"
 
@@ -25,7 +29,7 @@
 
 namespace extenser::tests
 {
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
 TEST_SUITE("json::deserializer (magic_enum)")
 #else
 TEST_SUITE("json::deserializer")
@@ -281,7 +285,7 @@ TEST_SUITE("json::deserializer")
         {
             static constexpr auto expected_val{ Fruit::Orange };
 
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
             const nlohmann::json test_obj = "Orange";
 #else
             const nlohmann::json test_obj = 5;
@@ -338,7 +342,7 @@ TEST_SUITE("json::deserializer")
             {
                 TestCode test_val{};
 
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
                 THEN("an exception is thrown")
                 {
                     CHECK_THROWS_AS(dser.as_enum("", test_val), deserialization_error);
@@ -847,7 +851,7 @@ TEST_SUITE("json::deserializer")
                     Person{ 19, "Ricardo Montoya", {}, Pet{ "Sinbad", Pet::Species::Cat }, {} } }
             };
 
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
             const auto test_obj = nlohmann::json::parse(R"({
 "Henrietta": {"age": 16, "name": "Henrietta Payne", "friends": [], "pet": {"name": "Ron", "species": "Fish"}, "fruit_count": {}},
 "Jerome": {"age": 12, "name": "Jerome Banks", "friends": [], "pet": null, "fruit_count": {}},
@@ -979,7 +983,7 @@ TEST_SUITE("json::deserializer")
         {
             static constexpr std::pair<Fruit, int> expected_val{ Fruit::Grape, 45 };
 
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
             const auto test_obj = nlohmann::json::parse(R"(["Grape", 45])");
 #else
             const auto test_obj = nlohmann::json::parse(R"([2, 45])");
@@ -1128,7 +1132,7 @@ TEST_SUITE("json::deserializer")
         GIVEN("a deserializer with a JSON object containing a sub-object representing a variant "
               "(Person)")
         {
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
             const auto test_obj = nlohmann::json::parse(
                 R"({"test_val": {"v_idx": 4, "v_val": {"age": 91, "name": "Gretl Hansel", "pet": {"name": "Fritz", "species": "Cat"}, "friends": [], "fruit_count": {}}}})");
 #else
@@ -1162,7 +1166,7 @@ TEST_SUITE("json::deserializer")
     {
         GIVEN("a deserializer with a JSON object representing a class")
         {
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
             const auto test_obj = nlohmann::json::parse(
                 R"({"age": 18, "name": "Bill Garfield", "friends": [], "pet": { "name": "Yolanda", "species": "Dog" }, "fruit_count": {"Apple": 2, "Kiwi": 4}})");
 #else
