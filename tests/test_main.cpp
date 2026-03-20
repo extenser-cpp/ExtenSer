@@ -11,6 +11,7 @@
 
 #include "extenser/json_adapter/extenser_json.hpp"
 #include "extenser/containers/array.hpp"
+#include "extenser/containers/deque.hpp"
 #include "extenser/containers/map.hpp"
 #include "extenser/containers/queue.hpp"
 #include "extenser/containers/span.hpp"

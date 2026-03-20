@@ -119,16 +119,12 @@ namespace detail_bitsery
         [[nodiscard]] auto object() & -> const std::vector<std::uint8_t>&
         {
             flush();
-
-            //EXTENSER_POSTCONDITION(!m_bytes.empty());
             return m_bytes;
         }
 
         [[nodiscard]] auto object() && -> std::vector<std::uint8_t>&&
         {
             flush();
-
-            //EXTENSER_POSTCONDITION(!m_bytes.empty());
             return std::move(m_bytes);
         }
 
@@ -167,7 +163,7 @@ namespace detail_bitsery
         template<typename T>
         void as_string([[maybe_unused]] const std::string_view key, const T& val)
         {
-            using traits_t = containers::string_traits<T>;
+            using traits_t = containers::traits<T>;
 
             if constexpr (std::is_pointer_v<T>)
             {
@@ -180,7 +176,7 @@ namespace detail_bitsery
             }
             else
             {
-                static constexpr std::size_t char_sz = sizeof(typename traits_t::character_type);
+                static constexpr std::size_t char_sz = sizeof(typename traits_t::value_type);
 
                 if constexpr (traits_t::has_fixed_size)
                 {
@@ -379,9 +375,9 @@ namespace detail_bitsery
         template<typename T>
         void as_string([[maybe_unused]] const std::string_view key, T& val)
         {
-            using traits_t = containers::string_traits<T>;
+            using traits_t = containers::traits<T>;
 
-            static constexpr std::size_t char_sz = sizeof(typename traits_t::character_type);
+            static constexpr std::size_t char_sz = sizeof(typename traits_t::value_type);
 
             update_buffer();
 

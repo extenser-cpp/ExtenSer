@@ -21,23 +21,14 @@ namespace extenser
 namespace containers
 {
     template<typename CharT, typename Traits, typename Allocator>
-    struct traits<std::basic_string<CharT, Traits, Allocator>>
+    struct traits<std::basic_string<CharT, Traits, Allocator>> :
+        string_traits<std::basic_string<CharT, Traits, Allocator>, false, true>
     {
-        using container_type = std::basic_string<CharT, Traits, Allocator>;
-        using character_type = CharT;
-        using size_type = typename container_type::size_type;
-        using value_type = typename container_type::value_type;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_contiguous = true;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = true;
     };
 
     template<typename CharT, typename Traits, typename Allocator>
     class adapter<std::basic_string<CharT, Traits, Allocator>> :
-        public string_adapter<std::basic_string<CharT, Traits, Allocator>>
+        public sequential_adapter<std::basic_string<CharT, Traits, Allocator>>
     {
     public:
         static_assert(std::is_same_v<CharT, char> || std::is_same_v<CharT, wchar_t>
@@ -64,53 +55,53 @@ namespace containers
             std::transform(first, last, std::back_inserter(container), convert_fn);
         }
 
-        static auto to_string(const container_type& container) -> std::string
-        {
-            if constexpr (std::is_same_v<CharT, char>)
-            {
-                return container;
-            }
-            else
-            {
-                return { container.begin(), container.end() };
-            }
-        }
-
-        static auto to_string(container_type&& container) -> std::string
-        {
-            if constexpr (std::is_same_v<CharT, char>)
-            {
-                return std::move(container);
-            }
-            else
-            {
-                return { container.begin(), container.end() };
-            }
-        }
-
-        static auto from_string(const std::string& str) -> container_type
-        {
-            if constexpr (std::is_same_v<CharT, char>)
-            {
-                return str;
-            }
-            else
-            {
-                return { str.begin(), str.end() };
-            }
-        }
-
-        static auto from_string(std::string&& str) -> container_type
-        {
-            if constexpr (std::is_same_v<CharT, char>)
-            {
-                return std::move(str);
-            }
-            else
-            {
-                return { str.begin(), str.end() };
-            }
-        }
+        // static auto to_string(const container_type& container) -> std::string
+        // {
+        //     if constexpr (std::is_same_v<CharT, char>)
+        //     {
+        //         return container;
+        //     }
+        //     else
+        //     {
+        //         return { container.begin(), container.end() };
+        //     }
+        // }
+        //
+        // static auto to_string(container_type&& container) -> std::string
+        // {
+        //     if constexpr (std::is_same_v<CharT, char>)
+        //     {
+        //         return std::move(container);
+        //     }
+        //     else
+        //     {
+        //         return { container.begin(), container.end() };
+        //     }
+        // }
+        //
+        // static auto from_string(const std::string& str) -> container_type
+        // {
+        //     if constexpr (std::is_same_v<CharT, char>)
+        //     {
+        //         return str;
+        //     }
+        //     else
+        //     {
+        //         return { str.begin(), str.end() };
+        //     }
+        // }
+        //
+        // static auto from_string(std::string&& str) -> container_type
+        // {
+        //     if constexpr (std::is_same_v<CharT, char>)
+        //     {
+        //         return std::move(str);
+        //     }
+        //     else
+        //     {
+        //         return { str.begin(), str.end() };
+        //     }
+        // }
     };
 } //namespace containers
 

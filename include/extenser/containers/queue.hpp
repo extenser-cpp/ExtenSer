@@ -12,6 +12,7 @@
 
 #include "../extenser.hpp"
 #include "deque.hpp"
+#include "vector.hpp"
 
 #include <queue>
 
@@ -29,5 +30,6 @@ void serialize(serializer_base<Adapter, Deserialize>& ser, std::queue<T, Contain
 {
     ser.as_array("", reinterpret_cast<Container&>(val));
 }
-} //namespace extenser::detail
+} // namespace extenser::detail
+
 #endif

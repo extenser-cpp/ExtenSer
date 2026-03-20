@@ -26,17 +26,8 @@ namespace containers
 {
 #if defined(__cpp_lib_span)
     template<typename T, std::size_t N>
-    struct traits<span<T, N>>
+    struct traits<span<T, N>> : sequential_traits<span<T, N>, true, true, !std::is_const_v<T>>
     {
-        using container_type = span<T, N>;
-        using size_type = typename span<T, N>::size_type;
-        using value_type = T;
-        using adapter_type = adapter<span<T, N>>;
-
-        static constexpr bool has_fixed_size = true;
-        static constexpr bool is_contiguous = true;
-        static constexpr bool is_mutable = !std::is_const_v<T>;
-        static constexpr bool is_sequential = true;
     };
 
     template<typename T, std::size_t N>
@@ -60,17 +51,8 @@ namespace containers
     };
 #else
     template<typename T>
-    struct traits<span<T>>
+    struct traits<span<T>> : sequential_traits<span<T>, true, true, !std::is_const_v<T>>
     {
-        using container_type = span<T>;
-        using size_type = typename span<T>::size_type;
-        using value_type = T;
-        using adapter_type = adapter<span<T>>;
-
-        static constexpr bool has_fixed_size = true;
-        static constexpr bool is_contiguous = true;
-        static constexpr bool is_mutable = !std::is_const_v<T>;
-        static constexpr bool is_sequential = true;
     };
 
     template<typename T>

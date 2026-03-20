@@ -22,17 +22,9 @@ namespace extenser
 namespace containers
 {
     template<typename T, std::size_t N>
-    struct traits<std::array<T, N>>
+    struct traits<std::array<T, N>> :
+        sequential_traits<std::array<T, N>, true, true, !std::is_const_v<T>>
     {
-        using container_type = std::array<T, N>;
-        using size_type = typename std::array<T, N>::size_type;
-        using value_type = T;
-        using adapter_type = adapter<std::array<T, N>>;
-
-        static constexpr bool has_fixed_size = true;
-        static constexpr bool is_contiguous = true;
-        static constexpr bool is_mutable = !std::is_const_v<T>;
-        static constexpr bool is_sequential = true;
     };
 
     template<typename T, std::size_t N>
