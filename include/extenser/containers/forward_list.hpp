@@ -12,7 +12,6 @@
 
 #include "../extenser.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <forward_list>
 #include <iterator>
@@ -22,17 +21,9 @@ namespace extenser
 namespace containers
 {
     template<typename T, typename Allocator>
-    struct traits<std::forward_list<T, Allocator>>
+    struct traits<std::forward_list<T, Allocator>> :
+        sequential_traits<std::forward_list<T, Allocator>, false, false, true>
     {
-        using container_type = std::forward_list<T, Allocator>;
-        using size_type = typename container_type::size_type;
-        using value_type = T;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_contiguous = false;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = true;
     };
 
     template<typename T, typename Allocator>

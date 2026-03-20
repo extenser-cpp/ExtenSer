@@ -20,18 +20,9 @@ namespace extenser
 namespace containers
 {
     template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator>
-    struct traits<std::unordered_map<Key, T, Hash, KeyEqual, Allocator>>
+    struct traits<std::unordered_map<Key, T, Hash, KeyEqual, Allocator>> :
+        map_traits<std::unordered_map<Key, T, Hash, KeyEqual, Allocator>, false, true>
     {
-        using container_type = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
-        using key_type = Key;
-        using mapped_type = T;
-        using size_type = typename container_type::size_type;
-        using value_type = typename container_type::value_type;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = false;
     };
 
     template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator>
@@ -54,19 +45,9 @@ namespace containers
     };
 
     template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator>
-    struct traits<std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>>
+    struct traits<std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>> :
+        map_traits<std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>, false, true>
     {
-        using container_type = std::unordered_multimap<Key, T, Hash, KeyEqual, Allocator>;
-        using key_type = Key;
-        using mapped_type = T;
-        using size_type = typename container_type::size_type;
-        using value_type = typename container_type::value_type;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_contiguous = false;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = false;
     };
 
     template<typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator>

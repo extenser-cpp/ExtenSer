@@ -20,17 +20,9 @@ namespace extenser
 namespace containers
 {
     template<typename Key, typename Compare, typename Allocator>
-    struct traits<std::set<Key, Compare, Allocator>>
+    struct traits<std::set<Key, Compare, Allocator>> :
+        associative_traits<std::set<Key, Compare, Allocator>, false, true>
     {
-        using container_type = std::set<Key, Compare, Allocator>;
-        using size_type = typename container_type::size_type;
-        using value_type = Key;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_contiguous = false;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = false;
     };
 
     template<typename Key, typename Compare, typename Allocator>
@@ -52,17 +44,9 @@ namespace containers
     };
 
     template<typename Key, typename Compare, typename Allocator>
-    struct traits<std::multiset<Key, Compare, Allocator>>
+    struct traits<std::multiset<Key, Compare, Allocator>> :
+        associative_traits<std::multiset<Key, Compare, Allocator>, false, true>
     {
-        using container_type = std::multiset<Key, Compare, Allocator>;
-        using size_type = typename container_type::size_type;
-        using value_type = Key;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_contiguous = false;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = false;
     };
 
     template<typename Key, typename Compare, typename Allocator>

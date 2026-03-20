@@ -22,6 +22,12 @@ namespace extenser
 namespace containers
 {
     template<typename T, typename Allocator>
+    struct traits<std::deque<T, Allocator>> :
+        sequential_traits<std::deque<T, Allocator>, false, false, true>
+    {
+    };
+
+    template<typename T, typename Allocator>
     class adapter<std::deque<T, Allocator>> : public sequential_adapter<std::deque<T, Allocator>>
     {
     public:

@@ -20,23 +20,14 @@ namespace extenser
 namespace containers
 {
     template<typename CharT, typename Traits>
-    struct traits<std::basic_string_view<CharT, Traits>>
+    struct traits<std::basic_string_view<CharT, Traits>> :
+        string_traits<std::basic_string_view<CharT, Traits>, true, false>
     {
-        using container_type = std::basic_string<CharT, Traits>;
-        using character_type = CharT;
-        using size_type = typename container_type::size_type;
-        using value_type = typename container_type::value_type;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = true;
-        static constexpr bool is_contiguous = true;
-        static constexpr bool is_mutable = false;
-        static constexpr bool is_sequential = true;
     };
 
     template<typename CharT, typename Traits>
     class adapter<std::basic_string_view<CharT, Traits>> :
-        public string_adapter<std::basic_string_view<CharT, Traits>>
+        public sequential_adapter<std::basic_string_view<CharT, Traits>>
     {
     public:
         static_assert(std::is_same_v<CharT, char> || std::is_same_v<CharT, wchar_t>,

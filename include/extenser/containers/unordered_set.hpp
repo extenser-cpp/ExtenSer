@@ -20,17 +20,9 @@ namespace extenser
 namespace containers
 {
     template<typename Key, typename Hash, typename KeyEqual, typename Allocator>
-    struct traits<std::unordered_set<Key, Hash, KeyEqual, Allocator>>
+    struct traits<std::unordered_set<Key, Hash, KeyEqual, Allocator>> :
+        associative_traits<std::unordered_set<Key, Hash, KeyEqual, Allocator>, false, true>
     {
-        using container_type = std::unordered_set<Key, Hash, KeyEqual, Allocator>;
-        using size_type = typename container_type::size_type;
-        using value_type = Key;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_contiguous = false;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = false;
     };
 
     template<typename Key, typename Hash, typename KeyEqual, typename Allocator>
@@ -53,17 +45,9 @@ namespace containers
     };
 
     template<typename Key, typename Hash, typename KeyEqual, typename Allocator>
-    struct traits<std::unordered_multiset<Key, Hash, KeyEqual, Allocator>>
+    struct traits<std::unordered_multiset<Key, Hash, KeyEqual, Allocator>> :
+        associative_traits<std::unordered_multiset<Key, Hash, KeyEqual, Allocator>, false, true>
     {
-        using container_type = std::unordered_multiset<Key, Hash, KeyEqual, Allocator>;
-        using size_type = typename container_type::size_type;
-        using value_type = Key;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_contiguous = false;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = false;
     };
 
     template<typename Key, typename Hash, typename KeyEqual, typename Allocator>

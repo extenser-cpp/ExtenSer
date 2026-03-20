@@ -32,12 +32,6 @@ target_link_libraries(json_test PRIVATE doctest_runner extenser_json)
 target_compile_features(json_test PRIVATE cxx_std_17)
 target_compile_options(json_test PRIVATE ${FULL_WARNING})
 
-get_target_property(json_test_defs json_test COMPILE_DEFINITIONS)
-if (NOT json_test_defs STREQUAL "json_test_defs-NOTFOUND")
-    list(FILTER json_test_defs EXCLUDE REGEX [[^EXTENSER_USE_MAGIC_ENUM$]])
-    set_property(TARGET json_test PROPERTY COMPILE_DEFINITIONS ${json_test_defs})
-endif ()
-
 if (USE_MAGIC_ENUM)
     add_executable(json_magic_test json_adapter/json.deser.test.cpp json_adapter/json.ser.test.cpp test_helpers.hpp)
     target_link_libraries(json_magic_test PRIVATE doctest_runner extenser_json)

@@ -20,19 +20,9 @@ namespace extenser
 namespace containers
 {
     template<typename Key, typename T, typename Compare, typename Allocator>
-    struct traits<std::map<Key, T, Compare, Allocator>>
+    struct traits<std::map<Key, T, Compare, Allocator>> :
+        map_traits<std::map<Key, T, Compare, Allocator>, false, true>
     {
-        using container_type = std::map<Key, T, Compare, Allocator>;
-        using key_type = Key;
-        using mapped_type = T;
-        using size_type = typename container_type::size_type;
-        using value_type = typename container_type::value_type;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_contiguous = false;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = false;
     };
 
     template<typename Key, typename T, typename Compare, typename Allocator>
@@ -54,19 +44,9 @@ namespace containers
     };
 
     template<typename Key, typename T, typename Compare, typename Allocator>
-    struct traits<std::multimap<Key, T, Compare, Allocator>>
+    struct traits<std::multimap<Key, T, Compare, Allocator>> :
+        map_traits<std::multimap<Key, T, Compare, Allocator>, false, true>
     {
-        using container_type = std::multimap<Key, T, Compare, Allocator>;
-        using key_type = Key;
-        using mapped_type = T;
-        using size_type = typename container_type::size_type;
-        using value_type = typename container_type::value_type;
-        using adapter_type = adapter<container_type>;
-
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_contiguous = false;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = false;
     };
 
     template<typename Key, typename T, typename Compare, typename Allocator>

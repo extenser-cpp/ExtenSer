@@ -513,7 +513,7 @@ namespace detail_json
         template<typename T>
         void as_string(const std::string_view key, T& val) const
         {
-            using traits_t = containers::string_traits<T>;
+            using traits_t = containers::traits<T>;
             using adapter_t = containers::adapter<T>;
 
             if constexpr (std::is_array_v<T>)
@@ -547,7 +547,7 @@ namespace detail_json
                         throw deserialization_error{ "JSON error: expected string-like type" };
                     }
 
-                    if constexpr (std::is_same_v<typename traits_t::character_type, char>)
+                    if constexpr (std::is_same_v<typename traits_t::value_type, char>)
                     {
                         const auto str = sub_obj.get<std::string>();
 
@@ -629,7 +629,7 @@ namespace detail_json
         {
             EXTENSER_PRECONDITION(std::size(val) == 0);
 
-            using traits_t = containers::associative_traits<T>;
+            using traits_t = containers::traits<T>;
             using adapter_t = containers::adapter<T>;
 
             const auto& obj = subobject(key);
@@ -646,7 +646,7 @@ namespace detail_json
         {
             EXTENSER_PRECONDITION(std::size(val) == 0);
 
-            using traits_t = containers::associative_traits<T>;
+            using traits_t = containers::traits<T>;
             using adapter_t = containers::adapter<T>;
 
             const auto& obj = subobject(key);
@@ -992,10 +992,10 @@ namespace detail_json
 
                 try
                 {
-                    using traits_t = containers::string_traits<T>;
+                    using traits_t = containers::traits<T>;
                     using adapter_t = containers::adapter<T>;
 
-                    if constexpr (std::is_same_v<typename traits_t::character_type, char>)
+                    if constexpr (std::is_same_v<typename traits_t::value_type, char>)
                     {
                         const auto str = arg.get<std::string>();
 

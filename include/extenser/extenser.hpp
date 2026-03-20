@@ -44,50 +44,78 @@ namespace containers
     class adapter;
 
     template<typename Container>
-    struct traits
+    struct traits;
+
+    template<typename Container, bool HasFixedSize, bool IsMutable, bool IsSequential>
+    struct traits_base
     {
         using container_type = Container;
         using size_type = typename Container::size_type;
         using value_type = typename Container::value_type;
         using adapter_type = adapter<Container>;
 
-        static constexpr bool has_fixed_size = false;
-        static constexpr bool is_mutable = true;
-        static constexpr bool is_sequential = true;
+        static constexpr bool has_fixed_size = HasFixedSize;
+        static constexpr bool is_mutable = IsMutable;
+        static constexpr bool is_sequential = IsSequential;
     };
 
-    template<typename Container>
-    struct sequential_traits : traits<Container>
+    template<typename Container, bool IsContiguous, bool HasFixedSize, bool IsMutable>
+    struct sequential_traits : traits_base<Container, HasFixedSize, IsMutable, true>
     {
-        using typename traits<Container>::container_type;
-        using typename traits<Container>::size_type;
-        using typename traits<Container>::value_type;
-        using typename traits<Container>::adapter_type;
+    private:
+        using base_t = traits_base<Container, HasFixedSize, IsMutable, true>;
 
-        static constexpr bool is_contiguous = false;
+    public:
+        using typename base_t::adapter_type;
+        using typename base_t::container_type;
+        using typename base_t::size_type;
+        using typename base_t::value_type;
+
+        static constexpr bool is_contiguous = IsContiguous;
     };
 
-    template<typename Container>
-    struct associative_traits : traits<Container>
+    template<typename Container, bool HasFixedSize, bool IsMutable>
+    struct associative_traits : traits_base<Container, HasFixedSize, IsMutable, false>
     {
-        using typename traits<Container>::container_type;
-        using typename traits<Container>::size_type;
+    private:
+        using base_t = traits_base<Container, HasFixedSize, IsMutable, false>;
+
+    public:
+        using typename base_t::adapter_type;
+        using typename base_t::container_type;
+        using typename base_t::size_type;
+        using typename base_t::value_type;
+
         using key_type = typename Container::key_type;
-        using mapped_type = typename Container::mapped_type;
-        using typename traits<Container>::value_type;
-        using typename traits<Container>::adapter_type;
-
-        static constexpr bool is_sequential = false;
     };
 
-    template<typename Container>
-    struct string_traits : sequential_traits<Container>
+    template<typename Container, bool HasFixedSize, bool IsMutable>
+    struct map_traits : associative_traits<Container, HasFixedSize, IsMutable>
     {
-        using character_type = typename traits<Container>::value_type;
-        using typename sequential_traits<Container>::container_type;
-        using typename sequential_traits<Container>::size_type;
-        using typename sequential_traits<Container>::value_type;
-        using typename sequential_traits<Container>::adapter_type;
+    private:
+        using base_t = associative_traits<Container, HasFixedSize, IsMutable>;
+
+    public:
+        using typename base_t::adapter_type;
+        using typename base_t::container_type;
+        using typename base_t::key_type;
+        using typename base_t::size_type;
+        using typename base_t::value_type;
+
+        using mapped_type = typename Container::mapped_type;
+    };
+
+    template<typename Container, bool HasFixedSize, bool IsMutable>
+    struct string_traits : sequential_traits<Container, true, HasFixedSize, IsMutable>
+    {
+    private:
+        using base_t = sequential_traits<Container, true, HasFixedSize, IsMutable>;
+
+    public:
+        using typename base_t::adapter_type;
+        using typename base_t::container_type;
+        using typename base_t::size_type;
+        using typename base_t::value_type;
     };
 
     template<typename Container>
@@ -143,35 +171,6 @@ namespace containers
             container_type& container, const Input_T& value, ConversionOp convert_fn)
         {
             (static_cast<adapter_type*>(this))->insert_value(container, value, convert_fn);
-        }
-    };
-
-    template<typename Container>
-    class string_adapter : public sequential_adapter<Container>
-    {
-        using traits_type = traits<Container>;
-        using adapter_type = typename traits_type::adapter_type;
-        using container_type = typename traits_type::container_type;
-        using size_type = typename traits_type::size_type;
-
-        EXTENSER_INLINE auto to_string(const container_type& container) -> std::string
-        {
-            return (static_cast<adapter_type*>(this))->to_string(container);
-        }
-
-        EXTENSER_INLINE auto to_string(container_type&& container) -> std::string
-        {
-            return (static_cast<adapter_type*>(this))->to_string(std::move(container));
-        }
-
-        EXTENSER_INLINE auto from_string(const std::string& str) -> container_type
-        {
-            return (static_cast<adapter_type*>(this))->from_string(str);
-        }
-
-        EXTENSER_INLINE auto from_string(std::string&& str) -> container_type
-        {
-            return (static_cast<adapter_type*>(this))->from_string(std::move(str));
         }
     };
 } //namespace containers
