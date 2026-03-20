@@ -7,6 +7,10 @@
 // See accompanying file LICENSE or a copy at
 // https://opensource.org/license/bsd-3-clause/
 
+#if defined(EXTENSER_USE_MAGIC_ENUM) && !defined(EXTENSER_USE_MAGIC_ENUM_TEST)
+#  undef EXTENSER_USE_MAGIC_ENUM
+#endif
+
 #include "extenser/json_adapter/extenser_json.hpp"
 #include "test_helpers.hpp"
 
@@ -32,7 +36,7 @@
 
 namespace extenser::tests
 {
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
 TEST_SUITE("json::serializer (magic_enum)")
 #else
 TEST_SUITE("json::serializer")
@@ -325,7 +329,7 @@ TEST_SUITE("json::serializer")
 
                 REQUIRE_NOTHROW(ser.as_enum("", test_val));
 
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
                 THEN("the JSON object holds the enum name")
                 {
                     REQUIRE(obj.is_string());
@@ -367,7 +371,7 @@ TEST_SUITE("json::serializer")
             {
                 static constexpr TestCode test_val{ 0xCCU };
 
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
                 THEN("an exception is thrown")
                 {
                     CHECK_THROWS_AS(ser.as_enum("", test_val), serialization_error);
@@ -390,7 +394,7 @@ TEST_SUITE("json::serializer")
 
                 REQUIRE_NOTHROW(ser.as_enum("", test_val));
 
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
                 THEN("the JSON object holds the enum name")
                 {
                     REQUIRE(obj.is_string());
@@ -417,7 +421,7 @@ TEST_SUITE("json::serializer")
                     REQUIRE(obj.contains("test_val"));
                     const auto& sub_obj = obj["test_val"];
 
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
                     AND_THEN("the sub-object holds the enum name")
                     {
                         REQUIRE(sub_obj.is_string());
@@ -952,7 +956,7 @@ TEST_SUITE("json::serializer")
 
                     AND_THEN("the array holds both values")
                     {
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
                         REQUIRE(obj[0].is_string());
                         CHECK_EQ(obj[0].get<std::string>(),
                             magic_enum::enum_name<Fruit>(test_val.first));
@@ -967,7 +971,7 @@ TEST_SUITE("json::serializer")
                         CHECK_EQ(obj[1]["name"].get<std::string>(), test_val.second.name);
 
                         REQUIRE(obj[1].contains("species"));
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
                         REQUIRE(obj[1]["species"].is_string());
                         CHECK_EQ(obj[1]["species"].get<std::string>(),
                             magic_enum::enum_name<Pet::Species>(test_val.second.species));
@@ -1241,7 +1245,7 @@ TEST_SUITE("json::serializer")
                         REQUIRE(obj["pet"]["name"].is_string());
                         CHECK_EQ(obj["pet"]["name"].get<std::string>(), test_val.pet->name);
                         REQUIRE(obj["pet"].contains("species"));
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
                         REQUIRE(obj["pet"]["species"].is_string());
                         CHECK_EQ(obj["pet"]["species"].get<std::string>(),
                             magic_enum::enum_name<Pet::Species>(test_val.pet->species));
@@ -1253,7 +1257,7 @@ TEST_SUITE("json::serializer")
 
                         REQUIRE(obj.contains("fruit_count"));
                         REQUIRE(obj["fruit_count"].is_object());
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
                         REQUIRE(obj["fruit_count"].contains("Apple"));
                         REQUIRE(obj["fruit_count"]["Apple"].is_number_integer());
                         CHECK_EQ(
@@ -1311,7 +1315,7 @@ TEST_SUITE("json::serializer")
 
                             REQUIRE(sub_obj.contains("fruit_count"));
                             REQUIRE(sub_obj["fruit_count"].is_object());
-#if defined(EXTENSER_USE_MAGIC_ENUM)
+#if defined(EXTENSER_USE_MAGIC_ENUM_TEST)
                             CHECK_FALSE(sub_obj["fruit_count"].contains("Apple"));
                             REQUIRE(sub_obj["fruit_count"].contains("Kiwi"));
                             REQUIRE(sub_obj["fruit_count"]["Kiwi"].is_number_integer());

@@ -11,7 +11,7 @@ cmake_minimum_required(VERSION 3.18)
 
 project(
         "ExtenSer"
-        VERSION 0.1.1
+        VERSION 0.1.2
         DESCRIPTION "Extensible, generic serialization library for C++"
         LANGUAGES CXX)
 
