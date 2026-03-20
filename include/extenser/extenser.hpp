@@ -593,13 +593,12 @@ namespace detail
         std::enable_if_t<std::is_array_v<T>, bool> = true>
     void serialize(serializer_base<Adapter, Deserialize>& ser, T& val)
     {
-        if constexpr (std::is_same_v<detail::remove_cvref_t<std::remove_all_extents_t<T>>, char>)
+        if constexpr (std::is_same_v<remove_cvref_t<std::remove_all_extents_t<T>>, char>)
         {
             std::string_view str_view{ val };
             ser.as_string("", str_view);
         }
-        else if constexpr (std::is_same_v<detail::remove_cvref_t<std::remove_all_extents_t<T>>,
-                               wchar_t>)
+        else if constexpr (std::is_same_v<remove_cvref_t<std::remove_all_extents_t<T>>, wchar_t>)
         {
             std::wstring_view str_view{ val };
             ser.as_string("", str_view);

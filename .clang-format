@@ -2,7 +2,7 @@
 BasedOnStyle: Microsoft
 
 AccessModifierOffset: -4
-AlignAfterOpenBracket: DontAlign
+AlignAfterOpenBracket: false
 AlignConsecutiveAssignments: None
 AlignConsecutiveBitFields: Consecutive # 11
 AlignConsecutiveDeclarations: None
@@ -41,10 +41,10 @@ IncludeBlocks: Regroup # 7
 IndentCaseLabels: true
 IndentGotoLabels: false # 10
 IndentPPDirectives: AfterHash
-#IndentRequiresClause: true # 15
+IndentRequiresClause: true # 15
 IndentWidth: 4
 IndentWrappedFunctionNames: false
-#InsertBraces: true # 15
+InsertBraces: true # 15
 KeepEmptyLinesAtTheStartOfBlocks: false
 Language: Cpp
 MaxEmptyLinesToKeep: 1
@@ -54,9 +54,9 @@ PointerAlignment: Left
 PPIndentWidth: 2 # 13
 QualifierAlignment: Custom # 14
 QualifierOrder: ["inline", "static", "constexpr", "const", "volatile", "type"] # 14
-ReflowComments: false
+ReflowComments: Never
 RemoveBracesLLVM: false # 14
-#RequiresClausePosition: OwnLine # 15
+RequiresClausePosition: OwnLine # 15
 SeparateDefinitionBlocks: Leave # 14
 SortIncludes: Never
 SortUsingDeclarations: true

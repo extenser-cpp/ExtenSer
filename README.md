@@ -9,6 +9,7 @@ ExtenSer is licensed under the [BSD 3-Clause License](LICENSE).
 ### Third-Party
 
 - [nlohmann-json](https://github.com/nlohmann/json) is licensed under the [MIT License](https://github.com/nlohmann/json/blob/develop/LICENSE.MIT).
+- [magic_enum](https://github.com/Neargye/magic_enum) is licensed under the [MIT License](https://github.com/Neargye/magic_enum/blob/master/LICENSE).
 - [bitsery](https://github.com/fraillt/bitsery) is licensed under the [MIT License](https://github.com/fraillt/bitsery/blob/master/LICENSE).
 
 ## Features
