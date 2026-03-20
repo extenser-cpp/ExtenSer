@@ -26,52 +26,33 @@
 #include <bitsery/traits/string.h>
 #include <bitsery/traits/vector.h>
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
-#include <iterator>
-#include <limits>
-#include <numeric>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
-
-template<>
-struct std::hash<std::vector<std::uint8_t>>
-{
-    [[nodiscard]] auto operator()(const std::vector<std::uint8_t>& vec) const noexcept
-        -> std::size_t
-    {
-        return std::accumulate(vec.begin(), vec.end(), vec.size(),
-            [](const std::size_t seed, const std::size_t val) noexcept
-            {
-                static constexpr std::size_t magic_hash_val = 0x9E37'79B9UL;
-                return seed ^ (val + magic_hash_val + (seed << 6UL) + (seed >> 2UL));
-            });
-    }
-};
 
 namespace bitsery::traits
 {
 template<typename CharT, typename Traits>
 struct ContainerTraits<std::basic_string_view<CharT, Traits>> :
-    public StdContainer<std::basic_string_view<CharT, Traits>, false, true>
+    StdContainer<std::basic_string_view<CharT, Traits>, false, true>
 {
 };
 
-#if __cplusplus >= 202002L
+#if defined(__cpp_lib_span)
 template<typename T, std::size_t N>
-struct ContainerTraits<std::span<T, N>> : public StdContainer<std::span<T, N>, false, true>
+struct ContainerTraits<std::span<T, N>> : StdContainer<std::span<T, N>, false, true>
 {
 };
 #else
 template<typename T>
-struct ContainerTraits<extenser::span<T>> : public StdContainer<extenser::span<T>, false, true>
+struct ContainerTraits<extenser::span<T>> : StdContainer<extenser::span<T>, false, true>
 {
 };
 #endif
@@ -311,7 +292,7 @@ namespace detail_bitsery
         }
 
     private:
-        using config = typename serial_adapter::config;
+        using config = serial_adapter::config;
         using output_adapter = bitsery::OutputBufferAdapter<std::vector<std::uint8_t>>;
 
         void flush()
@@ -328,10 +309,9 @@ namespace detail_bitsery
     {
     public:
         explicit deserializer(const std::vector<std::uint8_t>& bytes) noexcept(
-            ::EXTENSER_ASSERT_NOTHROW)
+            EXTENSER_ASSERT_NOTHROW)
             : m_bytes(bytes), m_last_size(m_bytes.size()), m_ser(m_bytes.cbegin(), m_last_size)
         {
-            //EXTENSER_POSTCONDITION(!m_bytes.empty());
         }
 
         template<typename T>
@@ -522,7 +502,7 @@ namespace detail_bitsery
         }
 
     private:
-        using config = typename serial_adapter::config;
+        using config = serial_adapter::config;
         using input_adapter = bitsery::InputBufferAdapter<std::vector<std::uint8_t>>;
 
         void update_buffer()

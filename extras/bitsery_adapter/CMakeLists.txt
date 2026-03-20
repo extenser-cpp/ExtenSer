@@ -11,7 +11,7 @@ cmake_minimum_required(VERSION 3.18)
 
 project(
         "ExtenSer Bitsery Adapter"
-        VERSION 0.1.0
+        VERSION 0.1.2
         DESCRIPTION "Bitsery adapter for the ExtenSer serialization library"
         LANGUAGES CXX)
 

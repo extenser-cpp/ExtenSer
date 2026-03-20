@@ -365,7 +365,7 @@ struct decay_str<std::u8string_view>
 template<typename T>
 using decay_str_t = typename decay_str<T>::type;
 
-template<typename C>
+template<typename>
 struct is_optional : std::false_type
 {
 };
@@ -378,7 +378,7 @@ struct is_optional<std::optional<T>> : std::true_type
 template<typename C>
 inline constexpr bool is_optional_v = is_optional<std::remove_cv_t<C>>::value;
 
-template<typename C>
+template<typename>
 struct is_pair : std::false_type
 {
 };
@@ -391,7 +391,7 @@ struct is_pair<std::pair<T1, T2>> : std::true_type
 template<typename C>
 inline constexpr bool is_pair_v = is_pair<std::remove_cv_t<C>>::value;
 
-template<typename C>
+template<typename>
 struct is_tuple : std::false_type
 {
 };
@@ -404,7 +404,7 @@ struct is_tuple<std::tuple<Args...>> : std::true_type
 template<typename C>
 inline constexpr bool is_tuple_v = is_tuple<std::remove_cv_t<C>>::value;
 
-template<typename C>
+template<typename>
 struct is_variant : std::false_type
 {
 };
