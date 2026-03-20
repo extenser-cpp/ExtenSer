@@ -17,6 +17,7 @@
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>
 
+#include <bitset>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -722,6 +723,54 @@ TEST_SUITE("bitsery adapter")
 
             REQUIRE(std::holds_alternative<Person>(test_val));
             CHECK_EQ(std::get<Person>(test_val), std::get<Person>(expected_val));
+        }
+    }
+
+    TEST_CASE("a bitset can be serialized to bitsery")
+    {
+        serializer ser{};
+
+        SUBCASE("small bitset")
+        {
+            static constexpr std::bitset<4> expected_val{ 6UL };
+
+            REQUIRE_NOTHROW(ser.as_object("", expected_val));
+
+            deserializer dser{ ser.object() };
+
+            std::bitset<4> test_val{};
+            dser.as_object("", test_val);
+
+            CHECK_EQ(test_val, expected_val);
+        }
+
+        SUBCASE("medium bitset")
+        {
+            static constexpr std::bitset<64> expected_val{ 0xAAAA'BBBB'CCCC'DDDDULL };
+
+            REQUIRE_NOTHROW(ser.as_object("", expected_val));
+
+            deserializer dser{ ser.object() };
+
+            std::bitset<64> test_val{};
+            dser.as_object("", test_val);
+
+            CHECK_EQ(test_val, expected_val);
+        }
+
+        SUBCASE("large bitset")
+        {
+            static const auto test_str = std::string(200, '1');
+            const std::bitset<200> expected_val{ test_str };
+
+            REQUIRE_NOTHROW(ser.as_object("", expected_val));
+
+            deserializer dser{ ser.object() };
+
+            std::bitset<200> test_val{};
+            dser.as_object("", test_val);
+
+            CHECK_EQ(test_val, expected_val);
         }
     }
 

@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -1157,6 +1158,69 @@ TEST_SUITE("json::deserializer")
                     CHECK(pet.has_value());
                     CHECK(friends.empty());
                     CHECK(fruit_count.empty());
+                }
+            }
+        }
+    }
+
+    SCENARIO("a bitset can be deserialized from JSON")
+    {
+        GIVEN("a deserializer with a JSON value representing a small (< 8 bit) bitset")
+        {
+            static constexpr auto test_int = 6UL;
+
+            const nlohmann::json test_obj{ { "bits", test_int } };
+            const deserializer dser{ test_obj };
+
+            WHEN("the value is deserialized")
+            {
+                std::bitset<4> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_object("", test_val));
+
+                THEN("the bitset is assigned as the correct value")
+                {
+                    CHECK_EQ(test_val.to_ullong(), test_int);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON value representing a normal (<= 64 bit) bitset")
+        {
+            static constexpr auto test_int = 0xAAAA'BBBB'CCCC'DDDDULL;
+
+            const nlohmann::json test_obj{ { "bits", test_int } };
+            const deserializer dser{ test_obj };
+
+            WHEN("the value is deserialized")
+            {
+                std::bitset<64> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_object("", test_val));
+
+                THEN("the bitset is assigned as the correct value")
+                {
+                    CHECK_EQ(test_val.to_ullong(), test_int);
+                }
+            }
+        }
+
+        GIVEN("a deserializer with a JSON value representing a large (> 64 bit) bitset")
+        {
+            static const auto test_str = std::string(200, '1');
+
+            const nlohmann::json test_obj{ { "bits", test_str } };
+            const deserializer dser{ test_obj };
+
+            WHEN("the value is deserialized")
+            {
+                std::bitset<200> test_val{};
+
+                REQUIRE_NOTHROW(dser.as_object("", test_val));
+
+                THEN("the bitset is assigned as the correct value")
+                {
+                    CHECK_EQ(test_val.to_string(), test_str);
                 }
             }
         }

@@ -18,12 +18,14 @@
 #include "extenser/containers/stack.hpp"
 #include "extenser/containers/string.hpp"
 #include "extenser/containers/vector.hpp"
+#include "../include/extenser/ext/bitset.hpp"
 
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>
 
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <numeric>
 #include <queue>
 #include <stack>
@@ -193,6 +195,52 @@ TEST_CASE("View")
     REQUIRE_EQ(dyn_arr[0], 0);
     REQUIRE_EQ(dyn_arr[49], 0);
     REQUIRE_EQ(dyn_arr[99], 0);
+}
+
+TEST_CASE("Bitset")
+{
+    {
+        std::bitset<4> small{ "0110" };
+
+        easy_serializer<json_adapter> ser{};
+        ser.serialize_object(small);
+
+        small.reset();
+
+        ser.deserialize_object(small);
+
+        REQUIRE_FALSE(small[0]);
+        REQUIRE(small[1]);
+        REQUIRE(small[2]);
+        REQUIRE_FALSE(small[3]);
+    }
+
+    {
+        std::bitset<64> medium{ 0x8899'AABB'CCDD'EEFFULL };
+
+        easy_serializer<json_adapter> ser{};
+        ser.serialize_object(medium);
+
+        medium.reset();
+
+        ser.deserialize_object(medium);
+
+        REQUIRE_EQ(medium.to_ullong(), 0x8899'AABB'CCDD'EEFFULL);
+    }
+
+    {
+        std::bitset<200> large{};
+        large.set();
+
+        easy_serializer<json_adapter> ser{};
+        ser.serialize_object(large);
+
+        large.reset();
+
+        ser.deserialize_object(large);
+
+        REQUIRE(large.all());
+    }
 }
 
 TEST_CASE("Simple JSON serialize/deserialize")

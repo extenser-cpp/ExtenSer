@@ -54,54 +54,6 @@ namespace containers
             container.reserve(static_cast<std::size_t>(std::distance(first, last)));
             std::transform(first, last, std::back_inserter(container), convert_fn);
         }
-
-        // static auto to_string(const container_type& container) -> std::string
-        // {
-        //     if constexpr (std::is_same_v<CharT, char>)
-        //     {
-        //         return container;
-        //     }
-        //     else
-        //     {
-        //         return { container.begin(), container.end() };
-        //     }
-        // }
-        //
-        // static auto to_string(container_type&& container) -> std::string
-        // {
-        //     if constexpr (std::is_same_v<CharT, char>)
-        //     {
-        //         return std::move(container);
-        //     }
-        //     else
-        //     {
-        //         return { container.begin(), container.end() };
-        //     }
-        // }
-        //
-        // static auto from_string(const std::string& str) -> container_type
-        // {
-        //     if constexpr (std::is_same_v<CharT, char>)
-        //     {
-        //         return str;
-        //     }
-        //     else
-        //     {
-        //         return { str.begin(), str.end() };
-        //     }
-        // }
-        //
-        // static auto from_string(std::string&& str) -> container_type
-        // {
-        //     if constexpr (std::is_same_v<CharT, char>)
-        //     {
-        //         return std::move(str);
-        //     }
-        //     else
-        //     {
-        //         return { str.begin(), str.end() };
-        //     }
-        // }
     };
 } //namespace containers
 

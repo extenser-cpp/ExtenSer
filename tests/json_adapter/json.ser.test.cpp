@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -1193,6 +1194,98 @@ TEST_SUITE("json::serializer")
                         REQUIRE(sub_val["name"].is_string());
                         CHECK_EQ(
                             sub_val["name"].get<std::string>(), std::get<Person>(test_val).name);
+                    }
+                }
+            }
+        }
+    }
+
+    SCENARIO("a bitset can be serialized to JSON")
+    {
+        GIVEN("a default-init serializer")
+        {
+            serializer ser{};
+            const auto& obj = ser.object();
+
+            WHEN("a bitset with a small value (< 8 bit) is serialized")
+            {
+                static constexpr std::bitset<4> test_val{ 6UL };
+
+                REQUIRE_NOTHROW(ser.as_object("", test_val));
+
+                THEN("the JSON object holds the value type")
+                {
+                    REQUIRE(obj.contains("bits"));
+
+                    const auto& bits = obj["bits"];
+
+                    REQUIRE(bits.is_number_integer());
+                    CHECK(bits.is_number_unsigned());
+                    CHECK_EQ(bits.get<unsigned long>(), test_val.to_ulong());
+                }
+            }
+
+            WHEN("a bitset with a normal value (<= 64 bit) is serialized")
+            {
+                static constexpr std::bitset<64> test_val{ 0xAAAA'BBBB'CCCC'DDDDULL };
+
+                REQUIRE_NOTHROW(ser.as_object("", test_val));
+
+                THEN("the JSON object holds the value type")
+                {
+                    REQUIRE(obj.contains("bits"));
+
+                    const auto& bits = obj["bits"];
+
+                    REQUIRE(bits.is_number_integer());
+                    CHECK(bits.is_number_unsigned());
+                    CHECK_EQ(bits.get<unsigned long long>(), test_val.to_ullong());
+                }
+            }
+
+            WHEN("a bitset with a large value (> 64 bit) is serialized")
+            {
+                static const auto test_str = std::string(200, '1');
+
+                const std::bitset<200> test_val{ test_str };
+
+                REQUIRE_NOTHROW(ser.as_object("", test_val));
+
+                THEN("the JSON object holds the value type")
+                {
+                    REQUIRE(obj.contains("bits"));
+
+                    const auto& bits = obj["bits"];
+
+                    REQUIRE(bits.is_string());
+
+                    const auto bits_str = bits.get<std::string>();
+                    CHECK_EQ(bits_str.size(), 200);
+                    CHECK_EQ(bits_str, test_val.to_string());
+                }
+            }
+
+            WHEN("a bitset with a value is serialized as a sub-object")
+            {
+                static constexpr std::bitset<64> test_val{ 0xAAAA'BBBB'CCCC'DDDDULL };
+
+                REQUIRE_NOTHROW(ser.as_object("test_val", test_val));
+
+                THEN("the JSON object has a sub-object")
+                {
+                    REQUIRE(obj.is_object());
+                    REQUIRE(obj.contains("test_val"));
+                    const auto& sub_obj = obj["test_val"];
+
+                    AND_THEN("the sub-object holds the value type")
+                    {
+                        REQUIRE(sub_obj.contains("bits"));
+
+                        const auto& bits = sub_obj["bits"];
+
+                        REQUIRE(bits.is_number_integer());
+                        CHECK(bits.is_number_unsigned());
+                        CHECK_EQ(bits.get<unsigned long long>(), test_val.to_ullong());
                     }
                 }
             }
