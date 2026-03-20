@@ -18,14 +18,19 @@
 #include "extenser/containers/stack.hpp"
 #include "extenser/containers/string.hpp"
 #include "extenser/containers/vector.hpp"
-#include "../include/extenser/ext/bitset.hpp"
+#include "extenser/ext/atomic.hpp"
+#include "extenser/ext/bitset.hpp"
+#include "extenser/ext/exception.hpp"
+#include "extenser/ext/filesystem.hpp"
 
 #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #include <doctest/doctest.h>
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <bitset>
+#include <filesystem>
 #include <numeric>
 #include <queue>
 #include <stack>
@@ -241,6 +246,47 @@ TEST_CASE("Bitset")
 
         REQUIRE(large.all());
     }
+}
+
+TEST_CASE("C++ exception")
+{
+    const auto ex = std::runtime_error("foo exception");
+
+    easy_serializer<json_adapter> ser{};
+    ser.serialize_object(ex);
+
+    std::logic_error ex2("");
+    ser.deserialize_object(ex2);
+
+    REQUIRE_EQ(std::string_view{ ex2.what() }, std::string_view{ ex.what() });
+}
+
+TEST_CASE("Atomics")
+{
+    std::atomic<int> atom{ 33 };
+
+    easy_serializer<json_adapter> ser{};
+    ser.serialize_object(atom);
+
+    ++atom;
+
+    ser.deserialize_object(atom);
+
+    REQUIRE_EQ(atom.load(), 33);
+}
+
+TEST_CASE("Filepath")
+{
+    std::filesystem::path path = "../foo.txt";
+
+    easy_serializer<json_adapter> ser{};
+    ser.serialize_object(path);
+
+    path.clear();
+
+    ser.deserialize_object(path);
+
+    REQUIRE_EQ(path.string(), "../foo.txt");
 }
 
 TEST_CASE("Simple JSON serialize/deserialize")

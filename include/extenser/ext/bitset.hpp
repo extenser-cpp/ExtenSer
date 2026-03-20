@@ -18,7 +18,7 @@
 namespace extenser::detail
 {
 template<typename Adapter, std::size_t N>
-void serialize(serializer_base<Adapter, false>& ser, std::bitset<N>& val)
+void serialize(serializer_base<Adapter, false>& ser, const std::bitset<N>& val)
 {
     if constexpr (N <= sizeof(unsigned long long) * 8)
     {
