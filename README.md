@@ -38,6 +38,16 @@ ExtenSer is licensed under the [BSD 3-Clause License](LICENSE).
   - Community-supported adapters:
     - **More to come!**
 
+## Error Handling
+
+Runtime failures are reported with structured exceptions declared in `extenser/extenser.hpp`.
+
+- `extenser::serialization_error` reports adapter or value-conversion failures while writing output.
+- `extenser::deserialization_error` reports invalid input, missing members, type mismatches, and other read failures.
+- `extenser::contract_violation` reports failed preconditions and postconditions when `EXTENSER_ASSERT_THROW` is enabled.
+
+Each exception derives from `extenser::extenser_exception` and exposes additional diagnostics through `code()`, `operation()`, `key()`, `expected_type()`, `actual_type()`, and `detail()`. These fields are intended to be stable enough for tests and logging, while `what()` provides a human-readable summary.
+
 ## Examples
 
 ### Serializing Standard Types

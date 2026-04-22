@@ -74,6 +74,108 @@ TEST_SUITE("bitsery adapter")
         CHECK(dser.has_value());
     }
 
+    TEST_CASE("truncated bitsery input raises a structured deserialization_error")
+    {
+        serializer ser{};
+        static constexpr std::uint32_t expected_val{ 0x1234ABCDU };
+
+        ser.as_uint("", expected_val);
+
+        auto bytes = ser.object();
+        REQUIRE(bytes.size() > 1);
+        bytes.pop_back();
+
+        deserializer dser{ bytes };
+        std::uint32_t test_val{};
+
+        try
+        {
+            dser.as_uint("", test_val);
+            FAIL("expected deserialization_error");
+        }
+        catch (const deserialization_error& ex)
+        {
+            CHECK_EQ(ex.code(), error_code::out_of_bounds);
+            CHECK(std::string{ ex.operation() } == "bitsery.deserialize.uint");
+            CHECK(std::string{ ex.actual_type() } == "DataOverflow");
+            CHECK(
+                std::string{ ex.detail() }.find("reader_error=DataOverflow") != std::string::npos);
+        }
+    }
+
+    TEST_CASE("oversized dynamic strings raise a structured serialization_error")
+    {
+        serializer ser{};
+        const std::string oversized(300, 'x');
+
+        try
+        {
+            ser.as_string("", oversized);
+            FAIL("expected serialization_error");
+        }
+        catch (const serialization_error& ex)
+        {
+            CHECK_EQ(ex.code(), error_code::invalid_size);
+            CHECK(std::string{ ex.operation() } == "bitsery.serialize.string");
+            CHECK(std::string{ ex.expected_type() } == "256");
+            CHECK(std::string{ ex.actual_type() } == "300");
+        }
+    }
+
+    TEST_CASE("null string pointers raise a structured serialization_error")
+    {
+        serializer ser{};
+        const char* null_str = nullptr;
+
+        try
+        {
+            ser.as_string("", null_str);
+            FAIL("expected serialization_error");
+        }
+        catch (const serialization_error& ex)
+        {
+            CHECK_EQ(ex.code(), error_code::invalid_argument);
+            CHECK(std::string{ ex.operation() } == "bitsery.serialize.string");
+            CHECK(std::string{ ex.actual_type() } == "null pointer");
+        }
+    }
+
+    TEST_CASE("nested oversized bitsery payloads raise a structured serialization_error")
+    {
+        serializer ser{};
+        const std::vector<std::string> oversized{ std::string(300, 'x') };
+
+        try
+        {
+            ser.as_array("", oversized);
+            FAIL("expected serialization_error");
+        }
+        catch (const serialization_error& ex)
+        {
+            CHECK_EQ(ex.code(), error_code::invalid_size);
+            CHECK(std::string{ ex.operation() } == "bitsery.serialize.string");
+            CHECK(std::string{ ex.expected_type() } == "256");
+            CHECK(std::string{ ex.actual_type() } == "300");
+        }
+    }
+
+    TEST_CASE("assert-throw mode raises a structured contract_violation")
+    {
+        const span<int> empty_span{};
+
+        try
+        {
+            std::ignore = empty_span.front();
+            FAIL("expected contract_violation");
+        }
+        catch (const contract_violation& ex)
+        {
+            CHECK_EQ(ex.code(), error_code::assertion_failed);
+            CHECK(std::string{ ex.operation() }.find("front") != std::string::npos);
+            CHECK(std::string{ ex.detail() }.find("m_head_ptr != nullptr") != std::string::npos);
+        }
+    }
+
     // TEST_CASE("a bitsery deserializer constructed with an empty object fails its post-condition")
     // {
     //     const std::vector<std::uint8_t> obj{};

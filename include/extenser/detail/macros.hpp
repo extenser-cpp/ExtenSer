@@ -10,6 +10,8 @@
 #ifndef EXTENSER_DETAIL_MACROS_HPP
 #define EXTENSER_DETAIL_MACROS_HPP
 
+#include "error.hpp"
+
 #if defined(_MSC_VER)
 #  define EXTENSER_ASSUME(EXPR) __assume(EXPR)
 #elif defined(__clang__)
@@ -33,10 +35,9 @@
           "EXTENSER_ASSERTION: \"%s\" failed!\n  func: %s,\n  file: %s,\n  line: %d\n\n", #EXPR, \
           __FUNCTION__, __FILE__, __LINE__)
 #elif defined(EXTENSER_ASSERT_THROW)
-#  include <stdexcept>
 #  define EXTENSER_ASSERTION(EXPR) \
       if (!(EXPR))                 \
-      throw std::runtime_error("EXTENSER_ASSERTION: \"" #EXPR "\" failed!")
+      throw extenser::detail::make_contract_violation(#EXPR, __FUNCTION__, __FILE__, __LINE__)
 #elif defined(EXTENSER_ASSERT_ABORT)
 #  include <cstdio>
 #  define EXTENSER_ASSERTION(EXPR) \

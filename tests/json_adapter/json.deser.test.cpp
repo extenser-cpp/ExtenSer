@@ -124,6 +124,63 @@ TEST_SUITE("json::deserializer")
         }
     }
 
+    SCENARIO("deserialization errors expose structured diagnostics")
+    {
+        GIVEN("a deserializer asked for a missing object member")
+        {
+            const nlohmann::json test_obj = nlohmann::json::object();
+            const deserializer dser{ test_obj };
+
+            WHEN("the missing member is deserialized")
+            {
+                bool test_val{ false };
+
+                THEN("the thrown error includes a stable code and key context")
+                {
+                    try
+                    {
+                        dser.as_bool("missing_flag", test_val);
+                        FAIL("expected deserialization_error");
+                    }
+                    catch (const deserialization_error& ex)
+                    {
+                        CHECK_EQ(ex.code(), error_code::missing_key);
+                        CHECK(std::string{ ex.key() } == "missing_flag");
+                        CHECK(std::string{ ex.operation() } == "json.deserialize.lookup");
+                    }
+                }
+            }
+        }
+
+        GIVEN("a deserializer asked for the wrong JSON type")
+        {
+            nlohmann::json test_obj;
+            test_obj["test_val"] = 0;
+            const deserializer dser{ test_obj };
+
+            WHEN("a boolean is deserialized from a numeric field")
+            {
+                bool test_val{ false };
+
+                THEN("the thrown error records expected-type context")
+                {
+                    try
+                    {
+                        dser.as_bool("test_val", test_val);
+                        FAIL("expected deserialization_error");
+                    }
+                    catch (const deserialization_error& ex)
+                    {
+                        CHECK_EQ(ex.code(), error_code::parse_failure);
+                        CHECK(std::string{ ex.operation() } == "json.deserialize.bool");
+                        CHECK(std::string{ ex.expected_type() } == "boolean");
+                        CHECK(std::string{ ex.detail() }.find("boolean") != std::string::npos);
+                    }
+                }
+            }
+        }
+    }
+
     SCENARIO_TEMPLATE("a float can be deserialized from JSON", T_Float, float, double)
     {
         static constexpr double test_epsilon{ 0.0001 };

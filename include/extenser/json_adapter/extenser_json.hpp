@@ -51,6 +51,73 @@ namespace detail
 
 namespace detail_json
 {
+    [[nodiscard]] inline auto json_type_name(const nlohmann::json& value) -> std::string_view
+    {
+        return value.type_name();
+    }
+
+    template<typename T>
+    [[nodiscard]] auto friendly_type_name() -> std::string
+    {
+#ifndef EXTENSER_NO_RTTI
+        return typeid(T).name();
+#else
+        return "{NO-RTTI}";
+#endif
+    }
+
+    template<typename Func>
+    auto invoke_deserialization(Func&& func, const std::string_view operation,
+        const std::string_view key = {}, const error_code code = error_code::parse_failure,
+        const std::string_view summary = "Failed to deserialize JSON value",
+        const std::string_view expected_type = {}, const std::string_view actual_type = {})
+        -> std::invoke_result_t<Func>
+    {
+        try
+        {
+            return std::forward<Func>(func)();
+        }
+        catch (const deserialization_error&)
+        {
+            throw;
+        }
+        catch (const contract_violation&)
+        {
+            throw;
+        }
+        catch (const std::exception& ex)
+        {
+            throw detail::make_deserialization_error(
+                code, summary, operation, key, expected_type, actual_type, ex.what());
+        }
+    }
+
+    template<typename Func>
+    auto invoke_serialization(Func&& func, const std::string_view operation,
+        const std::string_view key = {}, const error_code code = error_code::external_failure,
+        const std::string_view summary = "Failed to serialize JSON value",
+        const std::string_view expected_type = {}, const std::string_view actual_type = {})
+        -> std::invoke_result_t<Func>
+    {
+        try
+        {
+            return std::forward<Func>(func)();
+        }
+        catch (const serialization_error&)
+        {
+            throw;
+        }
+        catch (const contract_violation&)
+        {
+            throw;
+        }
+        catch (const std::exception& ex)
+        {
+            throw detail::make_serialization_error(
+                code, summary, operation, key, expected_type, actual_type, ex.what());
+        }
+    }
+
     class serializer;
     class deserializer;
 
@@ -204,10 +271,10 @@ namespace detail_json
 #if defined(EXTENSER_USE_MAGIC_ENUM)
             if (!magic_enum::enum_contains<no_ref_t>(arg))
             {
-                throw serialization_error{ std::string{ "Invalid enum value: " }
-                        .append(std::to_string(static_cast<std::underlying_type_t<no_ref_t>>(arg)))
-                        .append(" for type: ")
-                        .append(magic_enum::enum_type_name<no_ref_t>()) };
+                throw detail::make_serialization_error(error_code::invalid_enum_value,
+                    "Enum value is not representable in JSON", "json.serialize.enum", {},
+                    magic_enum::enum_type_name<no_ref_t>(), {},
+                    std::to_string(static_cast<std::underlying_type_t<no_ref_t>>(arg)));
             }
 
             push_string(magic_enum::enum_name<no_ref_t>(arg), obj);
@@ -402,7 +469,7 @@ namespace detail_json
             obj_arr.push_back(std::move(tmp));
         }
 
-        nlohmann::json m_json{};
+        nlohmann::json m_json;
     };
 
     class deserializer : public detail::serializer_base<serial_adapter, true>
@@ -412,69 +479,25 @@ namespace detail_json
 
         void as_bool(const std::string_view key, bool& val) const
         {
-            try
-            {
-                val = subobject(key).get<bool>();
-            }
-            catch (const deserialization_error&)
-            {
-                throw;
-            }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
-            }
+            read_scalar("json.deserialize.bool", key, val, "boolean");
         }
 
         template<typename T>
         void as_float(const std::string_view key, T& val) const
         {
-            try
-            {
-                val = subobject(key).get<T>();
-            }
-            catch (const deserialization_error&)
-            {
-                throw;
-            }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
-            }
+            read_scalar("json.deserialize.float", key, val, "number");
         }
 
         template<typename T>
         void as_int(const std::string_view key, T& val) const
         {
-            try
-            {
-                val = subobject(key).get<T>();
-            }
-            catch (const deserialization_error&)
-            {
-                throw;
-            }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
-            }
+            read_scalar("json.deserialize.int", key, val, "integer");
         }
 
         template<typename T>
         void as_uint(const std::string_view key, T& val) const
         {
-            try
-            {
-                val = subobject(key).get<T>();
-            }
-            catch (const deserialization_error&)
-            {
-                throw;
-            }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
-            }
+            read_scalar("json.deserialize.uint", key, val, "integer");
         }
 
         template<typename T>
@@ -482,32 +505,29 @@ namespace detail_json
         {
             static_assert(std::is_enum_v<T>, "T must be an enum type");
 
-            try
-            {
-#if defined(EXTENSER_USE_MAGIC_ENUM)
-                auto result = magic_enum::enum_cast<T>(subobject(key).get<std::string>());
-
-                if (!result.has_value())
+            invoke_deserialization(
+                [&]()
                 {
-                    throw deserialization_error{ std::string{ "Invalid enum value: \"" }
-                            .append(subobject(key).get<std::string>())
-                            .append("\" for type: ")
-                            .append(magic_enum::enum_type_name<T>()) };
-                }
+                    const auto& json_value = subobject(key);
 
-                val = *result;
+#if defined(EXTENSER_USE_MAGIC_ENUM)
+                    const auto enum_name = json_value.get<std::string>();
+                    auto result = magic_enum::enum_cast<T>(enum_name);
+
+                    if (!result.has_value())
+                    {
+                        throw detail::make_deserialization_error(error_code::invalid_enum_value,
+                            "Enum value is not recognized", "json.deserialize.enum", key,
+                            magic_enum::enum_type_name<T>(), json_type_name(json_value), enum_name);
+                    }
+
+                    val = *result;
 #else
-                val = static_cast<T>(subobject(key).get<std::underlying_type_t<T>>());
+                    val = static_cast<T>(json_value.get<std::underlying_type_t<T>>());
 #endif
-            }
-            catch (const deserialization_error&)
-            {
-                throw;
-            }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
-            }
+                },
+                "json.deserialize.enum", key, error_code::parse_failure,
+                "Failed to deserialize enum value", friendly_type_name<T>());
         }
 
         template<typename T>
@@ -523,18 +543,7 @@ namespace detail_json
             }
             else if constexpr (std::is_same_v<T, std::string>)
             {
-                try
-                {
-                    val = subobject(key).get<std::string>();
-                }
-                catch (const deserialization_error&)
-                {
-                    throw;
-                }
-                catch (const std::exception& ex)
-                {
-                    throw deserialization_error{ ex.what() };
-                }
+                read_scalar("json.deserialize.string", key, val, "string");
             }
             else
             {
@@ -544,37 +553,66 @@ namespace detail_json
 
                     if (!sub_obj.is_string() && !sub_obj.is_array())
                     {
-                        throw deserialization_error{ "JSON error: expected string-like type" };
+                        throw detail::make_deserialization_error(error_code::type_mismatch,
+                            "JSON value is not string-like", "json.deserialize.string", key,
+                            "string-like", json_type_name(sub_obj));
                     }
 
                     if constexpr (std::is_same_v<typename traits_t::value_type, char>)
                     {
-                        const auto str = sub_obj.get<std::string>();
-
-                        if constexpr (traits_t::has_fixed_size)
-                        {
-                            if (str.size() > adapter_t::size(val))
+                        invoke_deserialization(
+                            [&]()
                             {
-                                throw deserialization_error{ "JSON error: array out of bounds" };
-                            }
-                        }
+                                const auto str = sub_obj.get<std::string>();
 
-                        adapter_t::assign_from_range(val, str.cbegin(), str.cend(), [](const char c)
-                            { return static_cast<typename traits_t::value_type>(c); });
+                                if constexpr (traits_t::has_fixed_size)
+                                {
+                                    if (str.size() > adapter_t::size(val))
+                                    {
+                                        throw detail::make_deserialization_error(
+                                            error_code::out_of_bounds,
+                                            "Input string exceeds destination capacity",
+                                            "json.deserialize.string", key, "bounded string",
+                                            "oversized string");
+                                    }
+                                }
+
+                                adapter_t::assign_from_range(val, str.cbegin(), str.cend(),
+                                    [](const char char_value) -> typename traits_t::value_type
+                                    {
+                                        return static_cast<typename traits_t::value_type>(
+                                            char_value);
+                                    });
+                            },
+                            "json.deserialize.string", key, error_code::parse_failure,
+                            "Failed to deserialize string-like value", "string-like",
+                            json_type_name(sub_obj));
                     }
                     else
                     {
-                        if constexpr (traits_t::has_fixed_size)
-                        {
-                            if (sub_obj.size() > adapter_t::size(val))
+                        invoke_deserialization(
+                            [&]()
                             {
-                                throw deserialization_error{ "JSON error: array out of bounds" };
-                            }
-                        }
+                                if constexpr (traits_t::has_fixed_size)
+                                {
+                                    if (sub_obj.size() > adapter_t::size(val))
+                                    {
+                                        throw detail::make_deserialization_error(
+                                            error_code::out_of_bounds,
+                                            "Input array exceeds destination capacity",
+                                            "json.deserialize.string", key, "bounded string",
+                                            "oversized array");
+                                    }
+                                }
 
-                        adapter_t::assign_from_range(val, sub_obj.begin(), sub_obj.end(),
-                            [](const nlohmann::json& sub_val)
-                            { return sub_val.get<typename traits_t::value_type>(); });
+                                adapter_t::assign_from_range(val, sub_obj.begin(), sub_obj.end(),
+                                    [](const nlohmann::json& sub_value) ->
+                                    typename traits_t::value_type
+                                    { return sub_value.get<typename traits_t::value_type>(); });
+                            },
+                            "json.deserialize.string", key, error_code::parse_failure,
+                            "Failed to deserialize string-like value", "string-like",
+                            json_type_name(sub_obj));
                     }
                 }
                 else
@@ -599,7 +637,9 @@ namespace detail_json
                 {
                     if (arr.size() != adapter_t::size(val))
                     {
-                        throw deserialization_error{ "JSON error: array out of bounds" };
+                        throw detail::make_deserialization_error(error_code::invalid_size,
+                            "JSON array size does not match the destination size",
+                            "json.deserialize.array", key, "fixed-size array", "size mismatch");
                     }
                 }
 
@@ -675,7 +715,9 @@ namespace detail_json
 
             if (obj.size() != sizeof...(Args))
             {
-                throw deserialization_error{ "JSON error: invalid number of args" };
+                throw detail::make_deserialization_error(error_code::argument_count_mismatch,
+                    "Tuple arity does not match the JSON array", "json.deserialize.tuple", key,
+                    std::to_string(sizeof...(Args)), std::to_string(obj.size()));
             }
 
             [[maybe_unused]] std::size_t arg_counter = 0;
@@ -701,10 +743,9 @@ namespace detail_json
 
             if (v_idx >= arg_sz)
             {
-                throw deserialization_error{
-                    std::string{ "JSON error: variant index exceeded variant size: " }.append(
-                        std::to_string(arg_sz))
-                };
+                throw detail::make_deserialization_error(error_code::invalid_variant_index,
+                    "Variant discriminator exceeds the number of alternatives",
+                    "json.deserialize.variant", key, std::to_string(arg_sz), std::to_string(v_idx));
             }
 
             // TODO: Cleanup and move to serial-agnostic code
@@ -840,22 +881,33 @@ namespace detail_json
         }
 
     private:
+        template<typename T>
+        void read_scalar(const std::string_view operation, const std::string_view key, T& val,
+            const std::string_view expected_type) const
+        {
+            val = invoke_deserialization([&]() { return subobject(key).get<T>(); }, operation, key,
+                error_code::parse_failure, "Failed to deserialize scalar value", expected_type);
+        }
+
         [[nodiscard]] auto subobject(const std::string_view key) const -> const nlohmann::json&
         {
             EXTENSER_PRECONDITION(key.empty() || m_p_json->is_object());
 
-            try
+            if (key.empty())
             {
-                return key.empty() ? *m_p_json : m_p_json->at(key);
+                return *m_p_json;
             }
-            catch (const deserialization_error&)
+
+            const auto iter = m_p_json->find(key);
+
+            if (iter == m_p_json->end())
             {
-                throw;
+                throw detail::make_deserialization_error(error_code::missing_key,
+                    "Requested JSON object member was not found", "json.deserialize.lookup", key,
+                    "present object member", "missing member");
             }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
-            }
+
+            return *iter;
         }
 
         template<typename T>
@@ -943,97 +995,77 @@ namespace detail_json
 
             if (!validate_arg<no_ref_t>(arg))
             {
-#if defined(EXTENSER_NO_RTTI)
-                throw deserialization_error{
-                    std::string{ "JSON error: expected type: {NO-RTTI}, got type: " }.append(
-                        arg.type_name())
-                };
-#else
-                throw deserialization_error{ std::string{ "JSON error: expected type: " }
-                        .append(typeid(no_ref_t).name())
-                        .append(", got type: ")
-                        .append(arg.type_name()) };
-#endif
+                throw detail::make_deserialization_error(error_code::type_mismatch,
+                    "JSON value type does not match the requested type", "json.deserialize.arg", {},
+                    friendly_type_name<no_ref_t>(), json_type_name(arg));
             }
 
             if constexpr (std::is_same_v<no_ref_t, bool> || std::is_arithmetic_v<no_ref_t>)
             {
-                try
-                {
-                    return arg.get<no_ref_t>();
-                }
-                catch (const deserialization_error&)
-                {
-                    throw;
-                }
-                catch (const std::exception& ex)
-                {
-                    throw deserialization_error{ ex.what() };
-                }
+                return invoke_deserialization([&]() { return arg.get<no_ref_t>(); },
+                    "json.deserialize.arg", {}, error_code::parse_failure,
+                    "Failed to parse scalar JSON value", friendly_type_name<no_ref_t>(),
+                    json_type_name(arg));
             }
             else if constexpr (std::is_same_v<no_ref_t, std::string>)
             {
-                try
-                {
-                    return arg.get<std::string>();
-                }
-                catch (const deserialization_error&)
-                {
-                    throw;
-                }
-                catch (const std::exception& ex)
-                {
-                    throw deserialization_error{ ex.what() };
-                }
+                return invoke_deserialization([&]() { return arg.get<std::string>(); },
+                    "json.deserialize.arg", {}, error_code::parse_failure,
+                    "Failed to parse JSON string", friendly_type_name<no_ref_t>(),
+                    json_type_name(arg));
             }
             else if constexpr (detail::is_stringlike_v<no_ref_t>)
             {
                 no_ref_t out_val;
 
-                try
-                {
-                    using traits_t = containers::traits<T>;
-                    using adapter_t = containers::adapter<T>;
-
-                    if constexpr (std::is_same_v<typename traits_t::value_type, char>)
+                invoke_deserialization(
+                    [&]()
                     {
-                        const auto str = arg.get<std::string>();
+                        using traits_t = containers::traits<T>;
+                        using adapter_t = containers::adapter<T>;
 
-                        if constexpr (traits_t::has_fixed_size)
+                        if constexpr (std::is_same_v<typename traits_t::value_type, char>)
                         {
-                            if (str.size() > adapter_t::size(out_val))
-                            {
-                                throw deserialization_error{ "JSON error: array out of bounds" };
-                            }
-                        }
+                            const auto str = arg.get<std::string>();
 
-                        adapter_t::assign_from_range(out_val, str.cbegin(), str.cend(),
-                            [](const char c)
-                            { return static_cast<typename traits_t::value_type>(c); });
-                    }
-                    else
-                    {
-                        if constexpr (traits_t::has_fixed_size)
+                            if constexpr (traits_t::has_fixed_size)
+                            {
+                                if (str.size() > adapter_t::size(out_val))
+                                {
+                                    throw detail::make_deserialization_error(
+                                        error_code::out_of_bounds,
+                                        "Input string exceeds destination capacity",
+                                        "json.deserialize.arg", {}, "bounded string",
+                                        "oversized string");
+                                }
+                            }
+
+                            adapter_t::assign_from_range(out_val, str.cbegin(), str.cend(),
+                                [](const char char_value) -> typename traits_t::value_type
+                                { return static_cast<typename traits_t::value_type>(char_value); });
+                        }
+                        else
                         {
-                            if (arg.size() > adapter_t::size(out_val))
+                            if constexpr (traits_t::has_fixed_size)
                             {
-                                throw deserialization_error{ "JSON error: array out of bounds" };
+                                if (arg.size() > adapter_t::size(out_val))
+                                {
+                                    throw detail::make_deserialization_error(
+                                        error_code::out_of_bounds,
+                                        "Input array exceeds destination capacity",
+                                        "json.deserialize.arg", {}, "bounded string",
+                                        "oversized array");
+                                }
                             }
-                        }
 
-                        adapter_t::assign_from_range(out_val, arg.begin(), arg.end(),
-                            [](const nlohmann::json& sub_val)
-                            { return sub_val.get<typename traits_t::value_type>(); });
-                    }
-                }
-                catch (const deserialization_error&)
-                {
-                    throw;
-                }
-                catch (const std::exception& ex)
-                {
-                    throw deserialization_error{ ex.what() };
-                }
+                            adapter_t::assign_from_range(out_val, arg.begin(), arg.end(),
+                                [](const nlohmann::json& sub_value) -> typename traits_t::value_type
+                                { return sub_value.get<typename traits_t::value_type>(); });
+                        }
+                    },
+                    "json.deserialize.arg", {}, error_code::parse_failure,
+                    "Failed to parse string-like JSON value", friendly_type_name<no_ref_t>(),
+                    json_type_name(arg));
 
                 return out_val;
             }
@@ -1042,18 +1074,10 @@ namespace detail_json
                 no_ref_t out_val;
                 deserializer ser{ arg };
 
-                try
-                {
-                    ser.deserialize_object(out_val);
-                }
-                catch (const deserialization_error&)
-                {
-                    throw;
-                }
-                catch (const std::exception& ex)
-                {
-                    throw deserialization_error{ ex.what() };
-                }
+                invoke_deserialization([&]() { ser.deserialize_object(out_val); },
+                    "json.deserialize.object", {}, error_code::parse_failure,
+                    "Failed to deserialize nested object", friendly_type_name<no_ref_t>(),
+                    json_type_name(arg));
 
                 return out_val;
             }
@@ -1066,47 +1090,18 @@ namespace detail_json
 
             if (!validate_arg<no_ref_t>(arg))
             {
-#if defined(EXTENSER_NO_RTTI)
-                throw deserialization_error{
-                    std::string{ "JSON error: expected type: {NO-RTTI}, got type: " }.append(
-                        arg.type_name())
-                };
-#else
-                throw deserialization_error{ std::string{ "JSON error: expected type: " }
-                        .append(typeid(no_ref_t).name())
-                        .append(", got type: ")
-                        .append(arg.type_name()) };
-#endif
+                throw detail::make_deserialization_error(error_code::type_mismatch,
+                    "JSON value type does not match the requested object type",
+                    "json.deserialize.object", {}, friendly_type_name<no_ref_t>(),
+                    json_type_name(arg));
             }
 
             deserializer ser{ arg };
 
-            try
-            {
-                ser.deserialize_object(val);
-            }
-            catch (const deserialization_error&)
-            {
-                throw;
-            }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
-            }
-        }
-
-        [[nodiscard]] static auto get_next_arg(
-            const nlohmann::json& arg, std::size_t& index) noexcept -> const nlohmann::json&
-        {
-            if (arg.is_array())
-            {
-                const auto old_idx = index;
-                ++index;
-
-                return arg[old_idx];
-            }
-
-            return arg;
+            invoke_deserialization([&]() { ser.deserialize_object(val); },
+                "json.deserialize.object", {}, error_code::parse_failure,
+                "Failed to deserialize object in place", friendly_type_name<no_ref_t>(),
+                json_type_name(arg));
         }
 
         template<typename T>
@@ -1115,23 +1110,17 @@ namespace detail_json
         {
             if (index >= arg_arr.size())
             {
-                throw deserialization_error{ "JSON error: argument count mismatch" };
+                throw detail::make_deserialization_error(error_code::argument_count_mismatch,
+                    "JSON argument count does not match the requested arity",
+                    "json.deserialize.args", {}, std::to_string(index + 1),
+                    std::to_string(arg_arr.size()));
             }
 
-            const auto& next_obj = get_next_arg(arg_arr, index);
+            const auto& next_obj = arg_arr.is_array() ? arg_arr.at(index++) : arg_arr;
 
-            try
-            {
-                return parse_arg<T>(next_obj);
-            }
-            catch (const deserialization_error&)
-            {
-                throw;
-            }
-            catch (const std::exception& ex)
-            {
-                throw deserialization_error{ ex.what() };
-            }
+            return invoke_deserialization([&]() { return parse_arg<T>(next_obj); },
+                "json.deserialize.args", {}, error_code::parse_failure,
+                "Failed to parse positional argument");
         }
 
         const nlohmann::json* m_p_json;

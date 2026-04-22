@@ -28,6 +28,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -71,6 +72,111 @@ namespace extenser
 {
 namespace detail_bitsery
 {
+    [[nodiscard]] inline auto make_bitsery_serialization_error(const error_code code,
+        const std::string_view summary, const std::string_view operation,
+        const std::string_view expected_type = {}, const std::string_view actual_type = {},
+        const std::string_view detail_text = {}) -> serialization_error
+    {
+        return detail::make_serialization_error(
+            code, summary, operation, {}, expected_type, actual_type, detail_text);
+    }
+
+    [[nodiscard]] inline auto bitsery_reader_error_name(const bitsery::ReaderError error)
+        -> std::string_view
+    {
+        switch (error)
+        {
+            case bitsery::ReaderError::NoError:
+                return "NoError";
+            case bitsery::ReaderError::ReadingError:
+                return "ReadingError";
+            case bitsery::ReaderError::DataOverflow:
+                return "DataOverflow";
+            case bitsery::ReaderError::InvalidData:
+                return "InvalidData";
+            case bitsery::ReaderError::InvalidPointer:
+                return "InvalidPointer";
+            default:
+                return "UnknownReaderError";
+        }
+    }
+
+    [[nodiscard]] inline auto bitsery_error_code(const bitsery::ReaderError error) noexcept
+        -> error_code
+    {
+        switch (error)
+        {
+            case bitsery::ReaderError::DataOverflow:
+                return error_code::out_of_bounds;
+            case bitsery::ReaderError::InvalidData:
+            case bitsery::ReaderError::InvalidPointer:
+            case bitsery::ReaderError::ReadingError:
+                return error_code::parse_failure;
+            case bitsery::ReaderError::NoError:
+            default:
+                return error_code::unknown;
+        }
+    }
+
+    [[nodiscard]] inline auto make_bitsery_deserialization_error(const std::string_view operation,
+        const bitsery::ReaderError error, const std::size_t pos) -> deserialization_error
+    {
+        std::string detail{};
+        detail.append("reader_error=");
+        detail.append(bitsery_reader_error_name(error));
+        detail.append(", read_pos=");
+        detail.append(std::to_string(pos));
+
+        return detail::make_deserialization_error(bitsery_error_code(error),
+            "Bitsery adapter reported an invalid binary input state", operation, {},
+            "valid bitsery stream", bitsery_reader_error_name(error), detail);
+    }
+
+    template<typename CharT>
+    [[nodiscard]] auto make_string_view_from_pointer(const CharT* str_ptr)
+        -> std::basic_string_view<std::remove_cv_t<CharT>>
+    {
+        if (str_ptr == nullptr)
+        {
+            throw make_bitsery_serialization_error(error_code::invalid_argument,
+                "Cannot serialize a null string pointer", "bitsery.serialize.string",
+                "non-null string pointer", "null pointer");
+        }
+
+        return { str_ptr };
+    }
+
+    template<typename StringT>
+    void validate_string_size(
+        const StringT& value, const std::size_t max_size, const std::string_view operation)
+    {
+        const auto length = static_cast<std::size_t>(std::size(value));
+        const auto serialized_size =
+            length + (bitsery::traits::TextTraits<StringT>::addNUL ? 1U : 0U);
+
+        if (serialized_size > max_size)
+        {
+            throw make_bitsery_serialization_error(error_code::invalid_size,
+                "String exceeds the configured bitsery serialization limit", operation,
+                std::to_string(max_size), std::to_string(serialized_size));
+        }
+    }
+
+    template<typename ContainerT>
+    void validate_container_size(
+        const ContainerT& value, const std::size_t max_size, const std::string_view operation)
+    {
+        const auto container_size =
+            static_cast<std::size_t>(std::distance(std::begin(value), std::end(value)));
+
+        if (container_size > max_size)
+        {
+            throw make_bitsery_serialization_error(error_code::invalid_size,
+                "Container exceeds the configured bitsery serialization limit", operation,
+                std::to_string(max_size), std::to_string(container_size));
+        }
+    }
+
     class serializer;
     class deserializer;
 
@@ -148,7 +254,7 @@ namespace detail_bitsery
 
             if constexpr (std::is_pointer_v<T>)
             {
-                std::basic_string_view<std::remove_cv_t<std::remove_pointer_t<T>>> tmp{ val };
+                const auto tmp = make_string_view_from_pointer(val);
                 m_ser.text<sizeof(std::remove_pointer_t<T>)>(tmp);
             }
             else if constexpr (std::is_array_v<T>)
@@ -165,6 +271,7 @@ namespace detail_bitsery
                 }
                 else
                 {
+                    validate_string_size(val, config::max_string_size, "bitsery.serialize.string");
                     m_ser.text<char_sz>(val, config::max_string_size);
                 }
             }
@@ -194,6 +301,9 @@ namespace detail_bitsery
                 }
                 else
                 {
+                    validate_container_size(
+                        val, config::max_container_size, "bitsery.serialize.array");
+
                     if constexpr (std::is_arithmetic_v<typename traits_t::value_type>)
                     {
                         m_ser.container<sizeof(typename traits_t::value_type)>(
@@ -209,6 +319,7 @@ namespace detail_bitsery
             }
             else
             {
+                validate_container_size(val, config::max_container_size, "bitsery.serialize.array");
                 m_ser.ext(val, bitsery::ext::StdSet{ config::max_container_size },
                     [this](S& ser, typename traits_t::value_type& value)
                     { serial_adapter::parse_obj(ser, *this, value); });
@@ -221,6 +332,8 @@ namespace detail_bitsery
             using S = bitsery::Serializer<output_adapter>;
             using key_t = typename T::key_type;
             using val_t = typename T::mapped_type;
+
+            validate_container_size(val, config::max_container_size, "bitsery.serialize.map");
 
             m_ser.ext(val, bitsery::ext::StdMap{ config::max_container_size },
                 [this](S& ser, key_t& map_key, val_t& map_val)
@@ -317,30 +430,26 @@ namespace detail_bitsery
         template<typename T>
         void as_bool([[maybe_unused]] const std::string_view key, T& val)
         {
-            update_buffer();
-            m_ser.value1b(val);
+            read_with_status("bitsery.deserialize.bool", [&]() { m_ser.value1b(val); });
         }
 
         template<typename T>
         void as_float([[maybe_unused]] const std::string_view key, T& val)
         {
             static_assert(sizeof(T) <= sizeof(double), "long double is not supported");
-            update_buffer();
-            m_ser.value<sizeof(T)>(val);
+            read_with_status("bitsery.deserialize.float", [&]() { m_ser.value<sizeof(T)>(val); });
         }
 
         template<typename T>
         void as_int([[maybe_unused]] const std::string_view key, T& val)
         {
-            update_buffer();
-            m_ser.value<sizeof(T)>(val);
+            read_with_status("bitsery.deserialize.int", [&]() { m_ser.value<sizeof(T)>(val); });
         }
 
         template<typename T>
         void as_uint([[maybe_unused]] const std::string_view key, T& val)
         {
-            update_buffer();
-            m_ser.value<sizeof(T)>(val);
+            read_with_status("bitsery.deserialize.uint", [&]() { m_ser.value<sizeof(T)>(val); });
         }
 
         template<typename T>
@@ -348,8 +457,7 @@ namespace detail_bitsery
         {
             static_assert(std::is_enum_v<T>, "T must be an enum type");
 
-            update_buffer();
-            m_ser.value<sizeof(T)>(val);
+            read_with_status("bitsery.deserialize.enum", [&]() { m_ser.value<sizeof(T)>(val); });
         }
 
         template<typename T>
@@ -359,19 +467,21 @@ namespace detail_bitsery
 
             static constexpr std::size_t char_sz = sizeof(typename traits_t::value_type);
 
-            update_buffer();
-
-            if constexpr (traits_t::is_mutable)
-            {
-                if constexpr (traits_t::has_fixed_size)
+            read_with_status("bitsery.deserialize.string",
+                [&]()
                 {
-                    m_ser.text<char_sz>(val);
-                }
-                else
-                {
-                    m_ser.text<char_sz>(val, config::max_string_size);
-                }
-            }
+                    if constexpr (traits_t::is_mutable)
+                    {
+                        if constexpr (traits_t::has_fixed_size)
+                        {
+                            m_ser.text<char_sz>(val);
+                        }
+                        else
+                        {
+                            m_ser.text<char_sz>(val, config::max_string_size);
+                        }
+                    }
+                });
         }
 
         template<typename T>
@@ -382,47 +492,49 @@ namespace detail_bitsery
             using traits_t = containers::traits<T>;
             using S = bitsery::Deserializer<input_adapter>;
 
-            update_buffer();
-
-            if constexpr (traits_t::is_mutable)
-            {
-                if constexpr (traits_t::is_sequential)
+            read_with_status("bitsery.deserialize.array",
+                [&]()
                 {
-                    if constexpr (traits_t::has_fixed_size)
+                    if constexpr (traits_t::is_mutable)
                     {
-                        if constexpr (std::is_arithmetic_v<typename traits_t::value_type>)
+                        if constexpr (traits_t::is_sequential)
                         {
-                            m_ser.container<sizeof(typename traits_t::value_type)>(val);
+                            if constexpr (traits_t::has_fixed_size)
+                            {
+                                if constexpr (std::is_arithmetic_v<typename traits_t::value_type>)
+                                {
+                                    m_ser.container<sizeof(typename traits_t::value_type)>(val);
+                                }
+                                else
+                                {
+                                    m_ser.container(val,
+                                        [this](S& ser, typename traits_t::value_type& value)
+                                        { serial_adapter::parse_obj(ser, *this, value); });
+                                }
+                            }
+                            else
+                            {
+                                if constexpr (std::is_arithmetic_v<typename traits_t::value_type>)
+                                {
+                                    m_ser.container<sizeof(typename traits_t::value_type)>(
+                                        val, config::max_container_size);
+                                }
+                                else
+                                {
+                                    m_ser.container(val, config::max_container_size,
+                                        [this](S& ser, typename traits_t::value_type& value)
+                                        { serial_adapter::parse_obj(ser, *this, value); });
+                                }
+                            }
                         }
                         else
                         {
-                            m_ser.container(val,
+                            m_ser.ext(val, bitsery::ext::StdSet{ config::max_container_size },
                                 [this](S& ser, typename traits_t::value_type& value)
                                 { serial_adapter::parse_obj(ser, *this, value); });
                         }
                     }
-                    else
-                    {
-                        if constexpr (std::is_arithmetic_v<typename traits_t::value_type>)
-                        {
-                            m_ser.container<sizeof(typename traits_t::value_type)>(
-                                val, config::max_container_size);
-                        }
-                        else
-                        {
-                            m_ser.container(val, config::max_container_size,
-                                [this](S& ser, typename traits_t::value_type& value)
-                                { serial_adapter::parse_obj(ser, *this, value); });
-                        }
-                    }
-                }
-                else
-                {
-                    m_ser.ext(val, bitsery::ext::StdSet{ config::max_container_size },
-                        [this](S& ser, typename traits_t::value_type& value)
-                        { serial_adapter::parse_obj(ser, *this, value); });
-                }
-            }
+                });
         }
 
         template<typename T>
@@ -432,29 +544,33 @@ namespace detail_bitsery
             using key_t = typename T::key_type;
             using val_t = typename T::mapped_type;
 
-            update_buffer();
-
-            m_ser.ext(val, bitsery::ext::StdMap{ config::max_container_size },
-                [this](S& ser, key_t& map_key, val_t& map_val)
+            read_with_status("bitsery.deserialize.map",
+                [&]()
                 {
-                    serial_adapter::parse_obj(ser, *this, map_key);
-                    serial_adapter::parse_obj(ser, *this, map_val);
+                    m_ser.ext(val, bitsery::ext::StdMap{ config::max_container_size },
+                        [this](S& ser, key_t& map_key, val_t& map_val)
+                        {
+                            serial_adapter::parse_obj(ser, *this, map_key);
+                            serial_adapter::parse_obj(ser, *this, map_val);
+                        });
                 });
         }
 
         template<typename T>
         void as_multimap([[maybe_unused]] const std::string_view key, T& val)
         {
-            update_buffer();
             as_map(key, val);
         }
 
         template<typename T1, typename T2>
         void as_tuple([[maybe_unused]] const std::string_view key, std::pair<T1, T2>& val)
         {
-            update_buffer();
-            serial_adapter::parse_obj(m_ser, *this, val.first);
-            serial_adapter::parse_obj(m_ser, *this, val.second);
+            read_with_status("bitsery.deserialize.pair",
+                [&]()
+                {
+                    serial_adapter::parse_obj(m_ser, *this, val.first);
+                    serial_adapter::parse_obj(m_ser, *this, val.second);
+                });
         }
 
         template<typename... Args>
@@ -462,10 +578,13 @@ namespace detail_bitsery
         {
             using S = bitsery::Deserializer<input_adapter>;
 
-            update_buffer();
-            m_ser.ext(val,
-                bitsery::ext::StdTuple{ [this](S& ser, auto& subval)
-                    { serial_adapter::parse_obj(ser, *this, subval); } });
+            read_with_status("bitsery.deserialize.tuple",
+                [&]()
+                {
+                    m_ser.ext(val,
+                        bitsery::ext::StdTuple{ [this](S& ser, auto& subval)
+                            { serial_adapter::parse_obj(ser, *this, subval); } });
+                });
         }
 
         template<typename T>
@@ -473,9 +592,12 @@ namespace detail_bitsery
         {
             using S = bitsery::Deserializer<input_adapter>;
 
-            update_buffer();
-            m_ser.ext(val, bitsery::ext::StdOptional{},
-                [this](S& ser, T& subval) { serial_adapter::parse_obj(ser, *this, subval); });
+            read_with_status("bitsery.deserialize.optional",
+                [&]()
+                {
+                    m_ser.ext(val, bitsery::ext::StdOptional{}, [this](S& ser, T& subval)
+                        { serial_adapter::parse_obj(ser, *this, subval); });
+                });
         }
 
         template<typename... Args>
@@ -483,17 +605,20 @@ namespace detail_bitsery
         {
             using S = bitsery::Deserializer<input_adapter>;
 
-            update_buffer();
-            m_ser.ext(val,
-                bitsery::ext::StdVariant{ [this](S& ser, auto& subval)
-                    { serial_adapter::parse_obj(ser, *this, subval); } });
+            read_with_status("bitsery.deserialize.variant",
+                [&]()
+                {
+                    m_ser.ext(val,
+                        bitsery::ext::StdVariant{ [this](S& ser, auto& subval)
+                            { serial_adapter::parse_obj(ser, *this, subval); } });
+                });
         }
 
         template<typename T>
         void as_object([[maybe_unused]] const std::string_view key, T& val)
         {
-            update_buffer();
-            serial_adapter::parse_obj(m_ser, *this, val);
+            read_with_status("bitsery.deserialize.object",
+                [&]() { serial_adapter::parse_obj(m_ser, *this, val); });
         }
 
         void as_null([[maybe_unused]] const std::string_view key)
@@ -504,6 +629,25 @@ namespace detail_bitsery
     private:
         using config = serial_adapter::config;
         using input_adapter = bitsery::InputBufferAdapter<std::vector<std::uint8_t>>;
+
+        template<typename Func>
+        void read_with_status(const std::string_view operation, Func&& func)
+        {
+            update_buffer();
+            std::forward<Func>(func)();
+            ensure_reader_ok(operation);
+        }
+
+        void ensure_reader_ok(const std::string_view operation)
+        {
+            const auto error = m_ser.adapter().error();
+
+            if (error != bitsery::ReaderError::NoError)
+            {
+                throw make_bitsery_deserialization_error(
+                    operation, error, m_ser.adapter().currentReadPos());
+            }
+        }
 
         void update_buffer()
         {
@@ -531,7 +675,17 @@ namespace detail_bitsery
         }
         else if constexpr (detail::is_stringlike_v<T>)
         {
-            ser.text1b(val, config::max_string_size);
+            if constexpr (std::is_pointer_v<T>)
+            {
+                const auto tmp = make_string_view_from_pointer(val);
+                validate_string_size(tmp, config::max_string_size, "bitsery.serialize.string");
+                ser.text1b(tmp, config::max_string_size);
+            }
+            else
+            {
+                validate_string_size(val, config::max_string_size, "bitsery.serialize.string");
+                ser.text1b(val, config::max_string_size);
+            }
         }
         else if constexpr (detail::is_pair_v<T>)
         {
@@ -550,6 +704,8 @@ namespace detail_bitsery
             using key_t = typename T::key_type;
             using val_t = typename T::mapped_type;
 
+            validate_container_size(val, config::max_container_size, "bitsery.serialize.map");
+
             ser.ext(val, bitsery::ext::StdMap{ config::max_container_size },
                 [&fallback](S& s_ser, key_t& map_key, val_t& map_val)
                 {
@@ -560,6 +716,8 @@ namespace detail_bitsery
         else if constexpr (detail::is_set_v<T>)
         {
             using key_t = typename T::key_type;
+
+            validate_container_size(val, config::max_container_size, "bitsery.serialize.array");
 
             ser.ext(val, bitsery::ext::StdSet{ config::max_container_size },
                 [&fallback](S& s_ser, key_t& key_val) { parse_obj(s_ser, fallback, key_val); });
@@ -572,6 +730,8 @@ namespace detail_bitsery
             {
                 if constexpr (bitsery::traits::ContainerTraits<std::remove_cv_t<T>>::isResizable)
                 {
+                    validate_container_size(
+                        val, config::max_container_size, "bitsery.serialize.array");
                     ser.template container<sizeof(val_t), std::remove_cv_t<T>>(
                         val, config::max_container_size);
                 }
@@ -584,6 +744,8 @@ namespace detail_bitsery
             {
                 if constexpr (bitsery::traits::ContainerTraits<std::remove_cv_t<T>>::isResizable)
                 {
+                    validate_container_size(
+                        val, config::max_container_size, "bitsery.serialize.array");
                     ser.container(val, config::max_container_size, [](S& s_ser, std::string& substr)
                         { s_ser.text1b(substr, config::max_string_size); });
                 }

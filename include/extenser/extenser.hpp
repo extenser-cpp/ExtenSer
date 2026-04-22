@@ -10,13 +10,13 @@
 #ifndef EXTENSER_HPP
 #define EXTENSER_HPP
 
+#include "detail/error.hpp"
 #include "detail/macros.hpp"
 #include "detail/type_traits.hpp"
 #include "span.hpp"
 
 #include <cstddef>
 #include <optional>
-#include <stdexcept>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
@@ -127,7 +127,7 @@ namespace containers
         using container_type = typename traits_type::container_type;
         using size_type = typename traits_type::size_type;
 
-        EXTENSER_INLINE auto size(const container_type& container) const -> size_type
+        [[nodiscard]] EXTENSER_INLINE auto size(const container_type& container) const -> size_type
         {
             return (static_cast<const adapter_type*>(this))->size(container);
         }
@@ -219,24 +219,6 @@ inline constexpr bool is_null_serializable = std::is_null_pointer_v<T> || std::i
 template<typename T>
 inline constexpr bool is_object_serializable =
     std::disjunction_v<detail::has_serialize_adl<T>, detail::has_serialize_mem<T>>;
-
-class extenser_exception : public std::runtime_error
-{
-public:
-    using std::runtime_error::runtime_error;
-};
-
-class serialization_error : public extenser_exception
-{
-public:
-    using extenser_exception::extenser_exception;
-};
-
-class deserialization_error : public extenser_exception
-{
-public:
-    using extenser_exception::extenser_exception;
-};
 
 template<typename Derived>
 class generic_serializer
