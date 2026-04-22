@@ -71,6 +71,7 @@ public:
     {
         return m_expected_type;
     }
+
     [[nodiscard]] auto actual_type() const noexcept -> std::string_view { return m_actual_type; }
     [[nodiscard]] auto detail() const noexcept -> std::string_view { return m_detail; }
 

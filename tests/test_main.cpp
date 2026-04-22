@@ -236,7 +236,7 @@ TEST_CASE("README Example")
     REQUIRE_EQ(output_str, input_str);
 
     // Serialize non-default constructible type
-    NoDefault input_nd(2);
+    const NoDefault input_nd(2);
     serializer.serialize_object(input_nd);
 
     NoDefault out_nd(1);

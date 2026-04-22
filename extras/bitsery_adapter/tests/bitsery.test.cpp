@@ -82,7 +82,7 @@ TEST_SUITE("bitsery adapter")
         ser.as_uint("", expected_val);
 
         auto bytes = ser.object();
-        REQUIRE(bytes.size() > 1);
+        REQUIRE_GT(bytes.size(), 1);
         bytes.pop_back();
 
         deserializer dser{ bytes };
@@ -96,10 +96,9 @@ TEST_SUITE("bitsery adapter")
         catch (const deserialization_error& ex)
         {
             CHECK_EQ(ex.code(), error_code::out_of_bounds);
-            CHECK(std::string{ ex.operation() } == "bitsery.deserialize.uint");
-            CHECK(std::string{ ex.actual_type() } == "DataOverflow");
-            CHECK(
-                std::string{ ex.detail() }.find("reader_error=DataOverflow") != std::string::npos);
+            CHECK_EQ(ex.operation(), "bitsery.deserialize.uint");
+            CHECK_EQ(ex.actual_type(), "DataOverflow");
+            CHECK_NE(ex.detail().find("reader_error=DataOverflow"), std::string_view::npos);
         }
     }
 
@@ -116,9 +115,9 @@ TEST_SUITE("bitsery adapter")
         catch (const serialization_error& ex)
         {
             CHECK_EQ(ex.code(), error_code::invalid_size);
-            CHECK(std::string{ ex.operation() } == "bitsery.serialize.string");
-            CHECK(std::string{ ex.expected_type() } == "256");
-            CHECK(std::string{ ex.actual_type() } == "300");
+            CHECK_EQ(ex.operation(), "bitsery.serialize.string");
+            CHECK_EQ(ex.expected_type(), "256");
+            CHECK_EQ(ex.actual_type(), "300");
         }
     }
 
@@ -135,8 +134,8 @@ TEST_SUITE("bitsery adapter")
         catch (const serialization_error& ex)
         {
             CHECK_EQ(ex.code(), error_code::invalid_argument);
-            CHECK(std::string{ ex.operation() } == "bitsery.serialize.string");
-            CHECK(std::string{ ex.actual_type() } == "null pointer");
+            CHECK_EQ(ex.operation(), "bitsery.serialize.string");
+            CHECK_EQ(ex.actual_type(), "null pointer");
         }
     }
 
@@ -153,9 +152,9 @@ TEST_SUITE("bitsery adapter")
         catch (const serialization_error& ex)
         {
             CHECK_EQ(ex.code(), error_code::invalid_size);
-            CHECK(std::string{ ex.operation() } == "bitsery.serialize.string");
-            CHECK(std::string{ ex.expected_type() } == "256");
-            CHECK(std::string{ ex.actual_type() } == "300");
+            CHECK_EQ(ex.operation(), "bitsery.serialize.string");
+            CHECK_EQ(ex.expected_type(), "256");
+            CHECK_EQ(ex.actual_type(), "300");
         }
     }
 
@@ -171,8 +170,8 @@ TEST_SUITE("bitsery adapter")
         catch (const contract_violation& ex)
         {
             CHECK_EQ(ex.code(), error_code::assertion_failed);
-            CHECK(std::string{ ex.operation() }.find("front") != std::string::npos);
-            CHECK(std::string{ ex.detail() }.find("m_head_ptr != nullptr") != std::string::npos);
+            CHECK_NE(ex.operation().find("front"), std::string_view::npos);
+            CHECK_NE(ex.detail().find("m_head_ptr != nullptr"), std::string_view::npos);
         }
     }
 

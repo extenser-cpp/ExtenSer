@@ -10,8 +10,6 @@
 #ifndef EXTENSER_DETAIL_MACROS_HPP
 #define EXTENSER_DETAIL_MACROS_HPP
 
-#include "error.hpp"
-
 #if defined(_MSC_VER)
 #  define EXTENSER_ASSUME(EXPR) __assume(EXPR)
 #elif defined(__clang__)

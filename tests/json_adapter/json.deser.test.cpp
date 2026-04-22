@@ -145,8 +145,8 @@ TEST_SUITE("json::deserializer")
                     catch (const deserialization_error& ex)
                     {
                         CHECK_EQ(ex.code(), error_code::missing_key);
-                        CHECK(std::string{ ex.key() } == "missing_flag");
-                        CHECK(std::string{ ex.operation() } == "json.deserialize.lookup");
+                        CHECK_EQ(ex.key(), "missing_flag");
+                        CHECK_EQ(ex.operation(), "json.deserialize.lookup");
                     }
                 }
             }
@@ -172,9 +172,9 @@ TEST_SUITE("json::deserializer")
                     catch (const deserialization_error& ex)
                     {
                         CHECK_EQ(ex.code(), error_code::parse_failure);
-                        CHECK(std::string{ ex.operation() } == "json.deserialize.bool");
-                        CHECK(std::string{ ex.expected_type() } == "boolean");
-                        CHECK(std::string{ ex.detail() }.find("boolean") != std::string::npos);
+                        CHECK_EQ(ex.operation(), "json.deserialize.bool");
+                        CHECK_EQ(ex.expected_type(), "boolean");
+                        CHECK_NE(ex.detail().find("boolean"), std::string_view::npos);
                     }
                 }
             }
@@ -976,7 +976,7 @@ TEST_SUITE("json::deserializer")
             }
         }
 
-        GIVEN("a deserializer with a JSON object representing an unordered_multimap")
+        GIVEN("a deserializer with a JSON object representing an unordeTHROWred_multimap")
         {
             const std::unordered_multimap<std::string, std::string> expected_val{
                 { "Stan Lee", "Marvel" }, { "Jack Kirby", "Marvel" }, { "Jack Kirby", "DC" },

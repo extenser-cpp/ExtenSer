@@ -26,7 +26,6 @@
 #include <nlohmann/json.hpp>
 
 #include <cstddef>
-#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -469,7 +468,7 @@ namespace detail_json
             obj_arr.push_back(std::move(tmp));
         }
 
-        nlohmann::json m_json;
+        nlohmann::json m_json{};
     };
 
     class deserializer : public detail::serializer_base<serial_adapter, true>
@@ -506,7 +505,7 @@ namespace detail_json
             static_assert(std::is_enum_v<T>, "T must be an enum type");
 
             invoke_deserialization(
-                [&]()
+                [this, key, &val]
                 {
                     const auto& json_value = subobject(key);
 
@@ -561,7 +560,7 @@ namespace detail_json
                     if constexpr (std::is_same_v<typename traits_t::value_type, char>)
                     {
                         invoke_deserialization(
-                            [&]()
+                            [key, &sub_obj, &val]
                             {
                                 const auto str = sub_obj.get<std::string>();
 
@@ -591,7 +590,7 @@ namespace detail_json
                     else
                     {
                         invoke_deserialization(
-                            [&]()
+                            [key, &sub_obj, &val]
                             {
                                 if constexpr (traits_t::has_fixed_size)
                                 {
@@ -885,8 +884,9 @@ namespace detail_json
         void read_scalar(const std::string_view operation, const std::string_view key, T& val,
             const std::string_view expected_type) const
         {
-            val = invoke_deserialization([&]() { return subobject(key).get<T>(); }, operation, key,
-                error_code::parse_failure, "Failed to deserialize scalar value", expected_type);
+            val = invoke_deserialization([this, key] { return subobject(key).get<T>(); }, operation,
+                key, error_code::parse_failure, "Failed to deserialize scalar value",
+                expected_type);
         }
 
         [[nodiscard]] auto subobject(const std::string_view key) const -> const nlohmann::json&
@@ -1019,7 +1019,7 @@ namespace detail_json
                 no_ref_t out_val;
 
                 invoke_deserialization(
-                    [&]()
+                    [&arg, &out_val]
                     {
                         using traits_t = containers::traits<T>;
                         using adapter_t = containers::adapter<T>;
@@ -1074,7 +1074,7 @@ namespace detail_json
                 no_ref_t out_val;
                 deserializer ser{ arg };
 
-                invoke_deserialization([&]() { ser.deserialize_object(out_val); },
+                invoke_deserialization([&out_val, &ser] { ser.deserialize_object(out_val); },
                     "json.deserialize.object", {}, error_code::parse_failure,
                     "Failed to deserialize nested object", friendly_type_name<no_ref_t>(),
                     json_type_name(arg));
@@ -1098,7 +1098,7 @@ namespace detail_json
 
             deserializer ser{ arg };
 
-            invoke_deserialization([&]() { ser.deserialize_object(val); },
+            invoke_deserialization([&ser, &val] { ser.deserialize_object(val); },
                 "json.deserialize.object", {}, error_code::parse_failure,
                 "Failed to deserialize object in place", friendly_type_name<no_ref_t>(),
                 json_type_name(arg));
@@ -1118,7 +1118,7 @@ namespace detail_json
 
             const auto& next_obj = arg_arr.is_array() ? arg_arr.at(index++) : arg_arr;
 
-            return invoke_deserialization([&]() { return parse_arg<T>(next_obj); },
+            return invoke_deserialization([&next_obj] { return parse_arg<T>(next_obj); },
                 "json.deserialize.args", {}, error_code::parse_failure,
                 "Failed to parse positional argument");
         }
